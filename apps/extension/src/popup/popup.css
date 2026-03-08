@@ -1,0 +1,216 @@
+:root {
+  font-family: "Avenir Next", "Segoe UI Variable", "PingFang SC", sans-serif;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, rgba(214, 157, 55, 0.18), transparent 26%),
+    linear-gradient(180deg, #f7f0e4 0%, #eef5ed 100%);
+}
+
+.popup-shell {
+  width: 380px;
+  min-height: 560px;
+  padding: 18px;
+  color: #1b241e;
+}
+
+.popup-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 22px;
+  border-radius: 24px;
+  color: #f5f6f1;
+  background:
+    radial-gradient(circle at top right, rgba(240, 217, 138, 0.28), transparent 28%),
+    linear-gradient(145deg, #163226 0%, #1e684c 54%, #204233 100%);
+  box-shadow: 0 22px 42px rgba(23, 43, 33, 0.24);
+}
+
+.popup-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -36px -36px auto;
+  width: 140px;
+  height: 140px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.popup-hero h1 {
+  margin: 0;
+  font-size: 30px;
+  letter-spacing: -0.04em;
+}
+
+.popup-hero p {
+  margin: 10px 0 0;
+  color: rgba(245, 246, 241, 0.82);
+}
+
+.popup-stack {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.popup-card {
+  background: rgba(255, 252, 246, 0.88);
+  border: 1px solid rgba(70, 84, 75, 0.12);
+  border-radius: 20px;
+  padding: 16px;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 18px 34px rgba(37, 51, 43, 0.08);
+}
+
+.popup-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.popup-card h2 {
+  margin: 0;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+
+.popup-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(19, 69, 52, 0.08);
+  color: #194634;
+  font-weight: 600;
+}
+
+.popup-status.offline {
+  background: rgba(201, 93, 58, 0.12);
+  color: #8b3e28;
+}
+
+.popup-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #2d8b57;
+  box-shadow: 0 0 0 5px rgba(45, 139, 87, 0.12);
+}
+
+.popup-status.offline .popup-dot {
+  background: #c95d3a;
+  box-shadow: 0 0 0 5px rgba(201, 93, 58, 0.12);
+}
+
+.popup-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(19, 69, 52, 0.08);
+  color: #194634;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.popup-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.popup-metrics div {
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(223, 232, 221, 0.82);
+}
+
+.popup-metrics span,
+.popup-mode-card span {
+  display: block;
+  color: #617164;
+  font-size: 12px;
+}
+
+.popup-metrics strong,
+.popup-mode-card strong {
+  display: block;
+  margin-top: 6px;
+}
+
+.popup-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.popup-mode-card,
+.popup-primary,
+.popup-secondary {
+  min-height: 48px;
+  border-radius: 16px;
+  border: 1px solid rgba(23, 43, 33, 0.08);
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease;
+}
+
+.popup-mode-card:hover:not(:disabled),
+.popup-primary:hover:not(:disabled),
+.popup-secondary:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.popup-mode-card {
+  text-align: left;
+  padding: 14px;
+  background: rgba(223, 232, 221, 0.9);
+  color: #243129;
+}
+
+.popup-mode-card.active {
+  background: linear-gradient(135deg, #1f6b4f 0%, #143f30 100%);
+  color: white;
+  box-shadow: 0 14px 30px rgba(31, 107, 79, 0.2);
+}
+
+.popup-mode-card.active span {
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.popup-mode-card:disabled,
+.popup-primary:disabled,
+.popup-secondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.popup-primary {
+  width: 100%;
+  background: linear-gradient(135deg, #d89f37 0%, #f0d893 100%);
+  color: #2d2512;
+}
+
+.popup-secondary {
+  background: rgba(223, 232, 221, 0.92);
+  color: #223127;
+}
+
+.popup-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.popup-hint {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #617164;
+}

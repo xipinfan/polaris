@@ -1,0 +1,18 @@
+{
+  "extends": "../../configs/typescript/base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "lib": [
+      "DOM",
+      "ES2022"
+    ],
+    "types": [
+      "chrome"
+    ]
+  },
+  "include": [
+    "src",
+    "vite.config.ts"
+  ]
+}
