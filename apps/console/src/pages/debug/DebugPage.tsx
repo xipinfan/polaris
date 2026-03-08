@@ -129,8 +129,8 @@ export function DebugPage() {
           <input value={url} onChange={(event) => setUrl(event.target.value)} placeholder={t("debug.urlPlaceholder")} />
           <textarea rows={12} value={body} onChange={(event) => setBody(event.target.value)} placeholder={t("debug.bodyPlaceholder")} />
           <div className="button-grid">
-            <button type="submit">{t("debug.send")}</button>
-            <button type="button" onClick={() => saveDraft().catch(console.error)}>{t("debug.save")}</button>
+            <button className="primary-action" type="submit">{t("debug.send")}</button>
+            <button type="button" className="ghost-button" onClick={() => saveDraft().catch(console.error)}>{t("debug.save")}</button>
             <button type="button" className="ghost-button" onClick={resetDraft}>{t("debug.clear")}</button>
             <button
               type="button"

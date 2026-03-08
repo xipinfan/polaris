@@ -16,6 +16,8 @@ const emptyForm = {
 
 export function MockPage() {
   const [rules, setRules] = useState<MockRule[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -47,6 +49,31 @@ export function MockPage() {
     load();
   }, []);
 
+  useEffect(() => {
+    if (groupedRules.length === 0) {
+      setSelectedGroup(null);
+      return;
+    }
+
+    if (!selectedGroup || !groupedRules.some(([group]) => group === selectedGroup)) {
+      setSelectedGroup(groupedRules[0][0]);
+    }
+  }, [groupedRules, selectedGroup]);
+
+  const activeGroupRules = groupedRules.find(([group]) => group === selectedGroup)?.[1] ?? [];
+  const selectedRule = activeGroupRules.find((rule) => rule.id === selectedRuleId) ?? activeGroupRules[0];
+
+  useEffect(() => {
+    if (activeGroupRules.length === 0) {
+      setSelectedRuleId(null);
+      return;
+    }
+
+    if (!selectedRuleId || !activeGroupRules.some((rule) => rule.id === selectedRuleId)) {
+      setSelectedRuleId(activeGroupRules[0].id);
+    }
+  }, [activeGroupRules, selectedRuleId]);
+
   const submit = async () => {
     const payload = {
       name: form.name,
@@ -72,6 +99,7 @@ export function MockPage() {
   };
 
   const startEdit = (rule: MockRule) => {
+    setSelectedRuleId(rule.id);
     setEditingId(rule.id);
     setForm({
       name: rule.name,
@@ -122,124 +150,165 @@ export function MockPage() {
 
       <UiSlotPlaceholder slot="mock-toolbar" />
 
-      <section className="card-grid">
-        <div className="panel">
-          <span className="feature-badge">{t("mock.overview")}</span>
-          <div className="stats-grid compact">
-            <div className="stat-tile">
-              <span>{t("mock.metric.total")}</span>
-              <strong>{metrics.total}</strong>
-            </div>
-            <div className="stat-tile">
-              <span>{t("mock.metric.enabled")}</span>
-              <strong>{metrics.enabledCount}</strong>
-            </div>
-            <div className="stat-tile">
-              <span>{t("mock.metric.hits")}</span>
-              <strong>{metrics.totalHits}</strong>
-            </div>
-          </div>
+      <section className="request-summary-bar panel">
+        <div className="traffic-summary-strip">
+          <span>{t("mock.metric.total")} {metrics.total}</span>
+          <span>{t("mock.metric.enabled")} {metrics.enabledCount}</span>
+          <span>{t("mock.metric.hits")} {metrics.totalHits}</span>
         </div>
       </section>
 
-      <div className="two-column mock-layout">
-        <section className="table-card">
-          <div className="panel-heading">
-            <div>
-              <h3>{t("mock.variantsTitle")}</h3>
-              <p>{t("mock.variantsBody")}</p>
-            </div>
-          </div>
-          <div className="list">
-            {groupedRules.map(([group, items]) => (
-              <article key={group} className="panel">
-                <div className="panel-heading">
-                  <div>
-                    <h3>{group}</h3>
-                    <p>{t("mock.variantCount", { count: items.length })}</p>
-                  </div>
-                </div>
-                <div className="list">
-                  {items.map((rule) => (
-                    <div key={rule.id} className="list-item">
-                      <div className="list-row">
-                        <strong>{rule.name}</strong>
-                        <span className={`status-badge ${rule.enabled ? "" : "muted"}`}>
-                          {rule.enabled ? t("mock.enabledState") : t("mock.disabledState")}
-                        </span>
-                      </div>
-                      <p>{t("mock.hitsSummary", {
-                        count: rule.hitCount,
-                        time: rule.lastHitAt ? new Date(rule.lastHitAt).toLocaleString() : t("mock.lastHitNever")
-                      })}</p>
-                      <div className="button-grid">
-                        <button onClick={() => toggleRule(rule)}>{rule.enabled ? t("mock.disable") : t("mock.enable")}</button>
-                        <button className="ghost-button" onClick={() => startEdit(rule)}>{t("mock.edit")}</button>
-                        <button className="ghost-button" onClick={() => duplicate(rule)}>{t("mock.duplicate")}</button>
-                        <button className="danger-button" onClick={() => removeRule(rule)}>{t("mock.delete")}</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </article>
-            ))}
-            {rules.length === 0 && (
-              <div className="empty-card">
-                <h3>{t("mock.noneTitle")}</h3>
-                <p>{t("mock.noneBody")}</p>
+      {rules.length === 0 ? (
+        <div className="empty-card">
+          <h3>{t("mock.noneTitle")}</h3>
+          <p>{t("mock.noneBody")}</p>
+        </div>
+      ) : (
+        <section className="workspace-shell mock-workspace mock-pane-shell">
+          <aside className="workspace-sidebar panel">
+            <div className="panel-heading">
+              <div>
+                <h3>{t("mock.variantsTitle")}</h3>
+                <p>{t("mock.variantsBody")}</p>
               </div>
-            )}
-          </div>
-        </section>
-
-        <form
-          className="form-grid"
-          onSubmit={(event) => {
-            event.preventDefault();
-            submit().catch(console.error);
-          }}
-        >
-          <div className="panel-heading">
-            <div>
-              <h3>{editingId ? t("mock.form.edit") : t("mock.form.new")}</h3>
-              <p>{t("mock.form.body")}</p>
             </div>
-          </div>
-          <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder={t("mock.form.name")} />
-          <select value={form.method} onChange={(event) => setForm({ ...form, method: event.target.value })}>
-            <option>GET</option>
-            <option>POST</option>
-            <option>PUT</option>
-            <option>DELETE</option>
-          </select>
-          <input value={form.url} onChange={(event) => setForm({ ...form, url: event.target.value })} placeholder={t("mock.form.url")} />
-          <input
-            type="number"
-            value={form.responseStatus}
-            onChange={(event) => setForm({ ...form, responseStatus: Number(event.target.value) })}
-            placeholder={t("mock.form.status")}
-          />
-          <textarea rows={5} value={form.responseHeaders} onChange={(event) => setForm({ ...form, responseHeaders: event.target.value })} placeholder={t("mock.form.headers")} />
-          <textarea rows={10} value={form.responseBody} onChange={(event) => setForm({ ...form, responseBody: event.target.value })} placeholder={t("mock.form.bodyPlaceholder")} />
-          <label className="checkbox-row">
-            <input type="checkbox" checked={form.enabled} onChange={(event) => setForm({ ...form, enabled: event.target.checked })} />
-            {t("mock.form.enableNow")}
-          </label>
-          <div className="button-grid">
-            <button type="submit">{editingId ? t("mock.form.saveChanges") : t("mock.form.save")}</button>
-            <button
-              type="button"
-              className="ghost-button"
-              onClick={() => {
-                setEditingId(null);
-                setForm(emptyForm);
+            <div className="workspace-list">
+              {groupedRules.map(([group, items]) => (
+                <button
+                  key={group}
+                  type="button"
+                  className={`workspace-list-item ${selectedGroup === group ? "active" : ""}`}
+                  onClick={() => setSelectedGroup(group)}
+                >
+                  <div className="workspace-list-topline">
+                    <strong>{group}</strong>
+                    <span className="status-badge muted">{t("mock.variantCount", { count: items.length })}</span>
+                  </div>
+                  <p>{items[0]?.name}</p>
+                </button>
+              ))}
+            </div>
+          </aside>
+
+          <div className="workspace-detail mock-detail-grid">
+            <section className="panel mock-variant-pane">
+              <div className="panel-heading">
+                <div>
+                  <h3>{selectedGroup ?? t("mock.variantsTitle")}</h3>
+                  <p>{t("mock.workflowBody")}</p>
+                </div>
+              </div>
+              {selectedRule ? (
+                <div className="mock-context-card">
+                  <span>{t("mock.selectedRule")}</span>
+                  <strong>{selectedRule.name}</strong>
+                  <small>{t("mock.hitsSummary", {
+                    count: selectedRule.hitCount,
+                    time: selectedRule.lastHitAt ? new Date(selectedRule.lastHitAt).toLocaleString() : t("mock.lastHitNever")
+                  })}</small>
+                </div>
+              ) : null}
+              <div className="list">
+                {activeGroupRules.map((rule) => (
+                  <div key={rule.id} className={`list-item ${selectedRule?.id === rule.id ? "active" : ""}`}>
+                    <div className="list-row">
+                      <strong>{rule.name}</strong>
+                      <span className={`status-badge ${rule.enabled ? "" : "muted"}`}>
+                        {rule.enabled ? t("mock.enabledState") : t("mock.disabledState")}
+                      </span>
+                    </div>
+                    <p>{t("mock.hitsSummary", {
+                      count: rule.hitCount,
+                      time: rule.lastHitAt ? new Date(rule.lastHitAt).toLocaleString() : t("mock.lastHitNever")
+                    })}</p>
+                    <div className="inline-actions action-inline">
+                      <button className="ghost-button" onClick={() => setSelectedRuleId(rule.id)}>{t("mock.inspect")}</button>
+                    </div>
+                    <div className="button-grid compact-actions two-up">
+                      <button onClick={() => toggleRule(rule)}>{rule.enabled ? t("mock.disable") : t("mock.enable")}</button>
+                      <button className="ghost-button" onClick={() => startEdit(rule)}>{t("mock.edit")}</button>
+                      <button className="ghost-button" onClick={() => duplicate(rule)}>{t("mock.duplicate")}</button>
+                      <button className="danger-button" onClick={() => removeRule(rule)}>{t("mock.delete")}</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <form
+              className="form-grid mock-form-panel mock-editor-pane"
+              onSubmit={(event) => {
+                event.preventDefault();
+                submit().catch(console.error);
               }}
             >
-              {t("mock.form.clear")}
-            </button>
+              <div className="panel-heading">
+                <div>
+                  <h3>{editingId ? t("mock.form.edit") : t("mock.form.new")}</h3>
+                  <p>{editingId ? t("mock.form.editing", { name: form.name || "-" }) : t("mock.form.body")}</p>
+                </div>
+              </div>
+              <div className="flow-path compact">
+                <div className="flow-step compact">
+                  <span>1</span>
+                  <strong>{t("mock.flow.group")}</strong>
+                  <small>{t("mock.flow.groupBody")}</small>
+                </div>
+                <div className="flow-step compact">
+                  <span>2</span>
+                  <strong>{t("mock.flow.variant")}</strong>
+                  <small>{t("mock.flow.variantBody")}</small>
+                </div>
+                <div className="flow-step compact">
+                  <span>3</span>
+                  <strong>{t("mock.flow.response")}</strong>
+                  <small>{t("mock.flow.responseBody")}</small>
+                </div>
+              </div>
+              {selectedRule ? (
+                <div className="mock-context-card">
+                  <span>{t("mock.selectedRule")}</span>
+                  <strong>{selectedRule.name}</strong>
+                  <small>{selectedRule.method} - {selectedRule.url}</small>
+                </div>
+              ) : null}
+              <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder={t("mock.form.name")} />
+              <select value={form.method} onChange={(event) => setForm({ ...form, method: event.target.value })}>
+                <option>GET</option>
+                <option>POST</option>
+                <option>PUT</option>
+                <option>DELETE</option>
+              </select>
+              <input value={form.url} onChange={(event) => setForm({ ...form, url: event.target.value })} placeholder={t("mock.form.url")} />
+              <input
+                type="number"
+                value={form.responseStatus}
+                onChange={(event) => setForm({ ...form, responseStatus: Number(event.target.value) })}
+                placeholder={t("mock.form.status")}
+              />
+              <textarea rows={5} value={form.responseHeaders} onChange={(event) => setForm({ ...form, responseHeaders: event.target.value })} placeholder={t("mock.form.headers")} />
+              <textarea rows={10} value={form.responseBody} onChange={(event) => setForm({ ...form, responseBody: event.target.value })} placeholder={t("mock.form.bodyPlaceholder")} />
+              <label className="checkbox-row">
+                <input type="checkbox" checked={form.enabled} onChange={(event) => setForm({ ...form, enabled: event.target.checked })} />
+                {t("mock.form.enableNow")}
+              </label>
+              <div className="button-grid compact-actions two-up">
+                <button className="primary-action" type="submit">{editingId ? t("mock.form.saveChanges") : t("mock.form.save")}</button>
+                <button
+                  type="button"
+                  className="ghost-button"
+                  onClick={() => {
+                    setEditingId(null);
+                    setForm(emptyForm);
+                  }}
+                >
+                  {t("mock.form.clear")}
+                </button>
+              </div>
+            </form>
           </div>
-        </form>
-      </div>
+        </section>
+      )}
     </div>
   );
 }
