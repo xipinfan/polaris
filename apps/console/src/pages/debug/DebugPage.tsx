@@ -91,19 +91,11 @@ export function DebugPage() {
       <section className="page-header">
         <div>
           <h2>{t("debug.title")}</h2>
-          <p>{t("debug.subtitle")}</p>
         </div>
         {message ? <div className="panel banner-panel">{message}</div> : null}
       </section>
 
       <UiSlotPlaceholder slot="debug-header" />
-
-      <section className="card-grid">
-        <div className="panel">
-          <span className="feature-badge">{t("debug.flow")}</span>
-          <p>{t("debug.flowBody")}</p>
-        </div>
-      </section>
 
       <div className="debug-layout">
         <form
@@ -114,10 +106,7 @@ export function DebugPage() {
           }}
         >
           <div className="panel-heading">
-            <div>
-              <h3>{t("debug.formTitle")}</h3>
-              <p>{t("debug.formBody")}</p>
-            </div>
+            <div><h3>{t("debug.formTitle")}</h3></div>
           </div>
           <input value={name} onChange={(event) => setName(event.target.value)} placeholder={t("debug.namePlaceholder")} />
           <select value={method} onChange={(event) => setMethod(event.target.value)}>

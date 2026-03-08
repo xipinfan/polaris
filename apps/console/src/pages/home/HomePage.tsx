@@ -33,25 +33,14 @@ export function HomePage() {
     primaryProxyAction === "rules"
       ? t("home.enableRules")
       : t("home.backDirect");
-  const currentModeLabel = snapshot?.status.proxyMode ?? "direct";
-  const recentAssets = snapshot
-    ? [
-        ...snapshot.savedRequests.slice(0, 3).map((item) => ({
-          id: item.id,
-          title: item.name,
-          meta: `${item.method} - ${new Date(item.updatedAt).toLocaleString()}`,
-          kind: t("home.savedAsset"),
-          onClick: () =>
-            navigate("/requests", { state: { selectedId: item.id } }),
-        })),
-        ...snapshot.mockRules.slice(0, 2).map((rule) => ({
-          id: rule.id,
-          title: rule.name,
-          meta: `${rule.method} - ${rule.url}`,
-          kind: t("nav.rules"),
-          onClick: () => navigate("/rules"),
-        })),
-      ].slice(0, 3)
+  const recentMocks = snapshot
+    ? snapshot.mockRules.slice(0, 4).map((rule) => ({
+        id: rule.id,
+        title: rule.name,
+        meta: `${rule.method} - ${rule.url}`,
+        kind: t("nav.mock"),
+        onClick: () => navigate("/mock"),
+      }))
     : [];
 
   return (
@@ -59,7 +48,6 @@ export function HomePage() {
       <section className="page-header">
         <div>
           <h2>{t("home.title")}</h2>
-          <p>{t("home.subtitle")}</p>
         </div>
         {message ? <div className="panel banner-panel">{message}</div> : null}
       </section>
@@ -93,14 +81,6 @@ export function HomePage() {
                 </div>
                 <div className="home-hero-headline">
                   <h3>{t("home.taskTitle")}</h3>
-                  <p>
-                    {t("home.workspaceBody", {
-                      status: snapshot.status.online
-                        ? t("home.online")
-                        : t("home.offline"),
-                      mode: currentModeLabel,
-                    })}
-                  </p>
                 </div>
                 <div className="home-hero-actions">
                   <button
@@ -140,10 +120,10 @@ export function HomePage() {
                   </small>
                 </div>
                 <div className="home-signal-card">
-                  <span>{t("home.metric.savedRequests")}</span>
-                  <strong>{snapshot.savedRequests.length}</strong>
+                  <span>{t("home.metric.mockVariants")}</span>
+                  <strong>{snapshot.mockRules.length}</strong>
                   <small>
-                    {t("home.mockRules", { count: snapshot.mockRules.length })}
+                    {snapshot.status.proxyMode}
                   </small>
                 </div>
               </div>
@@ -154,11 +134,10 @@ export function HomePage() {
                 <span className="feature-badge">
                   {t("home.nextActionTitle")}
                 </span>
-                <h4>{t("home.nextActionBody")}</h4>
                 <div className="home-focus-links">
                   <button
                     className="ghost-button"
-                    onClick={() => navigate("/rules")}
+                    onClick={() => navigate("/mock")}
                   >
                     {t("home.quick.mock")}
                   </button>
@@ -193,7 +172,6 @@ export function HomePage() {
               <div className="panel-heading">
                 <div>
                   <h3>{t("home.module.traffic")}</h3>
-                  <p>{t("home.nextActionBody")}</p>
                 </div>
                 <button
                   className="panel-link-button panel-link-button-traffic"
@@ -211,7 +189,6 @@ export function HomePage() {
                     <span className="home-workbench-index">01</span>
                   </div>
                   <strong>{t("home.quick.traffic")}</strong>
-                  <p>{t("home.noTrafficBody")}</p>
                   <ul className="home-workbench-points">
                     <li>
                       {t("traffic.metric.visible")}{" "}
@@ -238,7 +215,6 @@ export function HomePage() {
                     <span className="home-workbench-index">02</span>
                   </div>
                   <strong>{t("home.quick.debug")}</strong>
-                  <p>{t("home.flow.debugBody")}</p>
                   <ul className="home-workbench-points">
                     <li>{t("home.workspaceLabel")}</li>
                     <li>{t("traffic.actionsTitle")}</li>
@@ -258,7 +234,6 @@ export function HomePage() {
                     <span className="home-workbench-index">03</span>
                   </div>
                   <strong>{t("home.quick.mock")}</strong>
-                  <p>{t("home.flow.mockBody")}</p>
                   <ul className="home-workbench-points">
                     <li>
                       {t("home.metric.mockVariants")}{" "}
@@ -268,7 +243,7 @@ export function HomePage() {
                   </ul>
                   <button
                     className="home-workbench-button"
-                    onClick={() => navigate("/rules")}
+                    onClick={() => navigate("/mock")}
                   >
                     {t("home.quick.mock")}
                   </button>
@@ -280,23 +255,16 @@ export function HomePage() {
                     </span>
                     <span className="home-workbench-index">04</span>
                   </div>
-                  <strong>{t("home.assetsTitle")}</strong>
-                  <p>{t("home.assetsBody")}</p>
+                  <strong>{t("home.quick.settings")}</strong>
                   <ul className="home-workbench-points">
-                    <li>
-                      {t("home.metric.savedRequests")}{" "}
-                      {snapshot.savedRequests.length}
-                    </li>
-                    <li>
-                      {t("home.metric.mockVariants")}{" "}
-                      {snapshot.mockRules.length}
-                    </li>
+                    <li>{t("home.module.control")}</li>
+                    <li>{snapshot.status.proxyMode}</li>
                   </ul>
                   <button
                     className="home-workbench-button"
-                    onClick={() => navigate("/requests")}
+                    onClick={() => navigate("/settings")}
                   >
-                    {t("home.manageAssets")}
+                    {t("home.quick.settings")}
                   </button>
                 </article>
               </div>
@@ -306,29 +274,30 @@ export function HomePage() {
               <section className="panel panel-section home-module home-module-assets">
                 <div className="home-module-titlebar">
                   <span className="feature-badge">
-                    {t("home.module.assets")}
+                    {t("mock.overview")}
                   </span>
                 </div>
                 <div className="panel-heading">
                   <div>
-                    <h3>{t("home.assetsTitle")}</h3>
-                    <p>{t("home.assetsBody")}</p>
+                    <h3>{t("home.quick.mock")}</h3>
                   </div>
                   <button
                     className="panel-link-button panel-link-button-assets"
-                    onClick={() => navigate("/requests")}
+                    onClick={() => navigate("/mock")}
                   >
-                    <span>{t("home.manageAssets")}</span>
+                    <span>{t("home.quick.mock")}</span>
                   </button>
                 </div>
                 <div className="home-asset-stats">
                   <div className="stat-tile home-asset-stat">
-                    <span>{t("home.metric.savedRequests")}</span>
-                    <strong>{snapshot.savedRequests.length}</strong>
-                  </div>
-                  <div className="stat-tile home-asset-stat">
                     <span>{t("home.metric.mockVariants")}</span>
                     <strong>{snapshot.mockRules.length}</strong>
+                  </div>
+                  <div className="stat-tile home-asset-stat">
+                    <span>{t("mock.metric.enabled")}</span>
+                    <strong>
+                      {snapshot.mockRules.filter((rule) => rule.enabled).length}
+                    </strong>
                   </div>
                 </div>
               </section>
@@ -337,11 +306,10 @@ export function HomePage() {
                 <div className="panel-heading">
                   <div>
                     <h3>{t("home.resumeTitle")}</h3>
-                    <p>{t("home.resumeBody")}</p>
                   </div>
                 </div>
                 <div className="home-timeline">
-                  {recentAssets.map((item, index) => (
+                  {recentMocks.map((item, index) => (
                     <button
                       key={item.id}
                       type="button"
@@ -351,7 +319,7 @@ export function HomePage() {
                       <span className="home-timeline-dot"></span>
                       <span
                         className="home-timeline-line"
-                        aria-hidden={index === recentAssets.length - 1}
+                        aria-hidden={index === recentMocks.length - 1}
                       ></span>
                       <div className="home-timeline-content">
                         <div className="home-timeline-top">
@@ -364,10 +332,10 @@ export function HomePage() {
                       </div>
                     </button>
                   ))}
-                  {recentAssets.length === 0 ? (
+                  {recentMocks.length === 0 ? (
                     <div className="empty-card">
-                      <h3>{t("home.noAssetsTitle")}</h3>
-                      <p>{t("home.noAssetsBody")}</p>
+                      <h3>{t("mock.noneTitle")}</h3>
+                      <p>{t("mock.noneBody")}</p>
                     </div>
                   ) : null}
                 </div>

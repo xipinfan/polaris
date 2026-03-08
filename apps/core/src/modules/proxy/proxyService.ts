@@ -22,6 +22,16 @@ export class ProxyService {
     return mode;
   }
 
+  async setCertificateInstalled(certificateInstalled: boolean): Promise<AppSetting> {
+    const settings = this.storage.getSettings();
+    const nextSettings = {
+      ...settings,
+      certificateInstalled
+    };
+    await this.storage.setSettings(nextSettings);
+    return nextSettings;
+  }
+
   listRules(): ProxyRule[] {
     return this.storage.getProxyRules();
   }

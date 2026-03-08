@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import type { RequestRecord } from "@polaris/shared-types";
+import type { AppSetting, RequestRecord } from "@polaris/shared-types";
 import { buildCurl } from "../../features/common/curl";
 import { JsonBlock } from "../../features/common/JsonBlock";
 import { KeyValueBlock } from "../../features/common/KeyValueBlock";
@@ -18,6 +18,7 @@ const refreshIntervalMs = 3000;
 
 type TrafficFocusMode = "all" | "errors" | "https" | "debug";
 type TrafficInspectorTab = "overview" | "timeline" | "composer" | "tools";
+type CertificatePlatform = "windows" | "mac" | "other";
 
 function formatRequestTime(value: string) {
   return new Date(value).toLocaleTimeString([], {
@@ -53,6 +54,7 @@ function getContentType(item: RequestRecord) {
 
 export function TrafficPage() {
   const [requests, setRequests] = useState<RequestRecord[]>([]);
+  const [settings, setSettings] = useState<AppSetting | null>(null);
   const [selectedId, setSelectedId] = useState<string>();
   const [keyword, setKeyword] = useState("");
   const [method, setMethod] = useState("");
@@ -63,6 +65,7 @@ export function TrafficPage() {
     useState<TrafficInspectorTab>("overview");
   const [isLoading, setIsLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [isCertificateModalOpen, setIsCertificateModalOpen] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string>();
   const [message, setMessage] = useState("");
   const deferredKeyword = useDeferredValue(keyword);
@@ -75,6 +78,30 @@ export function TrafficPage() {
   const copyText = async (value: string) => {
     await navigator.clipboard.writeText(value);
   };
+
+  const certificatePlatform = useMemo<CertificatePlatform>(() => {
+    if (typeof navigator === "undefined") {
+      return "windows";
+    }
+
+    const browserNavigator = navigator as Navigator & {
+      userAgentData?: { platform?: string };
+    };
+    const platform =
+      browserNavigator.userAgentData?.platform ??
+      navigator.platform ??
+      navigator.userAgent;
+
+    if (/mac/i.test(platform)) {
+      return "mac";
+    }
+
+    if (/win/i.test(platform)) {
+      return "windows";
+    }
+
+    return "other";
+  }, []);
 
   const buildParams = () => {
     const params = new URLSearchParams();
@@ -122,6 +149,10 @@ export function TrafficPage() {
   useEffect(() => {
     load().catch(console.error);
   }, [deferredKeyword, method, statusCode, hostOnly]);
+
+  useEffect(() => {
+    apiClient.settings().then(setSettings).catch(console.error);
+  }, []);
 
   useEffect(() => {
     if (!autoRefresh) {
@@ -212,20 +243,9 @@ export function TrafficPage() {
     };
   }, [visibleRequests]);
 
-  const saveSelected = async () => {
-    if (!selected) {
-      return;
-    }
-    const name = window.prompt(
-      t("common.savePrompt"),
-      `${selected.method} ${selected.path}`,
-    );
-    if (!name) {
-      return;
-    }
-    await apiClient.saveCapturedRequest(selected.id, { name });
-    setMessage(t("common.savedRequest", { name }));
-  };
+  const rootCertificateUrl = settings
+    ? `http://127.0.0.1:${settings.localApiPort}/api/certificates/root-ca`
+    : "http://127.0.0.1:9001/api/certificates/root-ca";
 
   const replaySelected = async () => {
     if (!selected) {
@@ -240,23 +260,9 @@ export function TrafficPage() {
     if (!selected) {
       return;
     }
-    navigate("/rules", {
+    navigate("/mock", {
       state: {
         seedRequest: selected,
-        mode: "mock",
-      },
-    });
-  };
-
-  const createRoutingRuleFromSelected = (action: "proxy" | "direct") => {
-    if (!selected) {
-      return;
-    }
-    navigate("/rules", {
-      state: {
-        seedRequest: selected,
-        mode: "proxy",
-        suggestedAction: action,
       },
     });
   };
@@ -287,36 +293,25 @@ export function TrafficPage() {
 
   return (
     <div className="page-stack traffic-page-shell">
-      <section className="traffic-scene-header">
-        <div className="traffic-scene-copy">
-          <span className="feature-badge traffic-scene-badge">
-            {t("traffic.title")}
-          </span>
-          <h2>{t("traffic.sceneTitle")}</h2>
-          <p>{t("traffic.sceneBody")}</p>
-        </div>
-        <div className="traffic-scene-metrics">
-          <div className="traffic-scene-metric">
-            <span>{t("traffic.metric.visible")}</span>
-            <strong>{summary.total}</strong>
-          </div>
-          <div className="traffic-scene-metric">
-            <span>{t("traffic.metric.errors")}</span>
-            <strong>{summary.errorCount}</strong>
-          </div>
-          <div className="traffic-scene-metric">
-            <span>{t("traffic.metric.https")}</span>
-            <strong>{summary.secureCount}</strong>
-          </div>
-        </div>
-      </section>
-
       <section className="traffic-toolbar-strip panel">
         <div className="traffic-toolbar-primary">
           <div className="traffic-toolbar-group traffic-toolbar-group-emphasis">
             <span className="traffic-toolbar-label">
               {t("traffic.toolbar.capture")}
             </span>
+            <button
+              className={`traffic-button ${
+                settings?.certificateInstalled
+                  ? "traffic-button-secondary"
+                  : "traffic-button-primary"
+              }`}
+              onClick={() => setIsCertificateModalOpen(true)}
+              type="button"
+            >
+              {settings?.certificateInstalled
+                ? t("traffic.toolbar.certificateInstalled")
+                : t("traffic.toolbar.certificate")}
+            </button>
             <button
               className={`traffic-button traffic-toolbar-mode ${autoRefresh ? "traffic-button-primary" : "traffic-button-secondary"}`}
               onClick={() => setAutoRefresh((current) => !current)}
@@ -338,22 +333,15 @@ export function TrafficPage() {
 
           <div className="traffic-toolbar-group">
             <span className="traffic-toolbar-label">
-              {t("traffic.toolbar.assets")}
+              {t("nav.mock")}
             </span>
             <button
               className="traffic-button traffic-toolbar-button"
-              onClick={saveSelected}
+              onClick={createMockFromSelected}
               disabled={!selected}
               type="button"
             >
-              {t("traffic.action.save")}
-            </button>
-            <button
-              className="traffic-button traffic-toolbar-button"
-              onClick={() => navigate("/requests")}
-              type="button"
-            >
-              {t("traffic.toolbar.import")}
+              {t("traffic.action.mock")}
             </button>
             <button
               className="traffic-button traffic-toolbar-button"
@@ -391,10 +379,10 @@ export function TrafficPage() {
             </button>
             <button
               className="traffic-button traffic-toolbar-button"
-              onClick={() => navigate("/rules")}
+              onClick={() => navigate("/mock")}
               type="button"
             >
-              {t("nav.rules")}
+              {t("nav.mock")}
             </button>
           </div>
         </div>
@@ -412,6 +400,113 @@ export function TrafficPage() {
       </section>
 
       {message ? <div className="panel banner-panel">{message}</div> : null}
+
+      {isCertificateModalOpen ? (
+        <div
+          className="traffic-modal-overlay"
+          onClick={() => setIsCertificateModalOpen(false)}
+          role="presentation"
+        >
+          <section
+            aria-modal="true"
+            className="traffic-modal-card"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <div className="traffic-modal-head">
+              <div>
+                <span className="feature-badge">{t("traffic.certificate.badge")}</span>
+                <h3>{t("traffic.certificate.title")}</h3>
+              </div>
+              <button
+                className="traffic-button traffic-button-tertiary"
+                onClick={() => setIsCertificateModalOpen(false)}
+                type="button"
+              >
+                {t("traffic.certificate.close")}
+              </button>
+            </div>
+            <p className="traffic-modal-body">{t("traffic.certificate.body")}</p>
+            <div className="traffic-certificate-visual">
+              <div className="traffic-certificate-visual-copy">
+                <span className="feature-badge">
+                  {certificatePlatform === "mac"
+                    ? t("traffic.certificate.platform.mac")
+                    : certificatePlatform === "windows"
+                      ? t("traffic.certificate.platform.windows")
+                      : t("traffic.certificate.platform.other")}
+                </span>
+                <strong>{t("traffic.certificate.visualTitle")}</strong>
+                <small>
+                  {certificatePlatform === "mac"
+                    ? t("traffic.certificate.visualBodyMac")
+                    : certificatePlatform === "windows"
+                      ? t("traffic.certificate.visualBodyWindows")
+                      : t("traffic.certificate.otherBody")}
+                </small>
+              </div>
+              <div className="traffic-certificate-fallback">
+                <strong>
+                  {certificatePlatform === "mac"
+                    ? t("traffic.certificate.inlineTitleMac")
+                    : certificatePlatform === "windows"
+                      ? t("traffic.certificate.inlineTitleWindows")
+                      : t("traffic.certificate.platform.other")}
+                </strong>
+                <p>
+                  {certificatePlatform === "mac"
+                    ? t("traffic.certificate.inlineBodyMac")
+                    : certificatePlatform === "windows"
+                      ? t("traffic.certificate.inlineBodyWindows")
+                      : t("traffic.certificate.otherBody")}
+                </p>
+              </div>
+            </div>
+            <div className="traffic-certificate-steps">
+              <div>
+                <span>1</span>
+                <strong>
+                  {certificatePlatform === "mac"
+                    ? t("traffic.certificate.stepDownloadMac")
+                    : t("traffic.certificate.stepDownload")}
+                </strong>
+              </div>
+              <div>
+                <span>2</span>
+                <strong>
+                  {certificatePlatform === "mac"
+                    ? t("traffic.certificate.stepTrustMac")
+                    : t("traffic.certificate.stepTrust")}
+                </strong>
+              </div>
+              <div>
+                <span>3</span>
+                <strong>{t("traffic.certificate.stepRefresh")}</strong>
+              </div>
+            </div>
+            <div className="traffic-modal-actions">
+              <a
+                className="traffic-button traffic-button-primary traffic-modal-link"
+                href={rootCertificateUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {t("traffic.certificate.download")}
+              </a>
+              <button
+                className="traffic-button traffic-button-secondary"
+                onClick={() => {
+                  void navigator.clipboard.writeText(rootCertificateUrl);
+                  setMessage(t("traffic.certificate.copied"));
+                }}
+                type="button"
+              >
+                {t("traffic.certificate.copy")}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       <section className="traffic-shell-v2">
         <section className="panel traffic-grid-panel">
@@ -933,10 +1028,10 @@ export function TrafficPage() {
                 </button>
                 <button
                   className="traffic-button traffic-button-secondary"
-                  onClick={saveSelected}
+                  onClick={createMockFromSelected}
                   type="button"
                 >
-                  {t("traffic.action.save")}
+                  {t("traffic.action.mock")}
                 </button>
               </div>
             </div>
@@ -946,10 +1041,10 @@ export function TrafficPage() {
             <div className="traffic-inspector-stack" ref={inspectorBodyRef}>
               <div className="traffic-tool-card traffic-tool-card-primary">
                 <div className="list-row">
-                  <strong>{t("traffic.ruleActions")}</strong>
+                  <strong>{t("mock.title")}</strong>
                   <span className="status-badge muted">{selected.host}</span>
                 </div>
-                <p>{t("traffic.ruleActionsBody")}</p>
+                <p>{t("mock.subtitle")}</p>
                 <div className="traffic-action-panel-grid">
                   <button
                     className="traffic-button traffic-button-primary"
@@ -960,43 +1055,43 @@ export function TrafficPage() {
                   </button>
                   <button
                     className="traffic-button traffic-button-secondary"
-                    onClick={() => createRoutingRuleFromSelected("proxy")}
+                    onClick={copyCurl}
                     type="button"
                   >
-                    {t("traffic.action.routeProxy")}
+                    {t("traffic.action.curl")}
                   </button>
                   <button
                     className="traffic-button traffic-button-secondary"
-                    onClick={() => createRoutingRuleFromSelected("direct")}
+                    onClick={openInDebug}
                     type="button"
                   >
-                    {t("traffic.action.routeDirect")}
+                    {t("traffic.action.debug")}
                   </button>
                   <button
                     className="traffic-button traffic-button-tertiary"
-                    onClick={() => navigate("/rules")}
+                    onClick={() => navigate("/mock")}
                     type="button"
                   >
-                    {t("traffic.action.openRules")}
+                    {t("nav.mock")}
                   </button>
                 </div>
               </div>
               <div className="traffic-tool-grid">
                 <div className="traffic-tool-card">
                   <div className="list-row">
-                    <strong>{t("traffic.tools.assetTitle")}</strong>
+                    <strong>{t("mock.variantsTitle")}</strong>
                     <span className="feature-badge">
-                      {t("traffic.tools.assetBadge")}
+                      {t("nav.mock")}
                     </span>
                   </div>
-                  <p>{t("traffic.tools.assetBody")}</p>
+                  <p>{t("mock.workflowBody")}</p>
                   <div className="traffic-action-panel-grid compact">
                     <button
                       className="traffic-button traffic-button-secondary"
-                      onClick={saveSelected}
+                      onClick={createMockFromSelected}
                       type="button"
                     >
-                      {t("traffic.action.save")}
+                      {t("traffic.action.mock")}
                     </button>
                     <button
                       className="traffic-button traffic-button-secondary"

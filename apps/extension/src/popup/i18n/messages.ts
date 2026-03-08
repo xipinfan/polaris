@@ -18,6 +18,7 @@ export const extensionMessages = {
     "popup.quickLinks": "\u5feb\u6377\u5165\u53e3",
     "popup.openConsole": "\u6253\u5f00\u63a7\u5236\u53f0",
     "popup.openSettings": "\u6253\u5f00\u8bbe\u7f6e",
+    "popup.openCertSettings": "\u6253\u5f00\u8bc1\u4e66\u8bbe\u7f6e",
     "popup.mode.direct.label": "\u76f4\u8fde",
     "popup.mode.direct.desc": "\u6d4f\u89c8\u5668\u8bf7\u6c42\u4e0d\u7ecf\u8fc7 Polaris\u3002",
     "popup.mode.global.label": "\u5168\u5c40\u4ee3\u7406",
@@ -30,7 +31,8 @@ export const extensionMessages = {
     "popup.message.switch": "\u5df2\u5207\u6362\u4e3a{mode}",
     "popup.message.removeRule": "\u5df2\u79fb\u9664\u7ad9\u70b9\u89c4\u5219\uff1a{host}",
     "popup.message.addRule": "\u5df2\u52a0\u5165\u7ad9\u70b9\u89c4\u5219\uff1a{host}",
-    "popup.error.switch": "\u5207\u6362\u5931\u8d25"
+    "popup.error.switch": "\u5207\u6362\u5931\u8d25",
+    "popup.error.openCertSettings": "\u6253\u5f00\u8bc1\u4e66\u8bbe\u7f6e\u5931\u8d25"
   },
   "en-US": {
     "popup.hero": "Switch browser proxy mode, manage the active site, and jump into the console from one compact panel.",
@@ -49,6 +51,7 @@ export const extensionMessages = {
     "popup.quickLinks": "Quick Links",
     "popup.openConsole": "Open Console",
     "popup.openSettings": "Open Settings",
+    "popup.openCertSettings": "Open Cert Settings",
     "popup.mode.direct.label": "Direct",
     "popup.mode.direct.desc": "Browser traffic bypasses Polaris.",
     "popup.mode.global.label": "Global",
@@ -61,7 +64,8 @@ export const extensionMessages = {
     "popup.message.switch": "Switched to {mode}.",
     "popup.message.removeRule": "Removed site rule for {host}.",
     "popup.message.addRule": "Added site rule for {host}.",
-    "popup.error.switch": "Switch failed."
+    "popup.error.switch": "Switch failed.",
+    "popup.error.openCertSettings": "Failed to open certificate settings."
   }
 } as const;
 

@@ -5,6 +5,12 @@ type ApplyProxyMessage = {
   apiPort: number;
 };
 
+type OpenCertificateSettingsMessage = {
+  type: "open-certificate-settings";
+};
+
+type ExtensionMessage = ApplyProxyMessage | OpenCertificateSettingsMessage;
+
 function applyProxyMode(message: ApplyProxyMessage): Promise<void> {
   return new Promise((resolve, reject) => {
     const config: chrome.proxy.ProxyConfig =
@@ -47,18 +53,38 @@ function applyProxyMode(message: ApplyProxyMessage): Promise<void> {
   });
 }
 
+function openCertificateSettings(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.create({ url: "chrome://settings/certificates" }, () => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   console.log("Polaris extension installed");
 });
 
-chrome.runtime.onMessage.addListener((message: ApplyProxyMessage, _sender, sendResponse) => {
-  if (message.type !== "apply-proxy-mode") {
-    return false;
+chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendResponse) => {
+  if (message.type === "apply-proxy-mode") {
+    applyProxyMode(message)
+      .then(() => sendResponse({ ok: true }))
+      .catch((error) => sendResponse({ ok: false, error: error instanceof Error ? error.message : "unknown error" }));
+
+    return true;
   }
 
-  applyProxyMode(message)
-    .then(() => sendResponse({ ok: true }))
-    .catch((error) => sendResponse({ ok: false, error: error instanceof Error ? error.message : "unknown error" }));
+  if (message.type === "open-certificate-settings") {
+    openCertificateSettings()
+      .then(() => sendResponse({ ok: true }))
+      .catch((error) => sendResponse({ ok: false, error: error instanceof Error ? error.message : "unknown error" }));
 
-  return true;
+    return true;
+  }
+
+  return false;
 });

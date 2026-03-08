@@ -19,13 +19,13 @@ export function SettingsPage() {
   }, []);
 
   const activeRules = useMemo(() => rules.filter((rule) => rule.enabled), [rules]);
+  const rootCertificateUrl = settings ? `http://127.0.0.1:${settings.localApiPort}/api/certificates/root-ca` : "#";
 
   return (
     <div className="page-stack">
       <section className="page-header">
         <div>
           <h2>{t("settings.title")}</h2>
-          <p>{t("settings.subtitle")}</p>
         </div>
       </section>
 
@@ -34,7 +34,6 @@ export function SettingsPage() {
           <div className="panel-heading">
             <div>
               <h3>{t("settings.servicesTitle")}</h3>
-              <p>{t("settings.servicesShort")}</p>
             </div>
             <span className={status?.online ? "status-badge" : "status-badge warning"}>
               {status?.online ? t("settings.online") : t("settings.offline")}
@@ -59,7 +58,6 @@ export function SettingsPage() {
         <section className="settings-layout-split">
           <section className="panel settings-section">
             <h3>{t("settings.languageTitle")}</h3>
-            <p>{t("settings.languageShort")}</p>
             <div className="settings-language-card">
               <span className="feature-badge">{t("settings.language.current", { locale: t(localeLabelKey) })}</span>
               <div className="settings-segmented">
@@ -71,7 +69,6 @@ export function SettingsPage() {
 
           <section className="panel settings-section">
             <h3>{t("settings.proxyModesTitle")}</h3>
-            <p>{t("settings.proxyModesShort")}</p>
             <div className="meta-list">
               <div>
                 <span>direct</span>
@@ -101,11 +98,22 @@ export function SettingsPage() {
         <section className="settings-layout-split">
           <section className="panel settings-section">
             <h3>{t("settings.httpsTitle")}</h3>
-            <p>{t("settings.httpsShort")}</p>
             <div className="meta-list">
+              <div>
+                <span>{t("settings.httpsMode")}</span>
+                <strong>{t("settings.httpsBody")}</strong>
+              </div>
               <div>
                 <span>{t("settings.certState")}</span>
                 <strong>{settings?.certificateInstalled ? t("settings.certInstalled") : t("settings.certMissing")}</strong>
+              </div>
+              <div>
+                <span>{t("settings.certDownload")}</span>
+                <strong>
+                  <a href={rootCertificateUrl} target="_blank" rel="noreferrer">
+                    {t("settings.certDownloadAction")}
+                  </a>
+                </strong>
               </div>
               <div>
                 <span>{t("settings.macosNote")}</span>
@@ -116,7 +124,6 @@ export function SettingsPage() {
 
           <section className="panel settings-section">
             <h3>{t("settings.mcpTitle")}</h3>
-            <p>{t("settings.mcpShort")}</p>
             <div className="meta-list">
               <div>
                 <span>{t("settings.mcpStatus")}</span>
@@ -132,7 +139,6 @@ export function SettingsPage() {
 
         <section className="panel settings-section">
           <h3>{t("settings.extensionTitle")}</h3>
-          <p>{t("settings.extensionShort")}</p>
           <div className="meta-list">
             <div>
               <span>{t("settings.uiSlots")}</span>

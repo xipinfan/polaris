@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ProxyMode, ProxyRule, ServiceStatus } from "@polaris/shared-types";
 import { useExtensionI18n } from "../i18n/I18nProvider";
-import { applyBrowserProxyMode } from "../../bridge/browserProxyBridge";
+import { applyBrowserProxyMode, openBrowserCertificateSettings } from "../../bridge/browserProxyBridge";
 import { coreBridge } from "../../bridge/coreBridge";
 
 export function Popup() {
@@ -153,6 +153,16 @@ export function Popup() {
             </button>
             <button className="popup-secondary" onClick={() => chrome.tabs.create({ url: "http://127.0.0.1:5173/settings" })}>
               {t("popup.openSettings")}
+            </button>
+            <button
+              className="popup-secondary"
+              onClick={() =>
+                openBrowserCertificateSettings().catch((error) =>
+                  setMessage(error instanceof Error ? error.message : t("popup.error.openCertSettings"))
+                )
+              }
+            >
+              {t("popup.openCertSettings")}
             </button>
           </div>
         </section>

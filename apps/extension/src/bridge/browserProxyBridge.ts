@@ -12,3 +12,13 @@ export async function applyBrowserProxyMode(mode: ProxyMode, status: Pick<Servic
     throw new Error(response?.error ?? "Failed to apply browser proxy mode");
   }
 }
+
+export async function openBrowserCertificateSettings() {
+  const response = await chrome.runtime.sendMessage({
+    type: "open-certificate-settings"
+  });
+
+  if (!response?.ok) {
+    throw new Error(response?.error ?? "Failed to open certificate settings");
+  }
+}

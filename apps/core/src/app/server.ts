@@ -4,6 +4,7 @@ import { createApiRouter } from "../api/routes/createApiRouter";
 import { ExtensionHost } from "../modules/extensions/extensionHost";
 import { MpcServer } from "../modules/mcp/mcpServer";
 import { MockService } from "../modules/mock/mockService";
+import { CertificateManager } from "../modules/proxy/certificateManager";
 import { ProxyEngine } from "../modules/proxy/proxyEngine";
 import { ProxyService } from "../modules/proxy/proxyService";
 import { RequestService } from "../modules/requests/requestService";
@@ -17,24 +18,28 @@ export async function startServers() {
   const proxyService = new ProxyService(storage);
   const mockService = new MockService(storage, extensionHost);
   const requestService = new RequestService(storage, mockService, extensionHost);
-  const proxyEngine = new ProxyEngine(requestService);
+  const certificateManager = new CertificateManager();
+  await certificateManager.init();
+  await proxyService.setCertificateInstalled(await certificateManager.isRootCertificateTrusted());
+  const proxyEngine = new ProxyEngine(requestService, mockService, certificateManager);
   const mcpServer = new MpcServer(requestService, mockService, proxyService);
-  const settings = proxyService.getSettings();
+  const runtimeSettings = proxyService.getSettings();
 
   const apiApp = express();
   apiApp.use(cors());
   apiApp.use(express.json({ limit: "2mb" }));
-  apiApp.use("/api", createApiRouter(requestService, mockService, proxyService));
+  apiApp.use("/api", createApiRouter(requestService, mockService, proxyService, certificateManager));
 
-  const apiServer = apiApp.listen(settings.localApiPort);
-  const proxyServer = proxyEngine.createServer(settings.localProxyPort);
-  const mcpHttpServer = settings.mcpEnabled ? mcpServer.createApp().listen(settings.mcpPort) : undefined;
+  const apiServer = apiApp.listen(runtimeSettings.localApiPort);
+  const proxyServer = proxyEngine.createServer(runtimeSettings.localProxyPort);
+  const mcpHttpServer = runtimeSettings.mcpEnabled ? mcpServer.createApp().listen(runtimeSettings.mcpPort) : undefined;
 
   return {
     apiServer,
     proxyServer,
     mcpHttpServer,
     extensionHost,
+    certificateManager,
     proxyService,
     requestService,
     mockService

@@ -7,18 +7,22 @@ import type {
   UpdateMockRuleInput
 } from "@polaris/shared-contracts";
 import { MockService } from "../../modules/mock/mockService";
+import { CertificateManager } from "../../modules/proxy/certificateManager";
 import { ProxyService } from "../../modules/proxy/proxyService";
 import { RequestService } from "../../modules/requests/requestService";
 
 export function createApiRouter(
   requestService: RequestService,
   mockService: MockService,
-  proxyService: ProxyService
+  proxyService: ProxyService,
+  certificateManager: CertificateManager
 ): Router {
   const router = express.Router();
+  const readSettings = async () =>
+    proxyService.setCertificateInstalled(await certificateManager.isRootCertificateTrusted());
 
-  router.get("/health", (_req, res) => {
-    const settings = proxyService.getSettings();
+  router.get("/health", async (_req, res) => {
+    const settings = await readSettings();
     res.json({
       data: {
         online: true,
@@ -33,8 +37,8 @@ export function createApiRouter(
     });
   });
 
-  router.get("/bootstrap", (_req, res) => {
-    const settings = proxyService.getSettings();
+  router.get("/bootstrap", async (_req, res) => {
+    const settings = await readSettings();
     res.json({
       data: {
         status: {
@@ -151,12 +155,17 @@ export function createApiRouter(
     res.json({ data: await requestService.run(req.body as RunRequestInput) });
   });
 
-  router.get("/settings", (_req, res) => {
-    res.json({ data: proxyService.getSettings() });
+  router.get("/settings", async (_req, res) => {
+    res.json({ data: await readSettings() });
   });
 
   router.get("/proxy/pac", (_req, res) => {
     res.type("application/x-ns-proxy-autoconfig").send(proxyService.generatePacScript());
+  });
+
+  router.get("/certificates/root-ca", async (_req, res) => {
+    res.setHeader("Content-Disposition", 'attachment; filename="polaris-root-ca.crt"');
+    res.type("application/x-x509-ca-cert").send(await certificateManager.getRootCertificatePem());
   });
 
   return router;

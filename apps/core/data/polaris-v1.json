@@ -9,6 +9,28 @@
   },
   "requests": [
     {
+      "id": "fdf3a180-e5ef-4f64-a76e-fa80ad6afc10",
+      "method": "GET",
+      "url": "https://polaris.local/demo",
+      "host": "polaris.local",
+      "path": "/demo",
+      "statusCode": 200,
+      "duration": 3,
+      "requestHeaders": {},
+      "requestQuery": {},
+      "requestBody": null,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "responseBody": {
+        "ok": true,
+        "from": "mock"
+      },
+      "createdAt": "2026-03-08T16:14:17.251Z",
+      "source": "debug",
+      "secure": true
+    },
+    {
       "id": "8a15f67d-b80e-4c91-b66f-093850e91e53",
       "method": "GET",
       "url": "https://polaris.local/demo",
@@ -1065,101 +1087,6 @@
   ],
   "mockRules": [
     {
-      "id": "2b25658e-68d6-48c1-8109-85b3dfd16a8b",
-      "name": "demo-mock",
-      "method": "GET",
-      "url": "https://polaris.local/demo",
-      "responseStatus": 200,
-      "responseHeaders": {
-        "content-type": "application/json"
-      },
-      "responseBody": {
-        "ok": true,
-        "from": "mock"
-      },
-      "enabled": true,
-      "hitCount": 4,
-      "createdAt": "2026-03-08T03:34:19.478Z",
-      "updatedAt": "2026-03-08T13:07:30.907Z",
-      "lastHitAt": "2026-03-08T13:07:30.907Z"
-    },
-    {
-      "id": "ac7832c9-c5d0-48a8-9ad1-3094c6926bff",
-      "name": "smoke-mock",
-      "method": "GET",
-      "url": "https://polaris.local/smoke",
-      "responseStatus": 200,
-      "responseHeaders": {
-        "content-type": "application/json"
-      },
-      "responseBody": {
-        "ok": true,
-        "source": "smoke-test"
-      },
-      "enabled": false,
-      "hitCount": 2,
-      "createdAt": "2026-03-08T04:05:17.733Z",
-      "updatedAt": "2026-03-08T06:36:49.941Z",
-      "lastHitAt": "2026-03-08T04:05:17.753Z"
-    },
-    {
-      "id": "36f46b42-6e34-414d-9c88-3ae9dfe48d6f",
-      "name": "smoke-mock",
-      "method": "GET",
-      "url": "https://polaris.local/smoke",
-      "responseStatus": 200,
-      "responseHeaders": {
-        "content-type": "application/json"
-      },
-      "responseBody": {
-        "ok": true,
-        "source": "smoke-test"
-      },
-      "enabled": false,
-      "hitCount": 2,
-      "createdAt": "2026-03-08T04:00:56.551Z",
-      "updatedAt": "2026-03-08T06:36:49.941Z",
-      "lastHitAt": "2026-03-08T04:00:56.562Z"
-    },
-    {
-      "id": "fb994dd1-a079-408d-aee7-fceea43060c7",
-      "name": "smoke-mock",
-      "method": "GET",
-      "url": "https://polaris.local/smoke",
-      "responseStatus": 200,
-      "responseHeaders": {
-        "content-type": "application/json"
-      },
-      "responseBody": {
-        "ok": true,
-        "source": "smoke-test"
-      },
-      "enabled": false,
-      "hitCount": 2,
-      "createdAt": "2026-03-08T03:57:57.937Z",
-      "updatedAt": "2026-03-08T06:36:49.941Z",
-      "lastHitAt": "2026-03-08T03:57:57.956Z"
-    },
-    {
-      "id": "85394501-167f-47d0-8783-87d02ee93a31",
-      "name": "smoke-mock",
-      "method": "GET",
-      "url": "https://polaris.local/smoke",
-      "responseStatus": 200,
-      "responseHeaders": {
-        "content-type": "application/json"
-      },
-      "responseBody": {
-        "ok": true,
-        "source": "smoke-test"
-      },
-      "enabled": false,
-      "hitCount": 2,
-      "createdAt": "2026-03-08T03:55:24.860Z",
-      "updatedAt": "2026-03-08T06:36:49.941Z",
-      "lastHitAt": "2026-03-08T03:55:24.880Z"
-    },
-    {
       "id": "86a0469e-3e0e-4e44-88b5-9322d0f61949",
       "name": "smoke-mock",
       "method": "GET",
@@ -1175,84 +1102,8 @@
       "enabled": false,
       "hitCount": 2,
       "createdAt": "2026-03-08T03:51:44.898Z",
-      "updatedAt": "2026-03-08T06:36:49.941Z",
+      "updatedAt": "2026-03-08T16:14:14.059Z",
       "lastHitAt": "2026-03-08T03:51:44.906Z"
-    },
-    {
-      "id": "7e5896e3-34de-4dd6-895a-9ded99a58a86",
-      "name": "smoke-mock",
-      "method": "GET",
-      "url": "https://polaris.local/smoke",
-      "responseStatus": 200,
-      "responseHeaders": {
-        "content-type": "application/json"
-      },
-      "responseBody": {
-        "ok": true,
-        "source": "smoke-test"
-      },
-      "enabled": false,
-      "hitCount": 2,
-      "createdAt": "2026-03-08T03:51:24.720Z",
-      "updatedAt": "2026-03-08T06:36:49.941Z",
-      "lastHitAt": "2026-03-08T03:51:24.729Z"
-    },
-    {
-      "id": "7fa86819-b2ce-4c53-a750-95dab68633a1",
-      "name": "smoke-mock",
-      "method": "GET",
-      "url": "https://polaris.local/smoke",
-      "responseStatus": 200,
-      "responseHeaders": {
-        "content-type": "application/json"
-      },
-      "responseBody": {
-        "ok": true,
-        "source": "smoke-test"
-      },
-      "enabled": false,
-      "hitCount": 2,
-      "createdAt": "2026-03-08T03:50:56.903Z",
-      "updatedAt": "2026-03-08T06:36:49.941Z",
-      "lastHitAt": "2026-03-08T03:50:56.915Z"
-    },
-    {
-      "id": "a83a6da1-0492-418c-bd4d-4f32c332dfa1",
-      "name": "smoke-mock",
-      "method": "GET",
-      "url": "https://polaris.local/smoke",
-      "responseStatus": 200,
-      "responseHeaders": {
-        "content-type": "application/json"
-      },
-      "responseBody": {
-        "ok": true,
-        "source": "smoke-test"
-      },
-      "enabled": false,
-      "hitCount": 2,
-      "createdAt": "2026-03-08T03:50:35.629Z",
-      "updatedAt": "2026-03-08T06:36:49.941Z",
-      "lastHitAt": "2026-03-08T03:50:35.637Z"
-    },
-    {
-      "id": "b120a521-d41d-473c-a8e2-cb358ceca11a",
-      "name": "smoke-mock",
-      "method": "GET",
-      "url": "https://polaris.local/smoke",
-      "responseStatus": 200,
-      "responseHeaders": {
-        "content-type": "application/json"
-      },
-      "responseBody": {
-        "ok": true,
-        "source": "smoke-test"
-      },
-      "enabled": false,
-      "hitCount": 2,
-      "createdAt": "2026-03-08T03:47:00.194Z",
-      "updatedAt": "2026-03-08T06:36:49.941Z",
-      "lastHitAt": "2026-03-08T03:47:00.205Z"
     },
     {
       "id": "97a1c29d-693c-4f7e-a9ef-19aa8e210ef2",
@@ -1270,8 +1121,179 @@
       "enabled": false,
       "hitCount": 2,
       "createdAt": "2026-03-08T03:40:24.091Z",
-      "updatedAt": "2026-03-08T06:36:49.941Z",
+      "updatedAt": "2026-03-08T16:14:14.059Z",
       "lastHitAt": "2026-03-08T03:40:24.111Z"
+    },
+    {
+      "id": "fb994dd1-a079-408d-aee7-fceea43060c7",
+      "name": "smoke-mock",
+      "method": "GET",
+      "url": "https://polaris.local/smoke",
+      "responseStatus": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "responseBody": {
+        "ok": true,
+        "source": "smoke-test"
+      },
+      "enabled": false,
+      "hitCount": 2,
+      "createdAt": "2026-03-08T03:57:57.937Z",
+      "updatedAt": "2026-03-08T16:14:14.059Z",
+      "lastHitAt": "2026-03-08T03:57:57.956Z"
+    },
+    {
+      "id": "ac7832c9-c5d0-48a8-9ad1-3094c6926bff",
+      "name": "smoke-mock",
+      "method": "GET",
+      "url": "https://polaris.local/smoke",
+      "responseStatus": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "responseBody": {
+        "ok": true,
+        "source": "smoke-test"
+      },
+      "enabled": false,
+      "hitCount": 2,
+      "createdAt": "2026-03-08T04:05:17.733Z",
+      "updatedAt": "2026-03-08T16:14:14.059Z",
+      "lastHitAt": "2026-03-08T04:05:17.753Z"
+    },
+    {
+      "id": "7fa86819-b2ce-4c53-a750-95dab68633a1",
+      "name": "smoke-mock",
+      "method": "GET",
+      "url": "https://polaris.local/smoke",
+      "responseStatus": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "responseBody": {
+        "ok": true,
+        "source": "smoke-test"
+      },
+      "enabled": false,
+      "hitCount": 2,
+      "createdAt": "2026-03-08T03:50:56.903Z",
+      "updatedAt": "2026-03-08T16:14:14.059Z",
+      "lastHitAt": "2026-03-08T03:50:56.915Z"
+    },
+    {
+      "id": "7e5896e3-34de-4dd6-895a-9ded99a58a86",
+      "name": "smoke-mock",
+      "method": "GET",
+      "url": "https://polaris.local/smoke",
+      "responseStatus": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "responseBody": {
+        "ok": true,
+        "source": "smoke-test"
+      },
+      "enabled": false,
+      "hitCount": 2,
+      "createdAt": "2026-03-08T03:51:24.720Z",
+      "updatedAt": "2026-03-08T16:14:14.059Z",
+      "lastHitAt": "2026-03-08T03:51:24.729Z"
+    },
+    {
+      "id": "a83a6da1-0492-418c-bd4d-4f32c332dfa1",
+      "name": "smoke-mock",
+      "method": "GET",
+      "url": "https://polaris.local/smoke",
+      "responseStatus": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "responseBody": {
+        "ok": true,
+        "source": "smoke-test"
+      },
+      "enabled": false,
+      "hitCount": 2,
+      "createdAt": "2026-03-08T03:50:35.629Z",
+      "updatedAt": "2026-03-08T16:14:14.059Z",
+      "lastHitAt": "2026-03-08T03:50:35.637Z"
+    },
+    {
+      "id": "36f46b42-6e34-414d-9c88-3ae9dfe48d6f",
+      "name": "smoke-mock",
+      "method": "GET",
+      "url": "https://polaris.local/smoke",
+      "responseStatus": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "responseBody": {
+        "ok": true,
+        "source": "smoke-test"
+      },
+      "enabled": false,
+      "hitCount": 2,
+      "createdAt": "2026-03-08T04:00:56.551Z",
+      "updatedAt": "2026-03-08T16:14:14.059Z",
+      "lastHitAt": "2026-03-08T04:00:56.562Z"
+    },
+    {
+      "id": "b120a521-d41d-473c-a8e2-cb358ceca11a",
+      "name": "smoke-mock",
+      "method": "GET",
+      "url": "https://polaris.local/smoke",
+      "responseStatus": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "responseBody": {
+        "ok": true,
+        "source": "smoke-test"
+      },
+      "enabled": false,
+      "hitCount": 2,
+      "createdAt": "2026-03-08T03:47:00.194Z",
+      "updatedAt": "2026-03-08T16:14:14.059Z",
+      "lastHitAt": "2026-03-08T03:47:00.205Z"
+    },
+    {
+      "id": "2b25658e-68d6-48c1-8109-85b3dfd16a8b",
+      "name": "demo-mock",
+      "method": "GET",
+      "url": "https://polaris.local/demo",
+      "responseStatus": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "responseBody": {
+        "ok": true,
+        "from": "mock"
+      },
+      "enabled": false,
+      "hitCount": 4,
+      "createdAt": "2026-03-08T03:34:19.478Z",
+      "updatedAt": "2026-03-08T16:14:14.059Z",
+      "lastHitAt": "2026-03-08T13:07:30.907Z"
+    },
+    {
+      "id": "85394501-167f-47d0-8783-87d02ee93a31",
+      "name": "smoke-mock",
+      "method": "GET",
+      "url": "https://polaris.local/smoke",
+      "responseStatus": 200,
+      "responseHeaders": {
+        "content-type": "application/json"
+      },
+      "responseBody": {
+        "ok": true,
+        "source": "smoke-test"
+      },
+      "enabled": false,
+      "hitCount": 2,
+      "createdAt": "2026-03-08T03:55:24.860Z",
+      "updatedAt": "2026-03-08T16:14:14.058Z",
+      "lastHitAt": "2026-03-08T03:55:24.880Z"
     },
     {
       "id": "f3480333-1328-40cb-b001-4ec170dcc37d",
@@ -1286,11 +1308,11 @@
         "ok": true,
         "from": "mock"
       },
-      "enabled": false,
-      "hitCount": 1,
+      "enabled": true,
+      "hitCount": 2,
       "createdAt": "2026-03-08T03:34:05.342Z",
-      "updatedAt": "2026-03-08T03:34:19.485Z",
-      "lastHitAt": "2026-03-08T03:34:05.380Z"
+      "updatedAt": "2026-03-08T16:14:17.248Z",
+      "lastHitAt": "2026-03-08T16:14:17.248Z"
     }
   ],
   "proxyRules": [
