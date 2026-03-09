@@ -7,4 +7,5 @@ export interface AppSetting {
   currentProxyMode: ProxyMode;
   certificateInstalled: boolean;
   mcpEnabled: boolean;
+  activeMockGroup: string | null;
 }

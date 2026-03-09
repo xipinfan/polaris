@@ -1,12 +1,15 @@
 import { formatJson } from "@polaris/shared-utils";
+import { useToast } from "../feedback/ToastProvider";
 import { useConsoleI18n } from "../../i18n/I18nProvider";
 
 export function JsonBlock({ title, value }: { title: string; value: unknown }) {
   const { t } = useConsoleI18n();
+  const { showToast } = useToast();
   const formatted = formatJson(value ?? {});
 
   const copy = async () => {
     await navigator.clipboard.writeText(formatted);
+    showToast(t("common.copied"));
   };
 
   return (

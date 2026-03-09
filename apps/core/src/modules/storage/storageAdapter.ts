@@ -39,21 +39,31 @@ export class StorageAdapter {
     try {
       const raw = await readFile(storageFile, "utf8");
       const parsed = JSON.parse(raw) as Partial<StorageSnapshot>;
+      const hadPersistedRequests =
+        Array.isArray(parsed.requests) && parsed.requests.length > 0;
       this.snapshot = {
         ...emptySnapshot,
         ...parsed,
+        requests: [],
         settings: {
           ...(parsed.settings ?? {}),
           ...defaultSettings
         }
       };
+      if (hadPersistedRequests) {
+        await this.persist();
+      }
     } catch {
       await this.persist();
     }
   }
 
   private async persist(): Promise<void> {
-    await writeFile(storageFile, JSON.stringify(this.snapshot, null, 2), "utf8");
+    await writeFile(
+      storageFile,
+      JSON.stringify({ ...this.snapshot, requests: [] }, null, 2),
+      "utf8",
+    );
   }
 
   getSettings(): AppSetting {
@@ -71,7 +81,10 @@ export class StorageAdapter {
 
   async appendRequest(request: RequestRecord): Promise<void> {
     this.snapshot.requests = [request, ...this.snapshot.requests].slice(0, 200);
-    await this.persist();
+  }
+
+  clearRequests(): void {
+    this.snapshot.requests = [];
   }
 
   getSavedRequests(): SavedRequest[] {

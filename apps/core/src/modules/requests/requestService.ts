@@ -9,20 +9,20 @@ import { ExtensionHost } from "../extensions/extensionHost";
 import { MockService } from "../mock/mockService";
 import { StorageAdapter } from "../storage/storageAdapter";
 import { normalizeBody } from "../../shared/normalizeBody";
+import {
+  normalizeCapturedBody,
+  parseSearchParamsRecord,
+} from "../../shared/requestParsing";
 
-function parseQuery(url: string): Record<string, string> {
+function parseQuery(url: string) {
   const parsed = new URL(url);
-  return Object.fromEntries(parsed.searchParams.entries());
+  return parseSearchParamsRecord(parsed.searchParams);
 }
 
 async function readResponseBody(response: Response): Promise<unknown> {
-  const text = await response.text();
-
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
+  const headers = Object.fromEntries(response.headers.entries());
+  const buffer = Buffer.from(await response.arrayBuffer());
+  return normalizeCapturedBody(buffer, headers);
 }
 
 export class RequestService {
@@ -57,6 +57,10 @@ export class RequestService {
   async capture(record: RequestRecord): Promise<void> {
     await this.extensionHost.emit("onRequestCaptured", record);
     await this.storage.appendRequest(record);
+  }
+
+  clear(): void {
+    this.storage.clearRequests();
   }
 
   listSaved(): SavedRequest[] {
@@ -131,7 +135,7 @@ export class RequestService {
         statusCode: mockRule.responseStatus,
         duration: Date.now() - startedAt,
         requestHeaders: input.headers ?? {},
-        requestQuery: Object.fromEntries(requestUrl.searchParams.entries()),
+        requestQuery: parseSearchParamsRecord(requestUrl.searchParams),
         requestBody: normalizeBody(input.body),
         responseHeaders: mockRule.responseHeaders,
         responseBody: mockRule.responseBody,
@@ -161,7 +165,7 @@ export class RequestService {
       statusCode: response.status,
       duration: Date.now() - startedAt,
       requestHeaders: input.headers ?? {},
-      requestQuery: Object.fromEntries(requestUrl.searchParams.entries()),
+      requestQuery: parseSearchParamsRecord(requestUrl.searchParams),
       requestBody: normalizeBody(input.body),
       responseHeaders: Object.fromEntries(response.headers.entries()),
       responseBody: normalizeBody(responseBody),

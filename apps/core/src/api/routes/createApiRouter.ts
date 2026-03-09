@@ -4,6 +4,7 @@ import type {
   RequestFilters,
   RunRequestInput,
   SaveRequestInput,
+  SetActiveMockGroupInput,
   UpdateMockRuleInput
 } from "@polaris/shared-contracts";
 import { MockService } from "../../modules/mock/mockService";
@@ -70,6 +71,11 @@ export function createApiRouter(
     res.json({ data: requestService.list(filters) });
   });
 
+  router.delete("/requests", (_req, res) => {
+    requestService.clear();
+    res.json({ data: { cleared: true } });
+  });
+
   router.get("/requests/:id", (req, res) => {
     const result = requestService.getById(req.params.id);
     if (!result) {
@@ -132,6 +138,15 @@ export function createApiRouter(
 
   router.post("/mock-rules/:id/enable", async (req, res) => {
     res.json({ data: await mockService.toggle(req.params.id, Boolean(req.body.enabled)) });
+  });
+
+  router.get("/mock-groups/active", (_req, res) => {
+    res.json({ data: { group: mockService.getActiveGroup() } });
+  });
+
+  router.post("/mock-groups/active", async (req, res) => {
+    const { group } = req.body as SetActiveMockGroupInput;
+    res.json({ data: { group: await mockService.setActiveGroup(group) } });
   });
 
   router.get("/proxy-rules", (_req, res) => {

@@ -2,11 +2,14 @@ import http from "node:http";
 import https from "node:https";
 import net from "node:net";
 import type { Duplex } from "node:stream";
-import zlib from "node:zlib";
 import { randomUUID } from "node:crypto";
 import type { IncomingMessage, RequestOptions, ServerResponse } from "node:http";
 import type { RequestRecord } from "@polaris/shared-types";
 import { normalizeBody } from "../../shared/normalizeBody";
+import {
+  normalizeCapturedBody,
+  parseSearchParamsRecord,
+} from "../../shared/requestParsing";
 import { MockService } from "../mock/mockService";
 import { RequestService } from "../requests/requestService";
 import { CertificateManager } from "./certificateManager";
@@ -41,59 +44,6 @@ function sanitizeProxyHeaders(headers: IncomingMessage["headers"]): Record<strin
   delete nextHeaders["transfer-encoding"];
   delete nextHeaders["upgrade"];
   return nextHeaders;
-}
-
-function decodeContent(buffer: Buffer, encoding?: string): Buffer {
-  const normalized = encoding?.toLowerCase();
-  if (!normalized || normalized === "identity") {
-    return buffer;
-  }
-
-  try {
-    if (normalized.includes("gzip")) {
-      return zlib.gunzipSync(buffer);
-    }
-    if (normalized.includes("deflate")) {
-      return zlib.inflateSync(buffer);
-    }
-    if (normalized.includes("br")) {
-      return zlib.brotliDecompressSync(buffer);
-    }
-  } catch {
-    return buffer;
-  }
-
-  return buffer;
-}
-
-function normalizeCapturedBody(buffer: Buffer, headers: Record<string, string>) {
-  if (!buffer.length) {
-    return null;
-  }
-
-  const decoded = decodeContent(buffer, headers["content-encoding"]);
-  const contentType = (headers["content-type"] ?? "").toLowerCase();
-  const isTextual =
-    contentType.includes("json") ||
-    contentType.includes("text/") ||
-    contentType.includes("xml") ||
-    contentType.includes("javascript") ||
-    contentType.includes("x-www-form-urlencoded");
-
-  if (!isTextual) {
-    return `[binary ${decoded.length} bytes]`;
-  }
-
-  const text = decoded.toString("utf8");
-  if (contentType.includes("json")) {
-    try {
-      return JSON.parse(text);
-    } catch {
-      return text;
-    }
-  }
-
-  return text;
 }
 
 export class ProxyEngine {
@@ -195,7 +145,7 @@ export class ProxyEngine {
         statusCode: mockRule.responseStatus,
         duration: Date.now() - startedAt,
         requestHeaders,
-        requestQuery: Object.fromEntries(targetUrl.searchParams.entries()),
+        requestQuery: parseSearchParamsRecord(targetUrl.searchParams),
         requestBody: normalizeCapturedBody(requestBuffer, requestHeaders),
         responseHeaders: mockRule.responseHeaders,
         responseBody: normalizeBody(mockRule.responseBody),
@@ -237,7 +187,7 @@ export class ProxyEngine {
           statusCode: proxyRes.statusCode ?? 0,
           duration: Date.now() - startedAt,
           requestHeaders,
-          requestQuery: Object.fromEntries(targetUrl.searchParams.entries()),
+          requestQuery: parseSearchParamsRecord(targetUrl.searchParams),
           requestBody: normalizeCapturedBody(requestBuffer, requestHeaders),
           responseHeaders,
           responseBody,

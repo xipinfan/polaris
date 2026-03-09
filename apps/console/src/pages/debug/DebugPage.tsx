@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import type { RequestRecord } from "@polaris/shared-types";
 import { buildCurl } from "../../features/common/curl";
+import { useToast } from "../../features/feedback/ToastProvider";
 import { JsonBlock } from "../../features/common/JsonBlock";
 import { useConsoleI18n } from "../../i18n/I18nProvider";
 import { UiSlotPlaceholder } from "../../features/slots/UiSlotPlaceholder";
@@ -26,8 +27,8 @@ export function DebugPage() {
   const [body, setBody] = useState("");
   const [name, setName] = useState("");
   const [response, setResponse] = useState<RequestRecord | null>(null);
-  const [message, setMessage] = useState("");
   const { t } = useConsoleI18n();
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (!routeState?.draft) {
@@ -39,8 +40,8 @@ export function DebugPage() {
     setMethod(draft.method);
     setUrl(draft.url);
     setBody(JSON.stringify(draft.body ?? {}, null, 2));
-    setMessage(t("common.draftLoaded"));
-  }, [routeState, t]);
+    showToast(t("common.draftLoaded"));
+  }, [routeState, showToast, t]);
 
   const parsedBody = () => {
     if (method === "GET") {
@@ -69,12 +70,12 @@ export function DebugPage() {
       body: parsedBody()
     });
     setResponse(result);
-    setMessage(t("common.requestSent", { status: result.statusCode }));
+    showToast(t("common.requestSent", { status: result.statusCode }));
   };
 
   const saveDraft = async () => {
     await apiClient.saveManualRequest(currentDraft);
-    setMessage(t("common.savedRequest", { name: currentDraft.name }));
+    showToast(t("common.savedRequest", { name: currentDraft.name }));
   };
 
   const resetDraft = () => {
@@ -83,7 +84,7 @@ export function DebugPage() {
     setUrl("");
     setBody("");
     setResponse(null);
-    setMessage(t("common.debugCleared"));
+    showToast(t("common.debugCleared"));
   };
 
   return (
@@ -92,7 +93,6 @@ export function DebugPage() {
         <div>
           <h2>{t("debug.title")}</h2>
         </div>
-        {message ? <div className="panel banner-panel">{message}</div> : null}
       </section>
 
       <UiSlotPlaceholder slot="debug-header" />
@@ -125,8 +125,9 @@ export function DebugPage() {
               type="button"
               className="ghost-button"
               onClick={() => {
-                navigator.clipboard.writeText(buildCurl(currentDraft));
-                setMessage(t("common.curlCopied"));
+                void navigator.clipboard
+                  .writeText(buildCurl(currentDraft))
+                  .then(() => showToast(t("common.curlCopied")));
               }}
             >
               {t("debug.copyCurl")}

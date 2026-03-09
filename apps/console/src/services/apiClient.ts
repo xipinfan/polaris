@@ -35,6 +35,7 @@ export const apiClient = {
   bootstrap: () => request<ServiceSnapshot>("/bootstrap"),
   health: () => request<ServiceStatus>("/health"),
   listRequests: (params?: URLSearchParams) => request<RequestRecord[]>(`/requests${params ? `?${params.toString()}` : ""}`),
+  clearRequests: () => request<{ cleared: true }>("/requests", { method: "DELETE" }),
   getRequest: (id: string) => request<RequestRecord>(`/requests/${id}`),
   saveCapturedRequest: (id: string, body: SaveRequestInput) =>
     request<SavedRequest>(`/requests/${id}/save`, { method: "POST", body: JSON.stringify(body) }),
@@ -54,6 +55,9 @@ export const apiClient = {
   deleteMockRule: (id: string) => request<{ id: string }>(`/mock-rules/${id}`, { method: "DELETE" }),
   enableMockRule: (id: string, enabled: boolean) =>
     request<MockRule>(`/mock-rules/${id}/enable`, { method: "POST", body: JSON.stringify({ enabled }) }),
+  getActiveMockGroup: () => request<{ group: string | null }>("/mock-groups/active"),
+  setActiveMockGroup: (group: string | null) =>
+    request<{ group: string | null }>("/mock-groups/active", { method: "POST", body: JSON.stringify({ group }) }),
   listProxyRules: () => request<ProxyRule[]>("/proxy-rules"),
   setProxyMode: (mode: ProxyMode) =>
     request<{ mode: ProxyMode }>("/proxy-mode", { method: "POST", body: JSON.stringify({ mode }) }),

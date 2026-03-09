@@ -50,6 +50,10 @@ export interface ToggleMockRuleInput {
   enabled: boolean;
 }
 
+export interface SetActiveMockGroupInput {
+  group: string | null;
+}
+
 export interface ServiceSnapshot {
   status: ServiceStatus;
   settings: AppSetting;
@@ -72,6 +76,10 @@ export interface CoreApiContract {
   "/api/mock-rules": { get: ApiEnvelope<MockRule[]>; post: ApiEnvelope<MockRule> & { body: CreateMockRuleInput } };
   "/api/mock-rules/:id": { put: ApiEnvelope<MockRule> & { body: UpdateMockRuleInput }; delete: ApiEnvelope<{ id: string }> };
   "/api/mock-rules/:id/enable": { post: ApiEnvelope<MockRule> & { body: ToggleMockRuleInput } };
+  "/api/mock-groups/active": {
+    get: ApiEnvelope<{ group: string | null }>;
+    post: ApiEnvelope<{ group: string | null }> & { body: SetActiveMockGroupInput };
+  };
   "/api/proxy-rules": { get: ApiEnvelope<ProxyRule[]> };
   "/api/proxy-rules/site": { post: ApiEnvelope<ProxyRule> & { body: { host: string; action: "proxy" | "direct" } } };
   "/api/proxy-rules/site/:host": { delete: ApiEnvelope<{ host: string }> };

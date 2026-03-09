@@ -11,6 +11,7 @@ import type { AppSetting, RequestRecord } from "@polaris/shared-types";
 import { buildCurl } from "../../features/common/curl";
 import { JsonBlock } from "../../features/common/JsonBlock";
 import { KeyValueBlock } from "../../features/common/KeyValueBlock";
+import { useToast } from "../../features/feedback/ToastProvider";
 import { useConsoleI18n } from "../../i18n/I18nProvider";
 import { apiClient } from "../../services/apiClient";
 
@@ -67,16 +68,18 @@ export function TrafficPage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [isCertificateModalOpen, setIsCertificateModalOpen] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string>();
-  const [message, setMessage] = useState("");
   const deferredKeyword = useDeferredValue(keyword);
   const navigate = useNavigate();
   const { t } = useConsoleI18n();
+  const { showToast } = useToast();
   const latestLoadId = useRef(0);
   const recordBodyRef = useRef<HTMLDivElement | null>(null);
   const inspectorBodyRef = useRef<HTMLDivElement | null>(null);
   const previousVisibleCountRef = useRef(0);
+  const userPinnedSelectionRef = useRef(false);
   const copyText = async (value: string) => {
     await navigator.clipboard.writeText(value);
+    showToast(t("common.copied"));
   };
 
   const certificatePlatform = useMemo<CertificatePlatform>(() => {
@@ -216,7 +219,11 @@ export function TrafficPage() {
       return;
     }
 
-    if (nextCount > previousVisibleCountRef.current && recordBodyRef.current) {
+    if (
+      nextCount > previousVisibleCountRef.current &&
+      recordBodyRef.current &&
+      !userPinnedSelectionRef.current
+    ) {
       recordBodyRef.current.scrollTop = recordBodyRef.current.scrollHeight;
     }
 
@@ -252,7 +259,7 @@ export function TrafficPage() {
       return;
     }
     const replayed = await apiClient.replayCapturedRequest(selected.id);
-    setMessage(t("common.replayedRequest", { status: replayed.statusCode }));
+    showToast(t("common.replayedRequest", { status: replayed.statusCode }));
     await load();
   };
 
@@ -267,12 +274,20 @@ export function TrafficPage() {
     });
   };
 
+  const clearRequests = async () => {
+    await apiClient.clearRequests();
+    userPinnedSelectionRef.current = false;
+    setRequests([]);
+    setSelectedId(undefined);
+    showToast(t("common.cleared"));
+  };
+
   const copyCurl = async () => {
     if (!selected) {
       return;
     }
     await navigator.clipboard.writeText(buildCurl(selected));
-    setMessage(t("common.curlCopied"));
+    showToast(t("common.curlCopied"));
   };
 
   const openInDebug = () => {
@@ -323,7 +338,9 @@ export function TrafficPage() {
             </button>
             <button
               className="traffic-button traffic-toolbar-button"
-              onClick={() => setRequests([])}
+              onClick={() => {
+                void clearRequests();
+              }}
               disabled={requests.length === 0}
               type="button"
             >
@@ -342,18 +359,6 @@ export function TrafficPage() {
               type="button"
             >
               {t("traffic.action.mock")}
-            </button>
-            <button
-              className="traffic-button traffic-toolbar-button"
-              onClick={() =>
-                navigator.clipboard
-                  .writeText(JSON.stringify(visibleRequests, null, 2))
-                  .then(() => setMessage(t("traffic.exported")))
-              }
-              disabled={visibleRequests.length === 0}
-              type="button"
-            >
-              {t("traffic.toolbar.export")}
             </button>
           </div>
 
@@ -398,9 +403,6 @@ export function TrafficPage() {
           </small>
         </div>
       </section>
-
-      {message ? <div className="panel banner-panel">{message}</div> : null}
-
       {isCertificateModalOpen ? (
         <div
           className="traffic-modal-overlay"
@@ -497,7 +499,7 @@ export function TrafficPage() {
                 className="traffic-button traffic-button-secondary"
                 onClick={() => {
                   void navigator.clipboard.writeText(rootCertificateUrl);
-                  setMessage(t("traffic.certificate.copied"));
+                  showToast(t("traffic.certificate.copied"));
                 }}
                 type="button"
               >
@@ -596,7 +598,10 @@ export function TrafficPage() {
                 <button
                   key={item.id}
                   className={`traffic-record-row ${selected?.id === item.id ? "active" : ""} ${item.statusCode >= 400 ? "warning-row" : ""}`}
-                  onClick={() => setSelectedId(item.id)}
+                  onClick={() => {
+                    userPinnedSelectionRef.current = true;
+                    setSelectedId(item.id);
+                  }}
                   type="button"
                 >
                   <span>{index + 1}</span>
@@ -990,15 +995,15 @@ export function TrafficPage() {
                 </div>
                 <p>{t("traffic.composerBody")}</p>
                 <div className="traffic-composer-preview">
-                  <div>
+                  <div className="traffic-composer-preview-row">
                     <span>{t("traffic.column.method")}</span>
                     <strong>{selected.method}</strong>
                   </div>
-                  <div>
+                  <div className="traffic-composer-preview-row">
                     <span>{t("traffic.column.host")}</span>
                     <strong>{selected.host}</strong>
                   </div>
-                  <div>
+                  <div className="traffic-composer-preview-row">
                     <span>{t("traffic.column.path")}</span>
                     <strong>{selected.path}</strong>
                   </div>
@@ -1044,7 +1049,6 @@ export function TrafficPage() {
                   <strong>{t("mock.title")}</strong>
                   <span className="status-badge muted">{selected.host}</span>
                 </div>
-                <p>{t("mock.subtitle")}</p>
                 <div className="traffic-action-panel-grid">
                   <button
                     className="traffic-button traffic-button-primary"
@@ -1077,7 +1081,7 @@ export function TrafficPage() {
                 </div>
               </div>
               <div className="traffic-tool-grid">
-                <div className="traffic-tool-card">
+                <div className="traffic-tool-card traffic-tool-card-stacked">
                   <div className="list-row">
                     <strong>{t("mock.variantsTitle")}</strong>
                     <span className="feature-badge">
@@ -1103,7 +1107,7 @@ export function TrafficPage() {
                   </div>
                 </div>
 
-                <div className="traffic-tool-card">
+                <div className="traffic-tool-card traffic-tool-card-stacked">
                   <div className="list-row">
                     <strong>{t("traffic.diagnosisTitle")}</strong>
                     <span

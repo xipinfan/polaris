@@ -15,5 +15,6 @@ export const defaultSettings: AppSetting = {
   mcpPort: envNumber("POLARIS_MCP_PORT", 9002),
   currentProxyMode: (process.env.POLARIS_PROXY_MODE as AppSetting["currentProxyMode"]) ?? "direct",
   certificateInstalled: false,
-  mcpEnabled: process.env.POLARIS_MCP_ENABLED === "false" ? false : true
+  mcpEnabled: process.env.POLARIS_MCP_ENABLED === "false" ? false : true,
+  activeMockGroup: null
 };

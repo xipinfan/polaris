@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { ServiceSnapshot } from "@polaris/shared-contracts";
+import { useToast } from "../../features/feedback/ToastProvider";
 import { useConsoleI18n } from "../../i18n/I18nProvider";
 import { apiClient } from "../../services/apiClient";
 
 export function HomePage() {
   const [snapshot, setSnapshot] = useState<ServiceSnapshot | null>(null);
-  const [message, setMessage] = useState("");
   const navigate = useNavigate();
   const { t } = useConsoleI18n();
+  const { showToast } = useToast();
 
   const load = () =>
     apiClient.bootstrap().then(setSnapshot).catch(console.error);
@@ -19,7 +20,7 @@ export function HomePage() {
 
   const setProxyMode = async (mode: "direct" | "rules") => {
     await apiClient.setProxyMode(mode);
-    setMessage(
+    showToast(
       mode === "direct"
         ? t("common.switchedDirect")
         : t("common.switchedRules"),
@@ -49,7 +50,6 @@ export function HomePage() {
         <div>
           <h2>{t("home.title")}</h2>
         </div>
-        {message ? <div className="panel banner-panel">{message}</div> : null}
       </section>
 
       {!snapshot ? (

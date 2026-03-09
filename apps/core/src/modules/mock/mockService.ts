@@ -5,6 +5,13 @@ import { ExtensionHost } from "../extensions/extensionHost";
 import { StorageAdapter } from "../storage/storageAdapter";
 import { normalizeBody } from "../../shared/normalizeBody";
 
+const groupNamePattern = /^\[(.+?)\]\s*(.+)$/;
+
+function getRuleGroup(rule: MockRule): string | null {
+  const match = rule.name.match(groupNamePattern);
+  return match?.[1]?.trim() || null;
+}
+
 export class MockService {
   constructor(
     private readonly storage: StorageAdapter,
@@ -15,24 +22,16 @@ export class MockService {
     return this.storage.getMockRules();
   }
 
-  private async ensureSingleEnabledVariant(rule: MockRule): Promise<void> {
-    if (!rule.enabled) {
-      return;
-    }
+  getActiveGroup(): string | null {
+    return this.storage.getSettings().activeMockGroup;
+  }
 
-    const nextRules = this.list().map((item) => {
-      if (item.id === rule.id) {
-        return item;
-      }
-
-      if (item.method === rule.method && item.url === rule.url) {
-        return { ...item, enabled: false, updatedAt: new Date().toISOString() };
-      }
-
-      return item;
+  async setActiveGroup(group: string | null): Promise<string | null> {
+    await this.storage.setSettings({
+      ...this.storage.getSettings(),
+      activeMockGroup: group
     });
-
-    await this.storage.setMockRules(nextRules);
+    return group;
   }
 
   async create(input: CreateMockRuleInput): Promise<MockRule> {
@@ -53,7 +52,6 @@ export class MockService {
 
     await this.extensionHost.emit("beforeMockCreate", rule);
     await this.storage.setMockRules([rule, ...this.list()]);
-    await this.ensureSingleEnabledVariant(rule);
     await this.extensionHost.emit("afterMockCreate", rule);
     return rule;
   }
@@ -73,7 +71,6 @@ export class MockService {
     };
 
     await this.storage.setMockRules(this.list().map((item) => (item.id === id ? nextRule : item)));
-    await this.ensureSingleEnabledVariant(nextRule);
     return nextRule;
   }
 
@@ -95,7 +92,18 @@ export class MockService {
 
   async match(method: string, url: string): Promise<MockRule | undefined> {
     await this.extensionHost.emit("beforeMockMatch", { method, url });
-    return this.list().find((rule) => rule.enabled && rule.method === method.toUpperCase() && rule.url === url);
+    const activeGroup = this.getActiveGroup();
+    return this.list().find((rule) => {
+      if (!rule.enabled || rule.method !== method.toUpperCase() || rule.url !== url) {
+        return false;
+      }
+
+      if (!activeGroup) {
+        return true;
+      }
+
+      return getRuleGroup(rule) === activeGroup;
+    });
   }
 
   async registerHit(ruleId: string): Promise<void> {

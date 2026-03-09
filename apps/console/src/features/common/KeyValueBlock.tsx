@@ -1,3 +1,4 @@
+import { useToast } from "../feedback/ToastProvider";
 import { useConsoleI18n } from "../../i18n/I18nProvider";
 
 type KeyValueMap = Record<string, unknown> | null | undefined;
@@ -24,10 +25,12 @@ export function KeyValueBlock({
   copyMode?: KeyValueCopyMode;
 }) {
   const { t } = useConsoleI18n();
+  const { showToast } = useToast();
   const entries = normalizeEntries(value);
   const copy = async () => {
     const content = entries.map((entry) => `${entry.key}: ${entry.value}`).join("\n");
     await navigator.clipboard.writeText(content);
+    showToast(t("common.copied"));
   };
 
   return (
@@ -55,7 +58,11 @@ export function KeyValueBlock({
                   <strong className="kv-value" title={entry.value}>{entry.value}</strong>
                   <button
                     className="inline-copy-button"
-                    onClick={() => void navigator.clipboard.writeText(entry.value)}
+                    onClick={() => {
+                      void navigator.clipboard.writeText(entry.value).then(() => {
+                        showToast(t("common.copied"));
+                      });
+                    }}
                     type="button"
                   >
                     {t("json.copy")}
