@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ProxyMode, ProxyRule, ServiceStatus } from "@polaris/shared-types";
 import { useExtensionI18n } from "../i18n/I18nProvider";
 import { applyBrowserProxyMode, openBrowserCertificateSettings } from "../../bridge/browserProxyBridge";
+import { getConsoleBaseUrl } from "../../bridge/coreDiscovery";
 import { coreBridge } from "../../bridge/coreBridge";
 
 export function Popup() {
@@ -49,6 +50,11 @@ export function Popup() {
     [host, rules]
   );
   const online = Boolean(status?.online);
+
+  const openConsole = async (pathname = "") => {
+    const baseUrl = await getConsoleBaseUrl();
+    await chrome.tabs.create({ url: `${baseUrl}${pathname}` });
+  };
 
   const switchMode = async (mode: ProxyMode) => {
     if (!status) {
@@ -148,10 +154,10 @@ export function Popup() {
             <h2>{t("popup.quickLinks")}</h2>
           </div>
           <div className="popup-actions">
-            <button className="popup-secondary" onClick={() => chrome.tabs.create({ url: "http://127.0.0.1:5173" })}>
+            <button className="popup-secondary" onClick={() => void openConsole()}>
               {t("popup.openConsole")}
             </button>
-            <button className="popup-secondary" onClick={() => chrome.tabs.create({ url: "http://127.0.0.1:5173/settings" })}>
+            <button className="popup-secondary" onClick={() => void openConsole("/settings")}>
               {t("popup.openSettings")}
             </button>
             <button

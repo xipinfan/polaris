@@ -1,6 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { readFile, writeFile } from "node:fs/promises";
 import type {
   AppSetting,
   MockRule,
@@ -9,6 +7,7 @@ import type {
   SavedRequest
 } from "@polaris/shared-types";
 import { defaultSettings } from "../../app/config";
+import { ensurePolarisDir, getPolarisDataPath, migrateLegacyFile } from "../../app/paths";
 
 interface StorageSnapshot {
   settings: AppSetting;
@@ -18,9 +17,9 @@ interface StorageSnapshot {
   proxyRules: ProxyRule[];
 }
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const storageDir = path.resolve(__dirname, "../../../data");
-const storageFile = path.join(storageDir, "polaris-v1.json");
+const storageDirName = "data";
+const storageFileName = "polaris-v1.json";
+const storageFile = getPolarisDataPath(storageDirName, storageFileName);
 
 const emptySnapshot: StorageSnapshot = {
   settings: defaultSettings,
@@ -34,25 +33,20 @@ export class StorageAdapter {
   private snapshot: StorageSnapshot = emptySnapshot;
 
   async init(): Promise<void> {
-    await mkdir(storageDir, { recursive: true });
+    await ensurePolarisDir(storageDirName);
+    await migrateLegacyFile(`${storageDirName}/${storageFileName}`);
 
     try {
       const raw = await readFile(storageFile, "utf8");
       const parsed = JSON.parse(raw) as Partial<StorageSnapshot>;
-      const hadPersistedRequests =
-        Array.isArray(parsed.requests) && parsed.requests.length > 0;
       this.snapshot = {
         ...emptySnapshot,
         ...parsed,
-        requests: [],
         settings: {
           ...(parsed.settings ?? {}),
           ...defaultSettings
         }
       };
-      if (hadPersistedRequests) {
-        await this.persist();
-      }
     } catch {
       await this.persist();
     }
@@ -61,7 +55,7 @@ export class StorageAdapter {
   private async persist(): Promise<void> {
     await writeFile(
       storageFile,
-      JSON.stringify({ ...this.snapshot, requests: [] }, null, 2),
+      JSON.stringify(this.snapshot, null, 2),
       "utf8",
     );
   }
@@ -81,10 +75,12 @@ export class StorageAdapter {
 
   async appendRequest(request: RequestRecord): Promise<void> {
     this.snapshot.requests = [request, ...this.snapshot.requests].slice(0, 200);
+    await this.persist();
   }
 
-  clearRequests(): void {
+  async clearRequests(): Promise<void> {
     this.snapshot.requests = [];
+    await this.persist();
   }
 
   getSavedRequests(): SavedRequest[] {

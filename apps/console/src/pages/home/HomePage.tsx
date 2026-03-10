@@ -4,15 +4,22 @@ import type { ServiceSnapshot } from "@polaris/shared-contracts";
 import { useToast } from "../../features/feedback/ToastProvider";
 import { useConsoleI18n } from "../../i18n/I18nProvider";
 import { apiClient } from "../../services/apiClient";
+import { readCachedBootstrap, writeCachedBootstrap } from "../../services/consoleCache";
 
 export function HomePage() {
-  const [snapshot, setSnapshot] = useState<ServiceSnapshot | null>(null);
+  const [snapshot, setSnapshot] = useState<ServiceSnapshot | null>(() => readCachedBootstrap());
   const navigate = useNavigate();
   const { t } = useConsoleI18n();
   const { showToast } = useToast();
 
   const load = () =>
-    apiClient.bootstrap().then(setSnapshot).catch(console.error);
+    apiClient
+      .bootstrap()
+      .then((nextSnapshot) => {
+        setSnapshot(nextSnapshot);
+        writeCachedBootstrap(nextSnapshot);
+      })
+      .catch(console.error);
 
   useEffect(() => {
     load();

@@ -14,6 +14,7 @@ import { KeyValueBlock } from "../../features/common/KeyValueBlock";
 import { useToast } from "../../features/feedback/ToastProvider";
 import { useConsoleI18n } from "../../i18n/I18nProvider";
 import { apiClient } from "../../services/apiClient";
+import { readCachedSettings, writeCachedSettings } from "../../services/consoleCache";
 
 const refreshIntervalMs = 3000;
 
@@ -55,7 +56,7 @@ function getContentType(item: RequestRecord) {
 
 export function TrafficPage() {
   const [requests, setRequests] = useState<RequestRecord[]>([]);
-  const [settings, setSettings] = useState<AppSetting | null>(null);
+  const [settings, setSettings] = useState<AppSetting | null>(() => readCachedSettings());
   const [selectedId, setSelectedId] = useState<string>();
   const [keyword, setKeyword] = useState("");
   const [method, setMethod] = useState("");
@@ -154,7 +155,13 @@ export function TrafficPage() {
   }, [deferredKeyword, method, statusCode, hostOnly]);
 
   useEffect(() => {
-    apiClient.settings().then(setSettings).catch(console.error);
+    apiClient
+      .settings()
+      .then((nextSettings) => {
+        setSettings(nextSettings);
+        writeCachedSettings(nextSettings);
+      })
+      .catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -252,7 +259,7 @@ export function TrafficPage() {
 
   const rootCertificateUrl = settings
     ? `http://127.0.0.1:${settings.localApiPort}/api/certificates/root-ca`
-    : "http://127.0.0.1:9001/api/certificates/root-ca";
+    : "#";
 
   const replaySelected = async () => {
     if (!selected) {

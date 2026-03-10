@@ -1,8 +1,8 @@
 import type { ProxyMode, ProxyRule, ServiceStatus } from "@polaris/shared-types";
-
-const baseUrl = "http://127.0.0.1:9001/api";
+import { getApiBaseUrl } from "./coreDiscovery";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const baseUrl = await getApiBaseUrl();
   const response = await fetch(`${baseUrl}${path}`, {
     headers: {
       "Content-Type": "application/json"

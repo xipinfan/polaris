@@ -1,4 +1,4 @@
 node_modules
 dist
 .run-logs/
-apps/core/data/certificates/hosts
+apps/core/data/

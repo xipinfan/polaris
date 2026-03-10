@@ -1,12 +1,17 @@
 {
-  "name": "polaris",
+  "name": "polaris-workspace",
   "private": true,
   "packageManager": "pnpm@10.7.1",
   "scripts": {
+    "polaris:start": "corepack pnpm --filter polaris build && node packages/cli/dist/bin.js start",
+    "polaris:stop": "node packages/cli/dist/bin.js stop",
+    "polaris:status": "node packages/cli/dist/bin.js status",
     "dev": "node scripts/dev/start.mjs",
     "dev:core": "corepack pnpm --filter @polaris/core dev",
+    "dev:mcp": "node scripts/mcp-stdio.mjs --watch",
     "dev:console": "corepack pnpm --filter @polaris/console dev",
     "dev:extension": "corepack pnpm --filter @polaris/extension dev",
+    "mcp": "node scripts/mcp-stdio.mjs",
     "build": "corepack pnpm -r build",
     "typecheck": "corepack pnpm -r typecheck",
     "test:smoke": "node scripts/dev/smoke-v1.mjs",

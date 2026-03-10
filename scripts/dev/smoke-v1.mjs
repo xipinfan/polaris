@@ -1,17 +1,38 @@
 import { spawn } from "node:child_process";
+import net from "node:net";
 import process from "node:process";
 import path from "node:path";
+import os from "node:os";
+import { rm } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "../..");
-const smokePorts = {
-  proxy: 9100,
-  api: 9101,
-  mcp: 9102
-};
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function findAvailablePort() {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.unref();
+    server.on("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        server.close(() => reject(new Error("Failed to determine an available port")));
+        return;
+      }
+      const { port } = address;
+      server.close((error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(port);
+      });
+    });
+  });
 }
 
 async function waitFor(url, timeoutMs = 15000) {
@@ -32,7 +53,7 @@ async function waitFor(url, timeoutMs = 15000) {
 }
 
 async function api(pathname, init) {
-  const response = await fetch(`http://127.0.0.1:${smokePorts.api}${pathname}`, {
+  const response = await fetch(`http://127.0.0.1:${globalThis.__smokePorts.api}${pathname}`, {
     headers: {
       "Content-Type": "application/json"
     },
@@ -49,8 +70,17 @@ async function api(pathname, init) {
 
 async function main() {
   const tsxCli = path.join(rootDir, "apps/core/node_modules/tsx/dist/cli.mjs");
+  const smokeHome = path.join(os.tmpdir(), `polaris-smoke-${process.pid}`);
+  await rm(smokeHome, { recursive: true, force: true });
+  const smokePorts = {
+    proxy: await findAvailablePort(),
+    api: await findAvailablePort(),
+    mcp: await findAvailablePort()
+  };
+  globalThis.__smokePorts = smokePorts;
   const coreEnv = {
     ...process.env,
+    POLARIS_HOME: smokeHome,
     POLARIS_PROXY_PORT: String(smokePorts.proxy),
     POLARIS_API_PORT: String(smokePorts.api),
     POLARIS_MCP_PORT: String(smokePorts.mcp)
@@ -154,7 +184,7 @@ async function main() {
       summary.replayStatus === 200,
       summary.proxyMode === "rules",
       summary.proxyRuleCount >= 1,
-      summary.mcpToolCount === 8,
+      summary.mcpToolCount === 11,
       summary.mcpResourceCount === 5,
       summary.pacContainsExample === true
     ];
@@ -168,6 +198,7 @@ async function main() {
   } finally {
     cleanup();
     await sleep(800);
+    await rm(smokeHome, { recursive: true, force: true });
   }
 }
 

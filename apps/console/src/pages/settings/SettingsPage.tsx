@@ -4,17 +4,35 @@ import { useConsoleI18n } from "../../i18n/I18nProvider";
 import type { ConsoleMessageKey } from "../../i18n/messages";
 import { UiSlotPlaceholder } from "../../features/slots/UiSlotPlaceholder";
 import { apiClient } from "../../services/apiClient";
+import {
+  readCachedHealth,
+  readCachedSettings,
+  writeCachedHealth,
+  writeCachedSettings
+} from "../../services/consoleCache";
 
 export function SettingsPage() {
-  const [status, setStatus] = useState<ServiceStatus | null>(null);
-  const [settings, setSettings] = useState<AppSetting | null>(null);
+  const [status, setStatus] = useState<ServiceStatus | null>(() => readCachedHealth());
+  const [settings, setSettings] = useState<AppSetting | null>(() => readCachedSettings());
   const [rules, setRules] = useState<ProxyRule[]>([]);
   const { locale, setLocale, t } = useConsoleI18n();
   const localeLabelKey = (`locale.name.${locale}` as ConsoleMessageKey);
 
   useEffect(() => {
-    apiClient.health().then(setStatus).catch(console.error);
-    apiClient.settings().then(setSettings).catch(console.error);
+    apiClient
+      .health()
+      .then((nextStatus) => {
+        setStatus(nextStatus);
+        writeCachedHealth(nextStatus);
+      })
+      .catch(console.error);
+    apiClient
+      .settings()
+      .then((nextSettings) => {
+        setSettings(nextSettings);
+        writeCachedSettings(nextSettings);
+      })
+      .catch(console.error);
     apiClient.listProxyRules().then(setRules).catch(console.error);
   }, []);
 

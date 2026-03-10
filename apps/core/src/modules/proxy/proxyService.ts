@@ -32,6 +32,11 @@ export class ProxyService {
     return nextSettings;
   }
 
+  async setSettings(settings: AppSetting): Promise<AppSetting> {
+    await this.storage.setSettings(settings);
+    return settings;
+  }
+
   listRules(): ProxyRule[] {
     return this.storage.getProxyRules();
   }

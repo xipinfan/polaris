@@ -38,7 +38,7 @@ export class RequestService {
       return requests;
     }
 
-    return requests.filter((item) => {
+    const filtered = requests.filter((item) => {
       const keywordMatch =
         !filters.keyword ||
         item.url.includes(filters.keyword) ||
@@ -48,6 +48,8 @@ export class RequestService {
       const hostMatch = !filters.host || item.host === filters.host;
       return keywordMatch && methodMatch && statusMatch && hostMatch;
     });
+
+    return typeof filters.limit === "number" ? filtered.slice(0, filters.limit) : filtered;
   }
 
   getById(id: string): RequestRecord | undefined {
@@ -59,12 +61,16 @@ export class RequestService {
     await this.storage.appendRequest(record);
   }
 
-  clear(): void {
-    this.storage.clearRequests();
+  async clear(): Promise<void> {
+    await this.storage.clearRequests();
   }
 
   listSaved(): SavedRequest[] {
     return this.storage.getSavedRequests();
+  }
+
+  getSavedById(id: string): SavedRequest | undefined {
+    return this.listSaved().find((item) => item.id === id);
   }
 
   async save(input: SaveRequestInput): Promise<SavedRequest> {
@@ -94,7 +100,7 @@ export class RequestService {
   }
 
   async updateSaved(id: string, input: SaveRequestInput): Promise<SavedRequest> {
-    const existing = this.listSaved().find((item) => item.id === id);
+    const existing = this.getSavedById(id);
     if (!existing) {
       throw new Error("Saved request not found");
     }
@@ -194,7 +200,7 @@ export class RequestService {
       );
     }
 
-    const saved = this.listSaved().find((item) => item.id === id);
+    const saved = this.getSavedById(id);
     if (!saved) {
       throw new Error("Request not found");
     }
@@ -236,7 +242,7 @@ export class RequestService {
       };
     }
 
-    const saved = this.listSaved().find((item) => item.id === id);
+    const saved = this.getSavedById(id);
     if (!saved) {
       return undefined;
     }

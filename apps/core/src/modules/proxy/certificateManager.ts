@@ -3,11 +3,10 @@ import { execFile } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import { fileURLToPath } from "node:url";
 import forge from "node-forge";
+import { ensurePolarisDir, getPolarisDataPath, migrateLegacyFile } from "../../app/paths";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const certificateDir = path.resolve(__dirname, "../../../data/certificates");
+const certificateDir = getPolarisDataPath("data", "certificates");
 const authorityKeyPath = path.join(certificateDir, "polaris-root-ca.key.pem");
 const authorityCertPath = path.join(certificateDir, "polaris-root-ca.cert.pem");
 const hostCertificateDir = path.join(certificateDir, "hosts");
@@ -52,7 +51,11 @@ export class CertificateManager {
   private authority?: { key: ForgePrivateKey; cert: ForgeCertificate };
 
   async init(): Promise<void> {
-    await mkdir(hostCertificateDir, { recursive: true });
+    await ensurePolarisDir("data", "certificates", "hosts");
+    await Promise.all([
+      migrateLegacyFile("data/certificates/polaris-root-ca.key.pem"),
+      migrateLegacyFile("data/certificates/polaris-root-ca.cert.pem")
+    ]);
     await this.loadOrCreateAuthority();
   }
 

@@ -66,13 +66,14 @@ export function createApiRouter(
       keyword: typeof req.query.keyword === "string" ? req.query.keyword : undefined,
       method: typeof req.query.method === "string" ? req.query.method : undefined,
       host: typeof req.query.host === "string" ? req.query.host : undefined,
-      statusCode: typeof req.query.statusCode === "string" ? Number(req.query.statusCode) : undefined
+      statusCode: typeof req.query.statusCode === "string" ? Number(req.query.statusCode) : undefined,
+      limit: typeof req.query.limit === "string" ? Number(req.query.limit) : undefined
     };
     res.json({ data: requestService.list(filters) });
   });
 
-  router.delete("/requests", (_req, res) => {
-    requestService.clear();
+  router.delete("/requests", async (_req, res) => {
+    await requestService.clear();
     res.json({ data: { cleared: true } });
   });
 

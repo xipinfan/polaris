@@ -53,7 +53,7 @@ export class ProxyEngine {
     private readonly certificateManager: CertificateManager
   ) {}
 
-  createServer(port: number): http.Server {
+  createServer(): http.Server {
     const server = http.createServer(async (req, res) => {
       await this.handleHttpRequest(req, res, "http:");
     });
@@ -62,7 +62,6 @@ export class ProxyEngine {
       await this.handleConnectRequest(req, clientSocket, head);
     });
 
-    server.listen(port);
     return server;
   }
 

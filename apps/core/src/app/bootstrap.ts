@@ -1,10 +1,9 @@
-import { defaultSettings } from "./config";
 import { startServers } from "./server";
 
 startServers()
-  .then(() => {
+  .then(({ runtimeSettings }) => {
     console.log(
-      `Polaris core started on proxy ${defaultSettings.localProxyPort}, api ${defaultSettings.localApiPort}, mcp ${defaultSettings.mcpPort}`
+      `Polaris core started on proxy ${runtimeSettings.localProxyPort}, api ${runtimeSettings.localApiPort}, mcp ${runtimeSettings.mcpPort}`
     );
   })
   .catch((error) => {

@@ -3,4 +3,5 @@ export interface RequestFilters {
   method?: string;
   statusCode?: number;
   host?: string;
+  limit?: number;
 }

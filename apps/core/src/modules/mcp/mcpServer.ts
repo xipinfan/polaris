@@ -34,6 +34,12 @@ export class MpcServer {
           case "get_request_detail":
             res.json({ data: this.requestService.getById(req.body.id) });
             return;
+          case "list_saved_requests":
+            res.json({ data: this.requestService.listSaved() });
+            return;
+          case "get_saved_request_detail":
+            res.json({ data: this.requestService.getSavedById(req.body.id) });
+            return;
           case "save_request":
             res.json({ data: await this.requestService.save(req.body as SaveRequestInput) });
             return;
@@ -51,6 +57,9 @@ export class MpcServer {
             return;
           case "list_proxy_rules":
             res.json({ data: this.proxyService.listRules() });
+            return;
+          case "get_proxy_mode":
+            res.json({ data: this.proxyService.getMode() });
             return;
           default:
             res.status(404).json({ error: "Unknown tool" });
