@@ -46,6 +46,17 @@ function sanitizeProxyHeaders(headers: IncomingMessage["headers"]): Record<strin
   return nextHeaders;
 }
 
+function getHeaderValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function createCorsHeaders(req: IncomingMessage): Record<string, string> {
+  return {
+    "Access-Control-Allow-Origin": getHeaderValue(req.headers.origin) ?? "*",
+    "Access-Control-Allow-Credentials": "true"
+  };
+}
+
 export class ProxyEngine {
   constructor(
     private readonly requestService: RequestService,
@@ -117,8 +128,21 @@ export class ProxyEngine {
   }
 
   private async handleHttpRequest(req: IncomingMessage, res: ServerResponse, protocol: "http:" | "https:"): Promise<void> {
+    const corsHeaders = createCorsHeaders(req);
+
+    if (req.method === "OPTIONS") {
+      res.writeHead(204, {
+        ...corsHeaders,
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+        "Access-Control-Allow-Headers": getHeaderValue(req.headers["access-control-request-headers"]) ?? "*",
+        "Access-Control-Max-Age": "86400"
+      });
+      res.end();
+      return;
+    }
+
     if (!req.url || !req.headers.host) {
-      res.writeHead(400).end("Invalid proxy request");
+      res.writeHead(400, corsHeaders).end("Invalid proxy request");
       return;
     }
 
@@ -132,7 +156,11 @@ export class ProxyEngine {
     const mockRule = await this.mockService.match(req.method ?? "GET", targetUrl.toString());
     if (mockRule) {
       await this.mockService.registerHit(mockRule.id);
-      res.writeHead(mockRule.responseStatus, mockRule.responseHeaders);
+      const mockResponseHeaders = {
+        ...mockRule.responseHeaders,
+        ...corsHeaders
+      };
+      res.writeHead(mockRule.responseStatus, mockResponseHeaders);
       res.end(typeof mockRule.responseBody === "string" ? mockRule.responseBody : JSON.stringify(mockRule.responseBody));
 
       const mockRecord: RequestRecord = {
@@ -146,7 +174,7 @@ export class ProxyEngine {
         requestHeaders,
         requestQuery: parseSearchParamsRecord(targetUrl.searchParams),
         requestBody: normalizeCapturedBody(requestBuffer, requestHeaders),
-        responseHeaders: mockRule.responseHeaders,
+        responseHeaders: mockResponseHeaders,
         responseBody: normalizeBody(mockRule.responseBody),
         createdAt: new Date().toISOString(),
         source: "proxy",
@@ -172,9 +200,12 @@ export class ProxyEngine {
       proxyRes.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
       proxyRes.on("end", async () => {
         const responseBuffer = Buffer.concat(chunks);
-        const responseHeaders = normalizeHeaders(proxyRes.headers);
+        const responseHeaders = {
+          ...normalizeHeaders(proxyRes.headers),
+          ...corsHeaders
+        };
         const responseBody = normalizeCapturedBody(responseBuffer, responseHeaders);
-        res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+        res.writeHead(proxyRes.statusCode ?? 502, responseHeaders);
         res.end(responseBuffer);
 
         const record: RequestRecord = {
@@ -200,7 +231,7 @@ export class ProxyEngine {
     });
 
     proxyReq.on("error", (error) => {
-      res.writeHead(502).end(error.message);
+      res.writeHead(502, corsHeaders).end(error.message);
     });
 
     if (requestBuffer.length) {

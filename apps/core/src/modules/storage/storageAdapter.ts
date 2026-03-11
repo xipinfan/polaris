@@ -31,6 +31,7 @@ const emptySnapshot: StorageSnapshot = {
 
 export class StorageAdapter {
   private snapshot: StorageSnapshot = emptySnapshot;
+  private persistQueue: Promise<void> = Promise.resolve();
 
   async init(): Promise<void> {
     await ensurePolarisDir(storageDirName);
@@ -42,9 +43,13 @@ export class StorageAdapter {
       this.snapshot = {
         ...emptySnapshot,
         ...parsed,
+        requests: parsed.requests ?? [],
+        savedRequests: parsed.savedRequests ?? [],
+        mockRules: parsed.mockRules ?? [],
+        proxyRules: parsed.proxyRules ?? [],
         settings: {
-          ...(parsed.settings ?? {}),
-          ...defaultSettings
+          ...defaultSettings,
+          ...(parsed.settings ?? {})
         }
       };
     } catch {
@@ -53,11 +58,10 @@ export class StorageAdapter {
   }
 
   private async persist(): Promise<void> {
-    await writeFile(
-      storageFile,
-      JSON.stringify(this.snapshot, null, 2),
-      "utf8",
-    );
+    this.persistQueue = this.persistQueue
+      .catch(() => undefined)
+      .then(() => writeFile(storageFile, JSON.stringify(this.snapshot, null, 2), "utf8"));
+    await this.persistQueue;
   }
 
   getSettings(): AppSetting {

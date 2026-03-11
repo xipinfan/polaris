@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import type { MockRule, RequestRecord } from "@polaris/shared-types";
 import { useToast } from "../../features/feedback/ToastProvider";
 import { useConsoleI18n } from "../../i18n/I18nProvider";
 import { apiClient } from "../../services/apiClient";
+import styles from "./MockPage.module.less";
 
 const groupNamePattern = /^\[(.+?)\]\s*(.+)$/;
 const groupsStorageKey = "polaris.console.mock.groups";
@@ -14,6 +15,7 @@ type MockPageLocationState = {
 };
 
 type GroupMetaMap = Record<string, { description?: string }>;
+
 type RuleUrlBlock = {
   key: string;
   host: string;
@@ -56,7 +58,12 @@ function writeStorage<T>(key: string, value: T) {
   if (typeof window === "undefined") {
     return;
   }
+
   window.localStorage.setItem(key, JSON.stringify(value));
+}
+
+function classNames(...values: Array<string | false | null | undefined>) {
+  return values.filter(Boolean).join(" ");
 }
 
 function getRuleScene(rule: MockRule, defaultGroup: string) {
@@ -162,7 +169,6 @@ function getUrlSummary(url: string) {
 
 function getResponseKind(
   rule: MockRule,
-  variant: string,
   t: ReturnType<typeof useConsoleI18n>["t"],
 ) {
   const contentType =
@@ -179,7 +185,34 @@ function getResponseKind(
     label = t("mock.ruleResponseStaticText");
   }
 
-  return { label, summary: `${rule.responseStatus} / ${variant}` };
+  return label;
+}
+
+function getMatchSummary(
+  queryCount: number,
+  t: ReturnType<typeof useConsoleI18n>["t"],
+) {
+  return [
+    t("mock.ruleMatchMode"),
+    t("mock.ruleMatchQueryCount", { count: queryCount }),
+    t("mock.ruleMatchHeaderCount", { count: 0 }),
+    t("mock.ruleMatchBodyCount", { count: 0 }),
+  ].join(" · ");
+}
+
+function getMethodClass(method: string) {
+  switch (method.toUpperCase()) {
+    case "POST":
+      return styles.methodPost;
+    case "PUT":
+      return styles.methodPut;
+    case "PATCH":
+      return styles.methodPatch;
+    case "DELETE":
+      return styles.methodDelete;
+    default:
+      return styles.methodGet;
+  }
 }
 
 export function MockPage() {
@@ -242,9 +275,7 @@ export function MockPage() {
   }, [defaultGroup, rules]);
 
   const groups = useMemo(() => {
-    return Array.from(
-      new Set([defaultGroup, ...customGroups, ...Object.keys(groupedRules)]),
-    );
+    return Array.from(new Set([defaultGroup, ...customGroups, ...Object.keys(groupedRules)]));
   }, [customGroups, defaultGroup, groupedRules]);
 
   const filteredGroups = useMemo(() => {
@@ -265,6 +296,7 @@ export function MockPage() {
   }, [groups, selectedGroup]);
 
   const currentGroup = groups.includes(selectedGroup) ? selectedGroup : defaultGroup;
+
   const currentGroupRules = useMemo(() => {
     return [...(groupedRules[currentGroup] ?? [])].sort((left, right) => {
       const leftUrl = getUrlSummary(left.url);
@@ -308,13 +340,12 @@ export function MockPage() {
     }, []);
   }, [currentGroupRules]);
 
-  const currentGroupDescription =
-    groupMeta[currentGroup]?.description?.trim() || t("mock.groupDescriptionEmpty");
-  const isCurrentGroupEnabled = currentGroupRules.some((rule) => rule.enabled);
   const currentGroupEnabledRules = useMemo(
     () => currentGroupRules.filter((rule) => rule.enabled),
     [currentGroupRules],
   );
+  const currentGroupDescription = groupMeta[currentGroup]?.description?.trim();
+  const isCurrentGroupEnabled = currentGroupRules.some((rule) => rule.enabled);
 
   useEffect(() => {
     const seedRequest = locationState?.seedRequest;
@@ -391,7 +422,7 @@ export function MockPage() {
     setIsModalOpen(true);
   };
 
-  const saveRule = async (keepOpen = false) => {
+  const saveRule = async () => {
     const payload = {
       name: buildRuleName(form.group, form.variant),
       method: form.method,
@@ -418,17 +449,8 @@ export function MockPage() {
     showToast(
       editingId
         ? t("common.mockUpdated", { name: form.variant })
-        : t("common.mockCreatedInGroup", {
-            name: form.variant,
-            group: form.group,
-          }),
+        : t("common.mockCreatedInGroup", { name: form.variant, group: form.group }),
     );
-
-    if (keepOpen) {
-      setEditingId(null);
-      setForm(buildEmptyForm(form.group));
-      return;
-    }
 
     setIsModalOpen(false);
     setEditingId(null);
@@ -471,7 +493,7 @@ export function MockPage() {
   };
 
   const copyGroup = async (groupName: string) => {
-    const nextName = buildUniqueGroupName(`${groupName} Copy`, groups);
+    const nextName = buildUniqueGroupName(`${groupName} 副本`, groups);
     const groupRules = groupedRules[groupName] ?? [];
 
     await Promise.all(
@@ -543,9 +565,7 @@ export function MockPage() {
   const toggleCurrentGroup = async () => {
     const nextEnabled = !isCurrentGroupEnabled;
     await Promise.all(
-      currentGroupRules.map((rule) =>
-        apiClient.enableMockRule(rule.id, nextEnabled),
-      ),
+      currentGroupRules.map((rule) => apiClient.enableMockRule(rule.id, nextEnabled)),
     );
     await load();
     showToast(
@@ -558,7 +578,7 @@ export function MockPage() {
   const duplicateRule = async (rule: MockRule) => {
     const scene = getRuleScene(rule, defaultGroup);
     await apiClient.createMockRule({
-      name: buildRuleName(currentGroup, `${scene.variant} Copy`),
+      name: buildRuleName(currentGroup, `${scene.variant} 副本`),
       method: rule.method,
       url: rule.url,
       responseStatus: rule.responseStatus,
@@ -591,20 +611,27 @@ export function MockPage() {
     showToast(t("common.mockDeleted", { name: scene.variant }));
   };
 
+  const overviewDescription = currentGroupDescription || t("mock.currentGroupHint");
+
   return (
-    <div className="page-stack mock-v3-page">
-      <section className="page-header mock-v3-header">
-        <div>
+    <div className={styles.page}>
+      <section className={styles.header}>
+        <div className={styles.headerCopy}>
+          <span className={styles.pageEyebrow}>{t("mock.title")}</span>
           <h2>{t("mock.title")}</h2>
+          <p>{t("mock.currentGroupBody")}</p>
         </div>
       </section>
 
-      <section className="mock-v3-shell">
-        <aside className="panel mock-sidebar">
-          <div className="mock-sidebar-head">
-            <h3>{t("mock.groupsTitle")}</h3>
+      <section className={styles.workspace}>
+        <aside className={styles.sidebar}>
+          <div className={styles.sidebarHeader}>
+            <div>
+              <span className={styles.sectionLabel}>{t("mock.groupsTitle")}</span>
+              <strong>{t("mock.groupsTitle")}</strong>
+            </div>
             <button
-              className="ghost-button mock-sidebar-create"
+              className={styles.secondaryButton}
               type="button"
               onClick={() => {
                 const nextName = window.prompt(t("mock.groupCreatePrompt"))?.trim();
@@ -625,125 +652,137 @@ export function MockPage() {
           </div>
 
           <input
-            className="mock-group-search"
+            className={styles.searchInput}
             placeholder={t("mock.groupSearch")}
             value={groupSearch}
             onChange={(event) => setGroupSearch(event.target.value)}
           />
 
-          <div className="mock-group-list">
+          <div className={styles.groupList}>
             {filteredGroups.map((group) => {
-              const summary =
-                groupSummaries.find((item) => item.group === group) ??
-                {
-                  group,
-                  count: 0,
-                  enabledCount: 0,
-                  active: false,
-                };
+              const summary = groupSummaries.find((item) => item.group === group) ?? {
+                group,
+                count: 0,
+                enabledCount: 0,
+                active: false,
+              };
 
               return (
-                <button
-                  className={`mock-group-item ${group === currentGroup ? "active" : ""}`}
+                <div
+                  className={classNames(
+                    styles.groupItem,
+                    group === currentGroup && styles.groupItemActive,
+                    groupMenuName === group && styles.groupItemOpen,
+                  )}
                   key={group}
-                  type="button"
-                  onClick={() => void activateGroup(group).catch(console.error)}
                 >
-                  <div className="mock-group-item-main">
-                    <strong>{group}</strong>
-                    <span>{t("mock.groupRuleCount", { count: summary.count })}</span>
-                  </div>
-                  <div className="mock-group-item-side">
-                    <span className={`status-badge ${summary.active ? "success" : "muted"}`}>
+                  <button
+                    className={styles.groupSelect}
+                    type="button"
+                    onClick={() => void activateGroup(group).catch(console.error)}
+                  >
+                    <div className={styles.groupMain}>
+                      <div className={styles.groupTitleRow}>
+                        <span
+                          className={classNames(
+                            styles.groupStatusDot,
+                            summary.active && styles.groupStatusDotActive,
+                          )}
+                        />
+                        <strong>{group}</strong>
+                      </div>
+                      <span className={styles.groupMeta}>
+                        {t("mock.groupRuleCount", { count: summary.count })}
+                      </span>
+                    </div>
+                    <span
+                      className={classNames(
+                        styles.statusBadge,
+                        summary.active ? styles.statusBadgeSuccess : styles.statusBadgeMuted,
+                      )}
+                    >
                       {summary.active ? t("mock.groupActive") : t("mock.groupInactive")}
                     </span>
-                    <span className="mock-group-item-count">{summary.count}</span>
-                    <div
-                      className="mock-menu-root"
-                      onClick={(event) => event.stopPropagation()}
+                  </button>
+
+                  <div className={styles.menuRoot} onClick={(event) => event.stopPropagation()}>
+                    <button
+                      className={classNames(styles.iconButton, styles.moreButton)}
+                      aria-label={t("mock.ruleMore")}
+                      type="button"
+                      onClick={() => setGroupMenuName((current) => (current === group ? null : group))}
                     >
-                      <button
-                        className="ghost-button mock-more-button"
-                        type="button"
-                        onClick={() =>
-                          setGroupMenuName((current) =>
-                            current === group ? null : group,
-                          )
-                        }
-                      >
-                        {t("mock.ruleMore")}
-                      </button>
-                      {groupMenuName === group ? (
-                        <div className="mock-action-menu">
-                          <button type="button" onClick={() => renameGroup(group).catch(console.error)}>
-                            {t("mock.groupRename")}
+                      ...
+                    </button>
+                    {groupMenuName === group ? (
+                      <div className={classNames(styles.actionMenu, styles.groupActionMenu)}>
+                        <button type="button" onClick={() => renameGroup(group).catch(console.error)}>
+                          {t("mock.groupRename")}
+                        </button>
+                        <button type="button" onClick={() => copyGroup(group).catch(console.error)}>
+                          {t("mock.groupCopy")}
+                        </button>
+                        {group !== defaultGroup ? (
+                          <button
+                            className={styles.menuDanger}
+                            type="button"
+                            onClick={() => deleteGroup(group).catch(console.error)}
+                          >
+                            {t("mock.groupDelete")}
                           </button>
-                          <button type="button" onClick={() => copyGroup(group).catch(console.error)}>
-                            {t("mock.groupCopy")}
-                          </button>
-                          {group !== defaultGroup ? (
-                            <button
-                              className="danger-button"
-                              type="button"
-                              onClick={() => deleteGroup(group).catch(console.error)}
-                            >
-                              {t("mock.groupDelete")}
-                            </button>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </div>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
         </aside>
 
-        <section className="panel mock-main">
-          <div className="mock-group-overview">
-            <div className="mock-group-overview-copy">
-              <div className="mock-group-overview-head">
-                <span className="feature-badge">{t("mock.currentGroupTitle")}</span>
-                <span className="status-badge success">{t("mock.groupActive")}</span>
+        <section className={styles.main}>
+          <div className={styles.overview}>
+            <div className={styles.overviewCopy}>
+              <div className={styles.overviewTitleRow}>
+                <h3>{currentGroup}</h3>
+                <span className={classNames(styles.statusBadge, styles.statusBadgeSuccess)}>
+                  {t("mock.groupActive")}
+                </span>
               </div>
-              <h3>{currentGroup}</h3>
-              <p>{currentGroupDescription}</p>
-              <small>{t("mock.currentGroupBody")}</small>
+              <p>{overviewDescription}</p>
             </div>
-            <div className="mock-group-overview-metrics">
-              <div className="mock-overview-stat">
-                <span>{t("mock.headerStatus")}</span>
-                <strong>{t("mock.groupActive")}</strong>
-              </div>
-              <div className="mock-overview-stat">
+
+            <div className={styles.metricRow}>
+              <div className={styles.metricCard}>
                 <span>{t("mock.headerRequestCount")}</span>
                 <strong>{currentGroupRules.length}</strong>
               </div>
-              <div className="mock-overview-stat">
+              <div className={styles.metricCard}>
                 <span>{t("mock.headerEnabledRuleCount")}</span>
                 <strong>{currentGroupEnabledRules.length}</strong>
               </div>
             </div>
-            <div className="mock-group-overview-actions">
-              <button className="primary-action" type="button" onClick={openCreateModal}>
+
+            <div className={styles.overviewActions}>
+              <button className={styles.primaryButton} type="button" onClick={openCreateModal}>
                 {t("mock.newRequest")}
               </button>
-              <button className="ghost-button" type="button" onClick={editGroupDescription}>
+              <button className={styles.secondaryButton} type="button" onClick={editGroupDescription}>
                 {t("mock.groupEdit")}
               </button>
-              <div className="mock-menu-root">
+              <div className={styles.menuRoot} onClick={(event) => event.stopPropagation()}>
                 <button
-                  className="ghost-button"
+                  className={styles.iconButton}
+                  aria-label={t("mock.ruleMore")}
                   type="button"
                   onClick={() =>
                     setGroupMenuName((current) => (current === "__header__" ? null : "__header__"))
                   }
                 >
-                  {t("mock.ruleMore")}
+                  ...
                 </button>
                 {groupMenuName === "__header__" ? (
-                  <div className="mock-action-menu">
+                  <div className={styles.actionMenu}>
                     <button type="button" onClick={() => copyGroup(currentGroup).catch(console.error)}>
                       {t("mock.groupCopy")}
                     </button>
@@ -752,7 +791,7 @@ export function MockPage() {
                     </button>
                     {currentGroup !== defaultGroup ? (
                       <button
-                        className="danger-button"
+                        className={styles.menuDanger}
                         type="button"
                         onClick={() => deleteGroup(currentGroup).catch(console.error)}
                       >
@@ -765,88 +804,78 @@ export function MockPage() {
             </div>
           </div>
 
-          <div className="mock-rules-table-shell">
-            <div className="mock-rules-table-head">
-              <span>{t("mock.ruleTable.request")}</span>
-              <span>{t("mock.ruleTable.match")}</span>
-              <span>{t("mock.ruleTable.response")}</span>
-              <span>{t("mock.ruleTable.proxy")}</span>
-              <span>{t("mock.ruleTable.status")}</span>
-              <span>{t("mock.ruleTable.actions")}</span>
-            </div>
+            <div className={styles.ruleTable}>
+              <div className={styles.ruleTableHead}>
+                <span>{t("mock.ruleTable.status")}</span>
+                <span>{t("mock.ruleTable.request")}</span>
+                <span>{t("mock.ruleTable.match")}</span>
+                <span>{t("mock.ruleTable.response")}</span>
+                <span>{t("mock.ruleTable.actions")}</span>
+              </div>
 
             {currentGroupRules.length === 0 ? (
-              <div className="mock-rules-empty">
+              <div className={styles.emptyState}>
                 <h3>{t("mock.ruleNoRulesTitle")}</h3>
                 <p>{t("mock.ruleNoRulesBody")}</p>
               </div>
             ) : (
-              <div className="mock-rules-table-body">
+              <div className={styles.ruleTableBody}>
                 {currentGroupRuleBlocks.map((block) => (
-                  <section className="mock-rule-block" key={block.key}>
-                    <div className="mock-rule-block-header">
-                      <div className="mock-rule-block-copy">
-                        <strong>{block.label}</strong>
-                        <span>{block.host || block.key}</span>
+                  <section className={styles.ruleBlock} key={block.key}>
+                    <button
+                      className={styles.ruleBlockHeader}
+                      type="button"
+                      onClick={() => toggleBlockCollapsed(block.key)}
+                    >
+                      <div className={styles.ruleBlockCopy}>
+                        <strong>{block.key}</strong>
+                        <span>{collapsedBlocks[block.key] ? t("mock.expand") : t("mock.collapse")}</span>
                       </div>
-                      <div className="mock-rule-block-meta">
-                        <span className="status-badge muted">
+                      <div className={styles.ruleBlockMeta}>
+                        <span className={classNames(styles.statusBadge, styles.statusBadgeMuted)}>
                           {t("mock.groupRuleCount", { count: block.rules.length })}
                         </span>
-                        <button
-                          className="ghost-button mock-collapse-button"
-                          type="button"
-                          onClick={() => toggleBlockCollapsed(block.key)}
-                        >
+                        <span className={styles.collapseIndicator}>
                           {collapsedBlocks[block.key] ? t("mock.expand") : t("mock.collapse")}
-                        </button>
+                        </span>
                       </div>
-                    </div>
+                    </button>
 
-                    <div className={`mock-rule-block-rows ${collapsedBlocks[block.key] ? "collapsed" : ""}`}>
+                    <div
+                      className={classNames(
+                        styles.ruleRows,
+                        collapsedBlocks[block.key] && styles.ruleRowsCollapsed,
+                      )}
+                    >
                       {block.rules.map((rule) => {
                         const scene = getRuleScene(rule, defaultGroup);
                         const queryCount = getQueryCount(rule.url);
-                        const responseKind = getResponseKind(rule, scene.variant, t);
+                        const responseKind = getResponseKind(rule, t);
                         const urlSummary = getUrlSummary(rule.url);
+                        const matchSummary = getMatchSummary(queryCount, t);
 
                         return (
                           <div
-                            className={`mock-rule-row ${selectedRuleId === rule.id ? "active" : ""}`}
+                            className={classNames(
+                              styles.ruleRow,
+                              selectedRuleId === rule.id && styles.ruleRowActive,
+                            )}
                             key={rule.id}
                             onClick={() => setSelectedRuleId(rule.id)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                setSelectedRuleId(rule.id);
+                              }
+                            }}
                             role="button"
                             tabIndex={0}
                           >
-                            <div className="mock-rule-request">
-                              <div className="mock-rule-request-top">
-                                <span className={`method-badge method-${rule.method.toLowerCase()}`}>
-                                  {rule.method}
-                                </span>
-                                <strong>{scene.variant}</strong>
-                              </div>
-                              <small>{urlSummary.full}</small>
-                            </div>
-
-                            <div className="mock-rule-match">
-                              <span>{t("mock.ruleMatchMode")}</span>
-                              <span>{t("mock.ruleMatchQueryCount", { count: queryCount })}</span>
-                              <span>{t("mock.ruleMatchHeaderCount", { count: 0 })}</span>
-                              <span>{t("mock.ruleMatchBodyCount", { count: 0 })}</span>
-                            </div>
-
-                            <div className="mock-rule-response">
-                              <strong>{responseKind.label}</strong>
-                              <small>{t("mock.ruleResponseSummary", { status: rule.responseStatus, name: scene.variant })}</small>
-                            </div>
-
-                            <div className="mock-rule-proxy">
-                              <span className="status-badge muted">{t("mock.ruleProxyOff")}</span>
-                              <small>{t("mock.ruleProxyOffBody")}</small>
-                            </div>
-
-                            <div className="mock-rule-status">
-                              <label className="mock-switch" aria-label={rule.enabled ? t("mock.disable") : t("mock.enable")}>
+                            <div className={styles.ruleStatus}>
+                              <label
+                                className={styles.switch}
+                                aria-label={rule.enabled ? t("mock.disable") : t("mock.enable")}
+                              >
                                 <input
                                   checked={rule.enabled}
                                   type="checkbox"
@@ -854,39 +883,60 @@ export function MockPage() {
                                     void toggleRule(rule).catch(console.error);
                                   }}
                                 />
-                                <span className="mock-switch-track" />
+                                <span className={styles.switchTrack} />
                               </label>
                             </div>
 
-                            <div className="mock-rule-actions" onClick={(event) => event.stopPropagation()}>
+                            <div className={styles.ruleRequest}>
+                              <div className={styles.ruleRequestTop}>
+                                <span className={classNames(styles.methodBadge, getMethodClass(rule.method))}>
+                                  {rule.method}
+                                </span>
+                                <strong>{scene.variant}</strong>
+                              </div>
+                              <small>{urlSummary.full}</small>
+                            </div>
+
+                            <div className={styles.ruleMatch}>
+                              <strong>{matchSummary}</strong>
+                            </div>
+
+                            <div className={styles.ruleResponse}>
+                              <strong>{`${responseKind} · ${rule.responseStatus}`}</strong>
+                            </div>
+
+                            <div className={styles.ruleActions} onClick={(event) => event.stopPropagation()}>
                               <button
-                                className="ghost-button"
+                                className={styles.secondaryButton}
                                 type="button"
                                 onClick={() => openEditModal(rule)}
                               >
                                 {t("mock.edit")}
                               </button>
-                              <div className="mock-menu-root">
+                              <div className={styles.menuRoot} onClick={(event) => event.stopPropagation()}>
                                 <button
-                                  className="ghost-button mock-more-button"
+                                  className={classNames(styles.iconButton, styles.moreButton)}
+                                  aria-label={t("mock.ruleMore")}
                                   type="button"
                                   onClick={() =>
-                                    setRuleMenuId((current) =>
-                                      current === rule.id ? null : rule.id,
-                                    )
+                                    setRuleMenuId((current) => (current === rule.id ? null : rule.id))
                                   }
                                 >
-                                  {t("mock.ruleMore")}
+                                  ...
                                 </button>
                                 {ruleMenuId === rule.id ? (
-                                  <div className="mock-action-menu">
+                                  <div className={styles.actionMenu}>
                                     <button type="button" onClick={() => duplicateRule(rule).catch(console.error)}>
                                       {t("mock.duplicate")}
                                     </button>
                                     <button type="button" onClick={() => openEditModal(rule)}>
                                       {t("mock.ruleMove")}
                                     </button>
-                                    <button className="danger-button" type="button" onClick={() => removeRule(rule).catch(console.error)}>
+                                    <button
+                                      className={styles.menuDanger}
+                                      type="button"
+                                      onClick={() => removeRule(rule).catch(console.error)}
+                                    >
                                       {t("mock.delete")}
                                     </button>
                                   </div>
@@ -906,43 +956,35 @@ export function MockPage() {
       </section>
 
       {isModalOpen ? (
-        <div
-          className="mock-modal-overlay"
-          onClick={() => setIsModalOpen(false)}
-          role="presentation"
-        >
+        <div className={styles.modalOverlay} onClick={() => setIsModalOpen(false)} role="presentation">
           <section
             aria-modal="true"
-            className="mock-modal-card"
+            className={styles.modalCard}
             onClick={(event) => event.stopPropagation()}
             role="dialog"
           >
-            <div className="mock-modal-head">
-              <div className="mock-modal-head-copy">
-                <div className="mock-modal-head-top">
-                  <span className="feature-badge">
-                    {editingId ? t("mock.modalEditTitle") : t("mock.modalCreateTitle")}
-                  </span>
-                </div>
+            <div className={styles.modalHeader}>
+              <div className={styles.modalHeaderCopy}>
+                <span className={styles.sectionBadge}>
+                  {editingId ? t("mock.modalEditTitle") : t("mock.modalCreateTitle")}
+                </span>
                 <h3>{editingId ? t("mock.modalEditTitle") : t("mock.modalCreateTitle")}</h3>
                 <p>{t("mock.modalBody")}</p>
               </div>
               <button
                 aria-label={t("mock.form.cancel")}
-                className="ghost-button mock-modal-close"
+                className={styles.modalClose}
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-              >
-                ×
-              </button>
+              />
             </div>
 
-            <div className="mock-modal-status-bar">
-              <div className="mock-modal-status-copy">
+            <div className={styles.modalStatusCard}>
+              <div className={styles.modalStatusCopy}>
                 <strong>{t("mock.form.ruleStatus")}</strong>
                 <span>{form.enabled ? t("mock.form.ruleEnabledHint") : t("mock.form.ruleDisabledHint")}</span>
               </div>
-              <label className="mock-switch" aria-label={form.enabled ? t("mock.disable") : t("mock.enable")}>
+              <label className={styles.switch} aria-label={form.enabled ? t("mock.disable") : t("mock.enable")}>
                 <input
                   checked={form.enabled}
                   type="checkbox"
@@ -950,22 +992,23 @@ export function MockPage() {
                     setForm((current) => ({ ...current, enabled: event.target.checked }))
                   }
                 />
-                <span className="mock-switch-track" />
+                <span className={styles.switchTrack} />
               </label>
             </div>
 
-            <div className="mock-modal-sections">
-              <section className="mock-modal-section">
-                <div className="mock-modal-section-head">
+            <div className={styles.modalSections}>
+              <section className={styles.modalSection}>
+                <div className={styles.modalSectionHeader}>
                   <div>
                     <strong>{t("mock.modalBasic")}</strong>
                     <p>{t("mock.form.basicHint")}</p>
                   </div>
                 </div>
-                <div className="mock-modal-grid">
-                  <label className="mock-field">
+                <div className={styles.modalGrid}>
+                  <label className={styles.field}>
                     <span>{t("mock.form.nameLabel")}</span>
                     <input
+                      className={styles.control}
                       placeholder={t("mock.form.name")}
                       value={form.variant}
                       onChange={(event) =>
@@ -973,9 +1016,10 @@ export function MockPage() {
                       }
                     />
                   </label>
-                  <label className="mock-field">
+                  <label className={styles.field}>
                     <span>{t("mock.form.groupLabel")}</span>
                     <select
+                      className={styles.control}
                       value={form.group}
                       onChange={(event) =>
                         setForm((current) => ({ ...current, group: event.target.value }))
@@ -987,10 +1031,12 @@ export function MockPage() {
                         </option>
                       ))}
                     </select>
+                    <small className={styles.fieldHint}>{t("mock.form.groupHint")}</small>
                   </label>
-                  <label className="mock-field">
+                  <label className={styles.field}>
                     <span>{t("mock.form.methodLabel")}</span>
                     <select
+                      className={styles.control}
                       value={form.method}
                       onChange={(event) =>
                         setForm((current) => ({ ...current, method: event.target.value }))
@@ -1003,13 +1049,10 @@ export function MockPage() {
                       <option>DELETE</option>
                     </select>
                   </label>
-                  <div className="mock-field mock-field-muted">
-                    <span>{t("mock.form.groupActiveHintLabel")}</span>
-                    <div className="mock-static-value">{t("mock.currentGroupBody")}</div>
-                  </div>
-                  <label className="mock-field mock-modal-grid-span">
+                  <label className={classNames(styles.field, styles.fieldFull)}>
                     <span>{t("mock.form.urlLabel")}</span>
                     <input
+                      className={styles.control}
                       placeholder={t("mock.form.url")}
                       value={form.url}
                       onChange={(event) =>
@@ -1020,62 +1063,62 @@ export function MockPage() {
                 </div>
               </section>
 
-              <section className="mock-modal-section">
-                <div className="mock-modal-section-head">
+              <section className={styles.modalSection}>
+                <div className={styles.modalSectionHeader}>
                   <div>
                     <strong>{t("mock.modalMatch")}</strong>
                     <p>{t("mock.form.matchSectionHint")}</p>
                   </div>
                 </div>
-                <div className="mock-modal-grid">
-                  <div className="mock-field">
+                <div className={styles.modalGrid}>
+                  <div className={styles.field}>
                     <span>{t("mock.form.matchModeLabel")}</span>
-                    <div className="mock-static-value">
-                      <strong>{t("mock.ruleMatchMode")}</strong>
-                      <small>{t("mock.ruleMatchExactUrl")}</small>
+                    <div className={styles.staticValue}>
+                      <strong>{t("mock.ruleMatchExactUrl")}</strong>
                     </div>
                   </div>
-                  <div className="mock-field">
+                  <div className={styles.field}>
                     <span>{t("mock.form.queryLabel")}</span>
-                    <div className="mock-static-value">
-                      <strong>{t("mock.ruleMatchQueryCount", { count: getQueryCount(form.url) })}</strong>
-                      <small>{t("mock.form.matchHint")}</small>
+                    <div className={styles.staticValue}>
+                      <strong>{t("mock.form.queryIncluded")}</strong>
+                      <small>{t("mock.ruleMatchQueryCount", { count: getQueryCount(form.url) })}</small>
                     </div>
                   </div>
-                  <div className="mock-field">
+                  <div className={styles.field}>
                     <span>{t("mock.form.headerLabel")}</span>
-                    <div className="mock-static-value">
-                      <strong>{t("mock.ruleMatchHeaderCount", { count: 0 })}</strong>
+                    <div className={styles.staticValue}>
+                      <strong>{t("mock.form.unsupportedCompact")}</strong>
                       <small>{t("mock.form.unsupportedHint")}</small>
                     </div>
                   </div>
-                  <div className="mock-field">
+                  <div className={styles.field}>
                     <span>{t("mock.form.bodyLabel")}</span>
-                    <div className="mock-static-value">
-                      <strong>{t("mock.ruleMatchBodyCount", { count: 0 })}</strong>
+                    <div className={styles.staticValue}>
+                      <strong>{t("mock.form.unsupportedCompact")}</strong>
                       <small>{t("mock.form.unsupportedHint")}</small>
                     </div>
                   </div>
                 </div>
               </section>
 
-              <section className="mock-modal-section">
-                <div className="mock-modal-section-head">
+              <section className={styles.modalSection}>
+                <div className={styles.modalSectionHeader}>
                   <div>
                     <strong>{t("mock.modalReturn")}</strong>
                     <p>{t("mock.form.responseSectionHint")}</p>
                   </div>
                 </div>
-                <div className="mock-modal-grid">
-                  <div className="mock-field">
+                <div className={styles.modalGrid}>
+                  <div className={styles.field}>
                     <span>{t("mock.form.returnTypeLabel")}</span>
-                    <div className="mock-static-value">
+                    <div className={styles.staticValue}>
                       <strong>{t("mock.ruleResponseFixed")}</strong>
                     </div>
                   </div>
-                  <label className="mock-field">
+                  <label className={styles.field}>
                     <span>{t("mock.form.statusLabel")}</span>
                     <input
+                      className={styles.control}
                       type="number"
                       placeholder={t("mock.form.status")}
                       value={form.responseStatus}
@@ -1087,11 +1130,11 @@ export function MockPage() {
                       }
                     />
                   </label>
-                  <label className="mock-field mock-modal-grid-span">
+                  <label className={classNames(styles.field, styles.fieldFull)}>
                     <span>{t("mock.form.headersLabel")}</span>
                     <textarea
-                      rows={5}
-                      className="mock-code-editor"
+                      rows={4}
+                      className={classNames(styles.codeEditor, styles.codeEditorCompact)}
                       placeholder={t("mock.form.headers")}
                       value={form.responseHeaders}
                       onChange={(event) =>
@@ -1099,11 +1142,11 @@ export function MockPage() {
                       }
                     />
                   </label>
-                  <label className="mock-field mock-modal-grid-span">
+                  <label className={classNames(styles.field, styles.fieldFull)}>
                     <span>{t("mock.form.bodyContentLabel")}</span>
                     <textarea
                       rows={10}
-                      className="mock-code-editor"
+                      className={classNames(styles.codeEditor, styles.codeEditorBody)}
                       placeholder={t("mock.form.bodyPlaceholder")}
                       value={form.responseBody}
                       onChange={(event) =>
@@ -1114,55 +1157,49 @@ export function MockPage() {
                 </div>
               </section>
 
-              <section className="mock-modal-section">
-                <div className="mock-modal-section-head">
+              <section className={styles.modalSection}>
+                <div className={styles.modalSectionHeader}>
                   <div>
                     <strong>{t("mock.modalAdvanced")}</strong>
                     <p>{t("mock.form.behaviorSectionHint")}</p>
                   </div>
                 </div>
-                <div className="mock-modal-grid">
-                  <div className="mock-field">
+                <div className={styles.modalGrid}>
+                  <div className={styles.field}>
                     <span>{t("mock.form.priorityLabel")}</span>
-                    <div className="mock-static-value">
+                    <div className={styles.staticValue}>
                       <strong>{form.priority}</strong>
                       <small>{t("mock.form.priorityHint")}</small>
                     </div>
                   </div>
-                  <div className="mock-field">
+                  <div className={styles.field}>
                     <span>{t("mock.form.proxyLabel")}</span>
-                    <div className="mock-static-value">
+                    <div className={styles.staticValue}>
                       <strong>{t("mock.ruleProxyOff")}</strong>
                       <small>{t("mock.form.proxyHint")}</small>
                     </div>
                   </div>
-                  <div className="mock-field">
+                  <div className={styles.field}>
                     <span>{t("mock.form.delayLabel")}</span>
-                    <div className="mock-static-value">
-                      <strong>{form.delayMs} ms</strong>
+                    <div className={styles.staticValue}>
+                      <strong>{form.delayMs} 毫秒</strong>
                       <small>{t("mock.form.delayHint")}</small>
                     </div>
                   </div>
-                  <div className="mock-field">
-                    <span>{t("mock.form.groupRuleLabel")}</span>
-                    <div className="mock-static-value">
-                      <strong>{form.group}</strong>
-                      <small>{t("mock.currentGroupBody")}</small>
-                    </div>
-                  </div>
                 </div>
+                <div className={styles.inlineHint}>{t("mock.currentGroupBody")}</div>
               </section>
             </div>
 
-            <div className="mock-modal-actions">
-              <button className="ghost-button" type="button" onClick={() => setIsModalOpen(false)}>
+            <div className={styles.modalActions}>
+              <button className={styles.secondaryButton} type="button" onClick={() => setIsModalOpen(false)}>
                 {t("mock.form.cancel")}
               </button>
               <button
-                className="primary-action"
+                className={styles.primaryButton}
                 type="button"
                 onClick={() => {
-                  void saveRule(false).catch((error) => {
+                  void saveRule().catch((error) => {
                     showToast(error instanceof Error ? error.message : String(error), "error");
                   });
                 }}
@@ -1176,3 +1213,4 @@ export function MockPage() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import { createBrowserRouter, NavLink, Navigate, Outlet } from "react-router-dom";
+﻿import { createBrowserRouter, NavLink, Navigate, Outlet } from "react-router-dom";
 import { useConsoleI18n } from "../i18n/I18nProvider";
 import { HomePage } from "../pages/home/HomePage";
 import { TrafficPage } from "../pages/traffic/TrafficPage";
@@ -14,7 +14,7 @@ function AppLayout() {
       <aside className="sidebar">
         <div className="brand">
           <h1>北极星</h1>
-          <p>Local API workbench</p>
+          <p>本地接口工作台</p>
         </div>
         <nav className="nav">
           <NavLink to="/">{t("nav.home")}</NavLink>
