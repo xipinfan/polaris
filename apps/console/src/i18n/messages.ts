@@ -4,6 +4,7 @@ export const consoleMessages = {
   "zh-CN": {
     "nav.home": "\u9996\u9875",
     "nav.traffic": "\u5b9e\u65f6\u8bf7\u6c42",
+    "nav.proxyForward": "\u4ee3\u7406\u8f6c\u53d1",
     "nav.requests": "\u5df2\u4fdd\u5b58\u8bf7\u6c42",
     "nav.rules": "\u89c4\u5219",
     "nav.mock": "\u6a21\u62df",
@@ -556,6 +557,7 @@ export const consoleMessages = {
   "en-US": {
     "nav.home": "Home",
     "nav.traffic": "Live Traffic",
+    "nav.proxyForward": "Proxy Forwarding",
     "nav.requests": "Saved Requests",
     "nav.rules": "Rules",
     "nav.mock": "Mock",

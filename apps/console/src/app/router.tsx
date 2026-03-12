@@ -5,6 +5,7 @@ import { TrafficPage } from "../pages/traffic/TrafficPage";
 import { MockPage } from "../pages/mock/MockPage";
 import { DebugPage } from "../pages/debug/DebugPage";
 import { SettingsPage } from "../pages/settings/SettingsPage";
+import { ProxyForwardPage } from "../pages/proxy-forward/ProxyForwardPage";
 
 function AppLayout() {
   const { t } = useConsoleI18n();
@@ -19,6 +20,7 @@ function AppLayout() {
         <nav className="nav">
           <NavLink to="/">{t("nav.home")}</NavLink>
           <NavLink to="/traffic">{t("nav.traffic")}</NavLink>
+          <NavLink to="/proxy-forward">{t("nav.proxyForward")}</NavLink>
           <NavLink to="/mock">{t("nav.mock")}</NavLink>
           <NavLink to="/debug">{t("nav.debug")}</NavLink>
           <NavLink to="/settings">{t("nav.settings")}</NavLink>
@@ -38,6 +40,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <HomePage /> },
       { path: "traffic", element: <TrafficPage /> },
+      { path: "proxy-forward", element: <ProxyForwardPage /> },
       { path: "mock", element: <MockPage /> },
       { path: "requests", element: <Navigate replace to="/mock" /> },
       { path: "rules", element: <Navigate replace to="/mock" /> },

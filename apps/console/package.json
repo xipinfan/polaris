@@ -12,6 +12,7 @@
     "@polaris/shared-contracts": "workspace:*",
     "@polaris/shared-types": "workspace:*",
     "@polaris/shared-utils": "workspace:*",
+    "antd": "^6.3.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.3.0"

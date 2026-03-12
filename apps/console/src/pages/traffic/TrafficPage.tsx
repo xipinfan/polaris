@@ -15,6 +15,7 @@ import { useToast } from "../../features/feedback/ToastProvider";
 import { useConsoleI18n } from "../../i18n/I18nProvider";
 import { apiClient } from "../../services/apiClient";
 import { readCachedSettings, writeCachedSettings } from "../../services/consoleCache";
+import styles from "./TrafficPage.module.css";
 
 const refreshIntervalMs = 3000;
 
@@ -314,7 +315,7 @@ export function TrafficPage() {
   };
 
   return (
-    <div className="page-stack traffic-page-shell">
+    <div className={styles.page}>
       <section className="traffic-toolbar-strip panel">
         <div className="traffic-toolbar-primary">
           <div className="traffic-toolbar-group traffic-toolbar-group-emphasis">
