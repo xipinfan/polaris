@@ -1,0 +1,29 @@
+﻿.card {
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #dbe2ef;
+  background: #ffffff;
+}
+
+.card h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.card p {
+  margin: 8px 0 0;
+  color: #4f5d75;
+}
+
+.error {
+  border-color: #f3c7c7;
+  background: #fff6f6;
+}
+
+.action {
+  margin-top: 14px;
+  border: 1px solid #c8d2e5;
+  background: #fff;
+  border-radius: 10px;
+  padding: 6px 12px;
+}

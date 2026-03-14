@@ -1,0 +1,136 @@
+﻿.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f3f6fa;
+  color: #475467;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.statusBadgeSuccess {
+  background: #edf7f2;
+  color: #1e7a54;
+}
+
+.statusBadgeWarning {
+  background: #fff3e8;
+  color: #b54708;
+}
+
+.statusBadgeDanger {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.statusBadgeMuted {
+  background: #f3f5f8;
+  color: #667085;
+}
+
+.listRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.timeline,
+.timelineItem,
+.timelineContent,
+.timelineStats,
+.detailScroll {
+  display: grid;
+  gap: 12px;
+}
+
+.detailScroll {
+  display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+}
+
+.timelineContent,
+.timelineStat {
+  border-radius: 18px;
+  border: 1px solid #e6ebf2;
+  background: #ffffff;
+}
+
+.timeline {
+  position: relative;
+}
+
+.timeline::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 11px;
+  width: 2px;
+  background: #dbe5f5;
+}
+
+.timelineItem {
+  position: relative;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: start;
+}
+
+.timelineDot {
+  position: relative;
+  z-index: 1;
+  width: 24px;
+  height: 24px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #cfe0ff;
+  box-shadow: 0 6px 16px rgba(49, 89, 201, 0.1);
+}
+
+.timelineItemActive .timelineDot {
+  background: #3159c9;
+  border-color: #3159c9;
+}
+
+.timelineContent,
+.timelineStat {
+  padding: 14px 16px;
+  border-radius: 16px;
+}
+
+.timelineStats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.timelineStat span {
+  display: block;
+  color: #667085;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.timelineStat strong {
+  display: block;
+  margin-top: 8px;
+  color: #101828;
+  font-size: 15px;
+  line-height: 1.55;
+  white-space: normal;
+  word-break: break-word;
+}
+
+@media (max-width: 900px) {
+.timelineStats {
+    grid-template-columns: 1fr;
+  }
+}
+

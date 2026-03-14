@@ -1,0 +1,173 @@
+﻿.featureBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f3f6fa;
+  color: #475467;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.button {
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease;
+}
+
+.button:hover:not(:disabled) {
+  transform: none;
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.buttonPrimary {
+  color: #ffffff;
+  border-color: #3159c9;
+  background: #3159c9;
+}
+
+.buttonPrimary:hover:not(:disabled) {
+  border-color: #3c67dc;
+  background: #3c67dc;
+}
+
+.buttonSecondary,
+.buttonTertiary {
+  color: #344054 !important;
+  border-color: #d7dee8 !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.92) inset, 0 4px 10px rgba(16, 24, 40, 0.04) !important;
+}
+
+.buttonSecondary:hover:not(:disabled),
+.buttonTertiary:hover:not(:disabled) {
+  color: #3159c9 !important;
+  border-color: #c6d1e0 !important;
+  background: #ffffff !important;
+}
+
+.toolbarSection .button {
+  min-height: 38px;
+}
+
+.detailContextActions .button {
+  min-height: 36px;
+}
+
+.actionGrid .button {
+  width: 100%;
+}
+
+.compactActionGrid .button {
+  min-height: 38px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.toolCard .featureBadge {
+  background: #eef3ff;
+  color: #3159c9;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(8px);
+}
+
+.modalCard {
+  width: min(560px, 100%);
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+  border-radius: 28px;
+  border: 1px solid rgba(221, 227, 236, 0.96);
+  background: #fcfcfd;
+  box-shadow: 0 28px 60px rgba(15, 23, 42, 0.16);
+}
+
+.modalHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.modalHead h3 {
+  margin: 8px 0 0;
+  font-size: 24px;
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+}
+
+.modalBody {
+  margin: 0;
+  color: var(--ink-1);
+  line-height: 1.65;
+}
+
+.certificateVisual,
+.certificateVisualCopy,
+.certificateSteps,
+.modalActions {
+  display: grid;
+  gap: 12px;
+}
+
+.certificateFallback {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid #e6ebf2;
+  background: #ffffff;
+}
+
+.certificateSteps > div {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.certificateSteps span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #eef3ff;
+  color: #3159c9;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.modalLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+

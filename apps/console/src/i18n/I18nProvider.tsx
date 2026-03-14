@@ -1,15 +1,18 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { consoleMessages, type ConsoleLocale, type ConsoleMessageKey } from "./messages";
+import { persistenceKeys, readPersistence, writePersistence } from "../lib/persistence";
 
-type TranslateParams = Record<string, string | number>;
+export type TranslateParams = Record<string, string | number>;
+export type TranslateFn = (
+  key: ConsoleMessageKey,
+  params?: TranslateParams,
+) => string;
 
 type I18nContextValue = {
   locale: ConsoleLocale;
   setLocale: (locale: ConsoleLocale) => void;
-  t: (key: ConsoleMessageKey, params?: TranslateParams) => string;
+  t: TranslateFn;
 };
-
-const STORAGE_KEY = "polaris.console.locale";
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
@@ -18,7 +21,7 @@ function detectInitialLocale(): ConsoleLocale {
     return "zh-CN";
   }
 
-  const stored = window.localStorage.getItem(STORAGE_KEY);
+  const stored = readPersistence<ConsoleLocale | null>(persistenceKeys.locale, null);
   if (stored === "zh-CN" || stored === "en-US") {
     return stored;
   }
@@ -41,7 +44,7 @@ export function ConsoleI18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocale] = useState<ConsoleLocale>(detectInitialLocale);
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, locale);
+    writePersistence(persistenceKeys.locale, locale);
   }, [locale]);
 
   const value = useMemo<I18nContextValue>(

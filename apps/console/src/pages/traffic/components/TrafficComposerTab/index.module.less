@@ -1,0 +1,171 @@
+﻿.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f3f6fa;
+  color: #475467;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.statusBadgeMuted {
+  background: #f3f5f8;
+  color: #667085;
+}
+
+.composerHead,
+.composerPreview,
+.actionGrid,
+.detailScroll {
+  display: grid;
+  gap: 12px;
+}
+
+.button {
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease;
+}
+
+.button:hover:not(:disabled) {
+  transform: none;
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.buttonPrimary {
+  color: #ffffff;
+  border-color: #3159c9;
+  background: #3159c9;
+}
+
+.buttonPrimary:hover:not(:disabled) {
+  border-color: #3c67dc;
+  background: #3c67dc;
+}
+
+.buttonSecondary {
+  color: #344054 !important;
+  border-color: #d7dee8 !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.92) inset, 0 4px 10px rgba(16, 24, 40, 0.04) !important;
+}
+
+.buttonSecondary:hover:not(:disabled) {
+  color: #3159c9 !important;
+  border-color: #c6d1e0 !important;
+  background: #ffffff !important;
+}
+
+.toolbarSection .button {
+  min-height: 38px;
+}
+
+.composerPreview {
+  display: grid;
+  gap: 12px;
+}
+
+.detailContextActions .button {
+  min-height: 36px;
+}
+
+.detailScroll {
+  display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+}
+
+.composerCard,
+.composerPreview > div {
+  border-radius: 18px;
+  border: 1px solid #e6ebf2;
+  background: #ffffff;
+}
+
+.composerPreview > div {
+  padding: 14px 16px;
+  border-radius: 16px;
+}
+
+.composerPreview span,
+.composerHead span {
+  display: block;
+  color: #667085;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.composerPreview strong,
+.composerHead strong {
+  display: block;
+  margin-top: 8px;
+  color: #101828;
+  font-size: 15px;
+  line-height: 1.55;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.composerCard {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.composerHead {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.composerCard p {
+  margin: 0;
+  color: #667085;
+  line-height: 1.6;
+}
+
+.actionGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.actionGrid .button {
+  width: 100%;
+}
+
+.compactActionGrid .button {
+  min-height: 38px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.composerPreviewRow {
+  display: grid;
+  gap: 6px;
+}
+
+@media (max-width: 900px) {
+.actionGrid {
+    grid-template-columns: 1fr;
+  }
+}
+

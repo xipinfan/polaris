@@ -5,6 +5,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import styles from "./ToastProvider.module.css";
 
 type ToastTone = "success" | "error" | "info";
 
@@ -40,10 +41,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div aria-atomic="true" aria-live="polite" className="toast-viewport">
+      <div aria-atomic="true" aria-live="polite" className={styles.viewport}>
         {toasts.map((toast) => (
           <div
-            className={`toast-card toast-${toast.tone}`}
+            className={`${styles.card} ${styles[toast.tone]}`}
             key={toast.id}
             role="status"
           >

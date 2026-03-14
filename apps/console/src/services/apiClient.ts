@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   CreateMockRuleInput,
   RunRequestInput,
   SaveRequestInput,
@@ -14,21 +14,70 @@ import type {
   SavedRequest,
   ServiceStatus
 } from "@polaris/shared-types";
+import { mapApiError, ApiError } from "./apiErrors";
+import { recordApiRequest } from "./apiMetrics";
 import { getApiBaseUrl } from "./coreDiscovery";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const baseUrl = await getApiBaseUrl();
-  const response = await fetch(`${baseUrl}${path}`, {
-    headers: {
-      "Content-Type": "application/json"
-    },
-    ...init
-  });
-  const payload = await response.json();
-  if (!response.ok) {
-    throw new Error(payload.error ?? "Request failed");
+  const startedAt = Date.now();
+  try {
+    const baseUrl = await getApiBaseUrl();
+    const response = await fetch(`${baseUrl}${path}`, {
+      headers: {
+        "Content-Type": "application/json"
+      },
+      ...init
+    });
+
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch (error) {
+      throw new ApiError({
+        message: "Invalid response payload",
+        code: "PARSE_ERROR",
+        path,
+        status: response.status,
+        details: error,
+      });
+    }
+
+    if (!response.ok) {
+      const message =
+        typeof payload === "object" && payload && "error" in payload
+          ? String((payload as { error?: unknown }).error ?? "Request failed")
+          : "Request failed";
+
+      throw new ApiError({
+        message,
+        code: "HTTP_ERROR",
+        path,
+        status: response.status,
+        details: payload,
+      });
+    }
+
+    recordApiRequest({ path, durationMs: Date.now() - startedAt, ok: true });
+
+    if (typeof payload === "object" && payload && "data" in payload) {
+      return (payload as { data: T }).data;
+    }
+
+    throw new ApiError({
+      message: "Missing response data",
+      code: "PARSE_ERROR",
+      path,
+      status: response.status,
+      details: payload,
+    });
+  } catch (error) {
+    const mapped = mapApiError(error, path);
+    if (mapped.code === "UNKNOWN_ERROR") {
+      mapped.code = "NETWORK_ERROR";
+    }
+    recordApiRequest({ path, durationMs: Date.now() - startedAt, ok: false });
+    throw mapped;
   }
-  return payload.data as T;
 }
 
 export const apiClient = {

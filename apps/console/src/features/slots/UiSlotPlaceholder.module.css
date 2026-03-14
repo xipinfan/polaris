@@ -1,0 +1,7 @@
+.placeholder {
+  padding: 14px;
+  border: 1px dashed #cfd8e3;
+  border-radius: var(--radius-md);
+  background: #f8fafc;
+  color: #667085;
+}

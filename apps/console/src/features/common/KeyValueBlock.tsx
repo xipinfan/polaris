@@ -1,5 +1,6 @@
 import { useToast } from "../feedback/ToastProvider";
 import { useConsoleI18n } from "../../i18n/I18nProvider";
+import styles from "./KeyValueBlock.module.css";
 
 type KeyValueMap = Record<string, unknown> | null | undefined;
 type KeyValueCopyMode = "block" | "row";
@@ -34,30 +35,30 @@ export function KeyValueBlock({
   };
 
   return (
-    <section className="panel kv-block">
-      <div className="kv-block-header">
+    <section className={`${styles.block} panel kv-block`}>
+      <div className={`${styles.header} kv-block-header`}>
         <h3>{title}</h3>
-        <div className="kv-block-actions">
-          <span className="feature-badge">{entries.length}</span>
+        <div className={`${styles.actions} kv-block-actions`}>
+          <span className={styles.countBadge}>{entries.length}</span>
           {copyMode === "block" ? (
-            <button className="json-copy-button" onClick={() => void copy()} type="button">
+            <button className={`${styles.copyButton} json-copy-button`} onClick={() => void copy()} type="button">
               {t("json.copy")}
             </button>
           ) : null}
         </div>
       </div>
       {entries.length === 0 ? (
-        <div className="kv-empty">{t("detail.emptySection")}</div>
+        <div className={styles.empty}>{t("detail.emptySection")}</div>
       ) : (
-        <div className="kv-table">
+        <div className={`${styles.table} kv-table`}>
           {entries.map((entry) => (
-            <div className="kv-row" key={entry.key}>
-              <span className="kv-key">{entry.key}</span>
+            <div className={`${styles.row} kv-row`} key={entry.key}>
+              <span className={`${styles.key} kv-key`}>{entry.key}</span>
               {copyMode === "row" ? (
-                <div className="kv-value-wrap">
-                  <strong className="kv-value" title={entry.value}>{entry.value}</strong>
+                <div className={`${styles.valueWrap} kv-value-wrap`}>
+                  <strong className={`${styles.value} kv-value`} title={entry.value}>{entry.value}</strong>
                   <button
-                    className="inline-copy-button"
+                    className={`${styles.inlineCopyButton} inline-copy-button`}
                     onClick={() => {
                       void navigator.clipboard.writeText(entry.value).then(() => {
                         showToast(t("common.copied"));
@@ -69,7 +70,7 @@ export function KeyValueBlock({
                   </button>
                 </div>
               ) : (
-                <strong className="kv-value" title={entry.value}>{entry.value}</strong>
+                <strong className={`${styles.value} kv-value`} title={entry.value}>{entry.value}</strong>
               )}
             </div>
           ))}

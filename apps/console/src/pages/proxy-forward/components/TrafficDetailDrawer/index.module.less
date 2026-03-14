@@ -1,0 +1,155 @@
+﻿.pageEyebrow {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.drawerSection {
+  border-radius: 24px !important;
+  border: 1px solid rgba(223, 229, 238, 0.94) !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.05) !important;
+}
+
+.drawerSection {
+  :global(.ant-card-body) {
+    padding: 18px 20px;
+  }
+}
+
+.drawerSectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(205, 213, 224, 0.72);
+  background: rgba(255, 255, 255, 0.72);
+  color: #475467;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.statusBadgeSuccess {
+  border-color: rgba(185, 230, 214, 0.9);
+  background: rgba(238, 249, 244, 0.98);
+  color: #16624d;
+}
+
+.statusBadgeDanger {
+  border-color: rgba(243, 196, 196, 0.9);
+  background: rgba(254, 242, 242, 0.98);
+  color: #b42318;
+}
+
+.drawerBody {
+  display: grid;
+  gap: 12px;
+}
+
+.drawerHero,
+.codePanel {
+  border-radius: 20px;
+  border: 1px solid rgba(223, 229, 238, 0.94);
+  background: rgba(248, 250, 252, 0.72);
+}
+
+.drawerHero {
+  padding: 18px 20px;
+}
+
+.drawerHeroTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+
+  h3 {
+    margin: 6px 0 0;
+    font-size: 24px;
+    line-height: 1.08;
+    letter-spacing: -0.04em;
+    color: #0f172a;
+  }
+}
+
+.drawerHeroMeta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 10px;
+  color: #667085;
+  font-size: 13px;
+}
+
+.drawerSectionHeader {
+  justify-content: space-between;
+  margin-bottom: 12px;
+
+  span {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+}
+
+.drawerGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.drawerGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.codePanel {
+  padding: 14px 16px;
+
+  pre {
+    margin: 0;
+    overflow: auto;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    color: #0f172a;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}
+
+.codePanelHeader {
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #667085;
+}
+
+.trafficDrawer {
+  :global(.ant-drawer-header) {
+    display: none;
+  }
+
+  :global(.ant-drawer-body) {
+    padding: 18px;
+    background: #f5f7fb;
+  }
+}
+
+@media (max-width: 1380px) {
+.drawerGrid {
+    grid-template-columns: 1fr;
+  }
+}
+

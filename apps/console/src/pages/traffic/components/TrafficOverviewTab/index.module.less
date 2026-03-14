@@ -1,0 +1,117 @@
+﻿.detailScroll {
+  display: grid;
+  gap: 12px;
+}
+
+.detailBodyGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.detailScroll {
+  display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+}
+
+.detailSummary,
+.detailSection {
+  border-radius: 18px;
+  border: 1px solid #e6ebf2;
+  background: #ffffff;
+}
+
+.detailSummaryHead {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e9edf4;
+  background: #f8fafc;
+}
+
+.detailSummaryHead strong {
+  color: #101828;
+  font-size: 16px;
+}
+
+.detailSummaryHead span {
+  color: #667085;
+  font-size: 13px;
+  word-break: break-word;
+}
+
+.detailFacts {
+  display: grid;
+}
+
+.detailFactRow {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 16px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.detailFactRow:last-child {
+  border-bottom: 0;
+}
+
+.detailFactRow > span {
+  color: #667085;
+  font-size: 12px;
+}
+
+.detailFactValue {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.detailFactValue strong {
+  color: #101828;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.inlineCopyButton {
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid #d7dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #667085;
+  font-size: 11px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.detailFactRow:hover .inlineCopyButton,
+.detailFactRow:focus-within .inlineCopyButton {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.inlineCopyButton:hover:not(:disabled),
+.inlineCopyButton:focus-visible {
+  color: #3159c9;
+  border-color: #c6d1e0;
+  background: #ffffff;
+}
+
+.detailSection {
+  overflow: hidden;
+}
+
+.detailSection :global(.json-block),
+.detailSection :global(.kv-block) {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+

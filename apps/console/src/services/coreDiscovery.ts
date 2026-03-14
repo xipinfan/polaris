@@ -1,4 +1,5 @@
-const API_PORT_STORAGE_KEY = "polaris.apiPort";
+import { persistenceKeys, readPersistence, writePersistence } from "../lib/persistence";
+
 const API_PORT_QUERY_KEY = "apiPort";
 const apiPortCandidates = Array.from({ length: 100 }, (_, index) => 9001 + index);
 let cachedApiBaseUrl: string | null = null;
@@ -9,7 +10,7 @@ function readStoredPort(): number | null {
     return Number(queryPort);
   }
 
-  const stored = window.localStorage.getItem(API_PORT_STORAGE_KEY);
+  const stored = readPersistence<string | null>(persistenceKeys.apiPort, null);
   return stored && Number.isInteger(Number(stored)) ? Number(stored) : null;
 }
 
@@ -42,7 +43,7 @@ export async function getApiBaseUrl(): Promise<string> {
 
   for (const port of candidates) {
     if (await isApiPortAvailable(port)) {
-      window.localStorage.setItem(API_PORT_STORAGE_KEY, String(port));
+      writePersistence(persistenceKeys.apiPort, String(port));
       cachedApiBaseUrl = `http://127.0.0.1:${port}/api`;
       return cachedApiBaseUrl;
     }

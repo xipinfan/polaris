@@ -1,0 +1,237 @@
+﻿.surface {
+  border-radius: 24px;
+  border: 1px solid rgba(221, 227, 236, 0.96);
+  background: #fcfcfd;
+  box-shadow: 0 16px 34px rgba(16, 24, 40, 0.05);
+}
+
+.emptyCard {
+  display: grid;
+  gap: 8px;
+  place-items: center;
+  min-height: 220px;
+  padding: 24px;
+  border-radius: 20px;
+  border: 1px dashed #d7dee8;
+  background: #ffffff;
+  text-align: center;
+}
+
+.emptyCard h3,
+.emptyCard p {
+  margin: 0;
+}
+
+.compactEmpty {
+  min-height: 180px;
+}
+
+.segmentedControl {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 14px;
+  border: 1px solid #dde3ec;
+  background: #f6f8fb;
+}
+
+.segmentedButton {
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #667085;
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.segmentedButtonActive {
+  background: #ffffff;
+  color: #101828;
+  box-shadow: 0 2px 10px rgba(16, 24, 40, 0.06);
+}
+
+.filterGrid,
+.metricRow {
+  display: grid;
+  gap: 12px;
+}
+
+.requestPane {
+  min-height: 0;
+  height: var(--traffic-main-panels-height);
+  padding: 16px;
+}
+
+.requestPane {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.filters {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.filterGrid {
+  grid-template-columns: minmax(240px, 1.6fr) minmax(180px, 1fr) 120px 120px;
+  gap: 10px;
+}
+
+.filterGridSecondary {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.metricRow {
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  gap: 14px;
+  color: #475467;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.filterInput {
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 14px;
+  border: 1px solid #d7dee8;
+  background: #ffffff;
+  color: #101828;
+  box-shadow: none;
+}
+
+.filterInput::placeholder {
+  color: #98a2b3;
+}
+
+.requestTable {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  border: 1px solid #e6ebf2;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.requestHeader,
+.requestRow {
+  display: grid;
+  grid-template-columns: 42px 68px 72px 82px minmax(120px, 0.72fr) minmax(220px, 1.5fr) minmax(120px, 0.72fr) 78px;
+  gap: 10px;
+  align-items: center;
+}
+
+.requestHeader {
+  min-height: 44px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e9edf4;
+  color: #667085;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.requestList {
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  background: #ffffff;
+}
+
+.requestRow {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 1px solid rgba(238, 242, 246, 0.95);
+  background: #ffffff;
+  text-align: left;
+  box-shadow: none;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #334155;
+  transform: none !important;
+}
+
+.requestRow:nth-child(even) {
+  background: #fafbfd;
+}
+
+.requestRow:hover {
+  background: #f5f8ff;
+}
+
+.requestRowActive {
+  background: #eef4ff;
+  box-shadow: inset 3px 0 0 #3159c9;
+}
+
+.requestRowWarning {
+  background: #fff8ef;
+}
+
+.requestRowWarning.requestRowActive {
+  background: #fff1dd;
+  box-shadow: inset 3px 0 0 #d46b08;
+}
+
+.requestRow span,
+.requestRow strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.requestRow strong {
+  color: #101828;
+}
+
+.statusCellSuccess {
+  color: #067647;
+}
+
+.statusCellWarning {
+  color: #b54708;
+}
+
+.statusCellDanger {
+  color: #b42318;
+}
+
+.statusCellMuted {
+  color: #667085;
+}
+
+@media (max-width: 1280px) {
+.requestPane {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+  }
+}
+
+@media (max-width: 900px) {
+.filterGrid,
+.filterGridSecondary {
+    grid-template-columns: 1fr;
+  }
+
+.requestTable {
+    overflow: auto;
+  }
+
+.requestHeader,
+.requestRow {
+    min-width: 980px;
+  }
+}
+

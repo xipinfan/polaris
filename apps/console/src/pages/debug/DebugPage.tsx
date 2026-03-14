@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import type { RequestRecord } from "@polaris/shared-types";
-import { buildCurl } from "../../features/common/curl";
+import { useRunDebugRequestMutation, useSaveDebugRequestMutation } from "../../domains/debug/mutations";
 import { useToast } from "../../features/feedback/ToastProvider";
-import { JsonBlock } from "../../features/common/JsonBlock";
 import { useConsoleI18n } from "../../i18n/I18nProvider";
+import { toastQueryError } from "../../lib/query/queryOptions";
 import { UiSlotPlaceholder } from "../../features/slots/UiSlotPlaceholder";
-import { apiClient } from "../../services/apiClient";
+import { DebugRequestForm } from "./components/DebugRequestForm";
+import { DebugResponsePanel } from "./components/DebugResponsePanel";
+import styles from "./DebugPage.module.css";
 
 type DebugDraftState = {
   draft?: {
@@ -27,6 +29,8 @@ export function DebugPage() {
   const [body, setBody] = useState("");
   const [name, setName] = useState("");
   const [response, setResponse] = useState<RequestRecord | null>(null);
+  const runRequestMutation = useRunDebugRequestMutation();
+  const saveRequestMutation = useSaveDebugRequestMutation();
   const { t } = useConsoleI18n();
   const { showToast } = useToast();
 
@@ -58,24 +62,32 @@ export function DebugPage() {
       headers: {},
       query: {},
       body: method === "GET" ? null : parsedBody(),
-      tags: ["debug"]
+      tags: ["debug"],
     }),
-    [body, method, name, url]
+    [body, method, name, url],
   );
 
   const runRequest = async () => {
-    const result = await apiClient.runRequest({
-      method,
-      url,
-      body: parsedBody()
-    });
-    setResponse(result);
-    showToast(t("common.requestSent", { status: result.statusCode }));
+    try {
+      const result = await runRequestMutation.mutateAsync({
+        method,
+        url,
+        body: parsedBody(),
+      });
+      setResponse(result);
+      showToast(t("common.requestSent", { status: result.statusCode }));
+    } catch (error) {
+      toastQueryError(showToast, error, "请求发送失败");
+    }
   };
 
   const saveDraft = async () => {
-    await apiClient.saveManualRequest(currentDraft);
-    showToast(t("common.savedRequest", { name: currentDraft.name }));
+    try {
+      await saveRequestMutation.mutateAsync(currentDraft);
+      showToast(t("common.savedRequest", { name: currentDraft.name }));
+    } catch (error) {
+      toastQueryError(showToast, error, "保存失败");
+    }
   };
 
   const resetDraft = () => {
@@ -88,8 +100,8 @@ export function DebugPage() {
   };
 
   return (
-    <div className="page-stack">
-      <section className="page-header">
+    <div className={styles.page}>
+      <section className={styles.header}>
         <div>
           <h2>{t("debug.title")}</h2>
         </div>
@@ -97,74 +109,26 @@ export function DebugPage() {
 
       <UiSlotPlaceholder slot="debug-header" />
 
-      <div className="debug-layout">
-        <form
-          className="form-grid"
-          onSubmit={(event) => {
-            event.preventDefault();
-            runRequest().catch(console.error);
+      <div className={styles.layout}>
+        <DebugRequestForm
+          body={body}
+          currentDraft={currentDraft}
+          method={method}
+          name={name}
+          onCopyCurl={(curlText) => {
+            void navigator.clipboard.writeText(curlText).then(() => showToast(t("common.curlCopied")));
           }}
-        >
-          <div className="panel-heading">
-            <div><h3>{t("debug.formTitle")}</h3></div>
-          </div>
-          <input value={name} onChange={(event) => setName(event.target.value)} placeholder={t("debug.namePlaceholder")} />
-          <select value={method} onChange={(event) => setMethod(event.target.value)}>
-            <option>GET</option>
-            <option>POST</option>
-            <option>PUT</option>
-            <option>DELETE</option>
-          </select>
-          <input value={url} onChange={(event) => setUrl(event.target.value)} placeholder={t("debug.urlPlaceholder")} />
-          <textarea rows={12} value={body} onChange={(event) => setBody(event.target.value)} placeholder={t("debug.bodyPlaceholder")} />
-          <div className="button-grid">
-            <button className="primary-action" type="submit">{t("debug.send")}</button>
-            <button type="button" className="ghost-button" onClick={() => saveDraft().catch(console.error)}>{t("debug.save")}</button>
-            <button type="button" className="ghost-button" onClick={resetDraft}>{t("debug.clear")}</button>
-            <button
-              type="button"
-              className="ghost-button"
-              onClick={() => {
-                void navigator.clipboard
-                  .writeText(buildCurl(currentDraft))
-                  .then(() => showToast(t("common.curlCopied")));
-              }}
-            >
-              {t("debug.copyCurl")}
-            </button>
-          </div>
-        </form>
-
-        {response ? (
-          <div className="detail-grid">
-            <div className="panel">
-              <div className="panel-heading">
-                <div>
-                  <h3>{t("debug.responseTitle")}</h3>
-                  <p>{response.method} {response.path}</p>
-                </div>
-                <span className={`status-badge ${response.statusCode >= 400 ? "warning" : ""}`}>{response.statusCode}</span>
-              </div>
-              <div className="stats-grid compact">
-                <div className="stat-tile">
-                  <span>{t("debug.metric.duration")}</span>
-                  <strong>{response.duration} ms</strong>
-                </div>
-                <div className="stat-tile">
-                  <span>{t("debug.metric.source")}</span>
-                  <strong>{response.source === "debug" ? t("debug.source.debug") : t("debug.source.proxy")}</strong>
-                </div>
-              </div>
-            </div>
-            <JsonBlock title={t("debug.responseHeaders")} value={response.responseHeaders} />
-            <JsonBlock title={t("debug.responseBody")} value={response.responseBody} />
-          </div>
-        ) : (
-          <div className="empty-card">
-            <h3>{t("debug.waitTitle")}</h3>
-            <p>{t("debug.waitBody")}</p>
-          </div>
-        )}
+          onReset={resetDraft}
+          onRun={() => void runRequest()}
+          onSave={() => void saveDraft()}
+          setBody={setBody}
+          setMethod={setMethod}
+          setName={setName}
+          setUrl={setUrl}
+          t={t}
+          url={url}
+        />
+        <DebugResponsePanel response={response} t={t} />
       </div>
     </div>
   );

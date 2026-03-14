@@ -1,6 +1,7 @@
 import { formatJson } from "@polaris/shared-utils";
 import { useToast } from "../feedback/ToastProvider";
 import { useConsoleI18n } from "../../i18n/I18nProvider";
+import styles from "./JsonBlock.module.css";
 
 export function JsonBlock({ title, value }: { title: string; value: unknown }) {
   const { t } = useConsoleI18n();
@@ -13,15 +14,15 @@ export function JsonBlock({ title, value }: { title: string; value: unknown }) {
   };
 
   return (
-    <section className="panel json-block">
-      <div className="json-block-header">
+    <section className={`${styles.block} panel json-block`}>
+      <div className={`${styles.header} json-block-header`}>
         <h3>{title}</h3>
-        <button className="json-copy-button" onClick={copy} type="button">
+        <button className={`${styles.copyButton} json-copy-button`} onClick={copy} type="button">
           {t("json.copy")}
         </button>
       </div>
-      <div className="json-code-shell simple">
-        <pre className="json-code">{formatted}</pre>
+      <div className={`${styles.codeShell} json-code-shell simple`}>
+        <pre className={`${styles.code} json-code`}>{formatted}</pre>
       </div>
     </section>
   );

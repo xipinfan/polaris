@@ -1,0 +1,324 @@
+﻿.sectionLabel {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(205, 213, 224, 0.72);
+  background: rgba(255, 255, 255, 0.72);
+  color: #475467;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.statusBadgeSuccess {
+  border-color: rgba(185, 230, 214, 0.9);
+  background: rgba(238, 249, 244, 0.98);
+  color: #16624d;
+}
+
+.statusBadgeMuted {
+  border-color: rgba(219, 225, 233, 0.92);
+  background: rgba(246, 248, 251, 0.98);
+  color: #667085;
+}
+
+.sidebar {
+  position: relative;
+  z-index: 24;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 14px;
+  min-height: 0;
+  height: var(--mock-main-panels-height);
+  min-height: var(--mock-main-panels-height);
+  max-height: var(--mock-main-panels-height);
+  padding: 14px;
+  border-radius: 24px;
+  border: 1px solid rgba(223, 229, 238, 0.94);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(247, 249, 252, 0.96) 100%);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.05);
+  align-self: stretch;
+  overflow: visible;
+}
+
+.sidebarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  strong {
+    display: block;
+    margin-top: 4px;
+    font-size: 16px;
+    line-height: 1.2;
+    color: #101828;
+  }
+}
+
+.searchInput {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(213, 221, 231, 0.98);
+  background: rgba(255, 255, 255, 0.96);
+  color: #101828;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 1px 2px rgba(16, 24, 40, 0.02);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+
+  &::placeholder {
+    color: #98a2b3;
+  }
+
+  &:focus {
+    border-color: rgba(83, 111, 194, 0.72);
+    box-shadow:
+      0 0 0 4px rgba(53, 86, 168, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  }
+}
+
+.searchInput {
+  min-height: 42px;
+  padding: 10px 12px;
+}
+
+.groupList {
+  display: grid;
+  gap: 10px;
+  min-height: 0;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  overflow-x: visible;
+  align-content: start;
+}
+
+.groupItem {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 20px;
+  transition: background 160ms ease;
+  overflow: visible;
+
+  &:hover {
+    background: rgba(244, 247, 252, 0.96);
+  }
+
+  &:hover .moreButton,
+  &:focus-within .moreButton {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.groupItemOpen {
+  z-index: 48;
+}
+
+.groupItemActive {
+  background: rgba(241, 245, 252, 0.98);
+
+  .groupSelect {
+    background: transparent;
+  }
+
+  .moreButton {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.groupSelect {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 0;
+  min-height: 72px;
+  padding: 12px 12px 12px 16px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 10px;
+    bottom: 10px;
+    width: 2px;
+    border-radius: 999px;
+    background: transparent;
+  }
+}
+
+.groupItemActive .groupSelect::before {
+  background: #3556a8;
+}
+
+.groupMain {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.groupTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+
+  strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #0f172a;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+}
+
+.groupStatusDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #c4ccd8;
+  flex: none;
+}
+
+.groupStatusDotActive {
+  background: #3556a8;
+  box-shadow: 0 0 0 4px rgba(53, 86, 168, 0.12);
+}
+
+.groupMeta {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #667085;
+}
+
+.secondaryButton,
+.iconButton,
+.actionMenu button {
+  border: 1px solid transparent;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.secondaryButton {
+  min-height: 38px;
+  padding: 0 14px;
+}
+
+.secondaryButton,
+.iconButton {
+  border-color: rgba(213, 221, 231, 0.98);
+  background: rgba(255, 255, 255, 0.92);
+  color: #344054;
+}
+
+.secondaryButton:hover,
+.iconButton:hover,
+.actionMenu button:hover {
+  background: rgba(246, 248, 251, 0.96);
+}
+
+.iconButton {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  padding: 0;
+  justify-content: center;
+  font-size: 15px;
+  color: #667085;
+}
+
+.moreButton {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ruleActions .secondaryButton {
+  min-height: 38px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+
+.menuRoot {
+  position: relative;
+  display: flex;
+  overflow: visible;
+  z-index: 30;
+}
+
+.actionMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 80;
+  display: grid;
+  min-width: 168px;
+  padding: 8px;
+  border-radius: 18px;
+  border: 1px solid rgba(223, 229, 238, 0.96);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.12);
+
+  button {
+    min-height: 36px;
+    padding: 0 12px;
+    justify-content: flex-start;
+    background: transparent;
+    color: #344054;
+  }
+}
+
+.groupActionMenu {
+  top: calc(100% + 8px);
+  right: 0;
+  left: auto;
+  min-width: 182px;
+  z-index: 96;
+}
+
+.menuDanger {
+  color: #b93815 !important;
+}
+
+@media (max-width: 860px) {
+.sidebar {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
