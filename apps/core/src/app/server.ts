@@ -10,11 +10,17 @@ import { createRuntime } from "./runtime";
 export async function startServers() {
   const runtime = await createRuntime();
   const currentSettings = runtime.proxyService.getSettings();
-  const legacyMcpServer = new MpcServer(runtime.requestService, runtime.mockService, runtime.proxyService);
+  const legacyMcpServer = new MpcServer(
+    runtime.requestService,
+    runtime.mockService,
+    runtime.proxyService,
+    runtime.certificateManager
+  );
   const streamableMcpServer = new PolarisMcpStreamableHttpServer(
     runtime.requestService,
     runtime.mockService,
-    runtime.proxyService
+    runtime.proxyService,
+    runtime.certificateManager
   );
 
   const apiApp = express();

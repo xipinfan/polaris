@@ -4,7 +4,7 @@ import type {
   RunRequestInput,
   SaveRequestInput
 } from "@polaris/shared-contracts";
-import type { RequestRecord, SavedRequest } from "@polaris/shared-types";
+import type { RequestRecord, RequestResolution, SavedRequest } from "@polaris/shared-types";
 import { ExtensionHost } from "../extensions/extensionHost";
 import { MockService } from "../mock/mockService";
 import { StorageAdapter } from "../storage/storageAdapter";
@@ -23,6 +23,13 @@ async function readResponseBody(response: Response): Promise<unknown> {
   const headers = Object.fromEntries(response.headers.entries());
   const buffer = Buffer.from(await response.arrayBuffer());
   return normalizeCapturedBody(buffer, headers);
+}
+
+function buildResolution(partial: Omit<RequestResolution, "decidedAt">): RequestResolution {
+  return {
+    ...partial,
+    decidedAt: new Date().toISOString()
+  };
 }
 
 export class RequestService {
@@ -147,7 +154,15 @@ export class RequestService {
         responseBody: mockRule.responseBody,
         createdAt: new Date().toISOString(),
         source,
-        secure: requestUrl.protocol === "https:"
+        secure: requestUrl.protocol === "https:",
+        resolution: buildResolution({
+          mode: "mock",
+          source: "mock_engine",
+          matchedRuleId: mockRule.id,
+          matchedRuleName: mockRule.name,
+          target: null,
+          reason: `Matched mock rule ${mockRule.name}`
+        })
       };
       await this.capture(record);
       return record;
@@ -177,7 +192,15 @@ export class RequestService {
       responseBody: normalizeBody(responseBody),
       createdAt: new Date().toISOString(),
       source,
-      secure: requestUrl.protocol === "https:"
+      secure: requestUrl.protocol === "https:",
+      resolution: buildResolution({
+        mode: "direct",
+        source: "none",
+        matchedRuleId: null,
+        matchedRuleName: null,
+        target: `${requestUrl.protocol}//${requestUrl.host}`,
+        reason: "No mock rule matched request"
+      })
     };
 
     await this.capture(record);

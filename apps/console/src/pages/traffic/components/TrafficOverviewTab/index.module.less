@@ -18,6 +18,7 @@
 }
 
 .detailSummary,
+.decisionCard,
 .detailSection {
   border-radius: 18px;
   border: 1px solid #e6ebf2;
@@ -106,6 +107,138 @@
 
 .detailSection {
   overflow: hidden;
+}
+
+.decisionCard {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border-color: #e5e7eb;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.decisionCardMock {
+  border-color: #f0abfc;
+  background: linear-gradient(180deg, #fdf4ff 0%, #ffffff 100%);
+}
+
+.decisionCardProxyForward {
+  border-color: #93c5fd;
+  background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+}
+
+.decisionCardDirect {
+  border-color: #86efac;
+  background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);
+}
+
+.decisionCardBlock {
+  border-color: #fdba74;
+  background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
+}
+
+.decisionCardError {
+  border-color: #fca5a5;
+  background: linear-gradient(180deg, #fef2f2 0%, #ffffff 100%);
+}
+
+.decisionCardUnknown {
+  border-color: #d0d5dd;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.decisionCard > strong {
+  color: #6b21a8;
+  font-size: 14px;
+}
+
+.decisionCardMock > strong {
+  color: #86198f;
+}
+
+.decisionCardProxyForward > strong {
+  color: #1e40af;
+}
+
+.decisionCardDirect > strong {
+  color: #166534;
+}
+
+.decisionCardBlock > strong {
+  color: #9a3412;
+}
+
+.decisionCardError > strong {
+  color: #991b1b;
+}
+
+.decisionCardUnknown > strong {
+  color: #475467;
+}
+
+.decisionRows {
+  display: grid;
+}
+
+.decisionRow {
+  display: grid;
+  grid-template-columns: 136px minmax(0, 1fr);
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px dashed #ece3f8;
+}
+
+.decisionRow:first-child {
+  border-top: 0;
+}
+
+.decisionRow > span {
+  color: #7c6f95;
+  font-size: 12px;
+}
+
+.decisionRow > strong {
+  color: #2a1f3f;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.decisionCardProxyForward .decisionRow > span,
+.decisionCardProxyForward .decisionRow > strong {
+  color: #1e3a8a;
+}
+
+.decisionCardProxyForward .decisionRow {
+  border-top-color: #dbeafe;
+}
+
+.decisionCardDirect .decisionRow > span,
+.decisionCardDirect .decisionRow > strong {
+  color: #14532d;
+}
+
+.decisionCardDirect .decisionRow {
+  border-top-color: #dcfce7;
+}
+
+.decisionCardBlock .decisionRow > span,
+.decisionCardBlock .decisionRow > strong {
+  color: #7c2d12;
+}
+
+.decisionCardBlock .decisionRow {
+  border-top-color: #ffedd5;
+}
+
+.decisionCardError .decisionRow > span,
+.decisionCardError .decisionRow > strong {
+  color: #7f1d1d;
+}
+
+.decisionCardError .decisionRow {
+  border-top-color: #fee2e2;
 }
 
 .detailSection :global(.json-block),

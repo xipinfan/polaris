@@ -4,13 +4,14 @@ import net from "node:net";
 import type { Duplex } from "node:stream";
 import { randomUUID } from "node:crypto";
 import type { IncomingMessage, RequestOptions, ServerResponse } from "node:http";
-import type { RequestRecord } from "@polaris/shared-types";
+import type { RequestRecord, RequestResolution } from "@polaris/shared-types";
 import { normalizeBody } from "../../shared/normalizeBody";
 import {
   normalizeCapturedBody,
   parseSearchParamsRecord,
 } from "../../shared/requestParsing";
 import { MockService } from "../mock/mockService";
+import { ProxyService } from "./proxyService";
 import { RequestService } from "../requests/requestService";
 import { CertificateManager } from "./certificateManager";
 
@@ -69,8 +70,16 @@ export class ProxyEngine {
   constructor(
     private readonly requestService: RequestService,
     private readonly mockService: MockService,
-    private readonly certificateManager: CertificateManager
+    private readonly certificateManager: CertificateManager,
+    private readonly proxyService: ProxyService
   ) {}
+
+  private buildResolution(partial: Omit<RequestResolution, "decidedAt">): RequestResolution {
+    return {
+      ...partial,
+      decidedAt: new Date().toISOString()
+    };
+  }
 
   createServer(): http.Server {
     const server = http.createServer(async (req, res) => {
@@ -161,6 +170,7 @@ export class ProxyEngine {
     const requestHeaders = sanitizeProxyHeaders(req.headers);
     requestHeaders.host = targetUrl.host;
     const startedAt = Date.now();
+    const forwardDecision = this.proxyService.getForwardDecision(targetUrl.host);
 
     const mockRule = await this.mockService.match(req.method ?? "GET", targetUrl.toString());
     if (mockRule) {
@@ -187,7 +197,15 @@ export class ProxyEngine {
         responseBody: normalizeBody(mockRule.responseBody),
         createdAt: new Date().toISOString(),
         source: "proxy",
-        secure: targetUrl.protocol === "https:"
+        secure: targetUrl.protocol === "https:",
+        resolution: this.buildResolution({
+          mode: "mock",
+          source: "mock_engine",
+          matchedRuleId: mockRule.id,
+          matchedRuleName: mockRule.name,
+          target: `${targetUrl.protocol}//${targetUrl.host}`,
+          reason: `Matched mock rule ${mockRule.name}`
+        })
       };
 
       if (shouldCapture) {
@@ -234,7 +252,18 @@ export class ProxyEngine {
           responseBody,
           createdAt: new Date().toISOString(),
           source: "proxy",
-          secure: targetUrl.protocol === "https:"
+          secure: targetUrl.protocol === "https:",
+          resolution: this.buildResolution({
+            mode: "proxy_forward",
+            source: forwardDecision.source,
+            matchedRuleId: forwardDecision.matchedRuleId ?? null,
+            matchedRuleName: forwardDecision.matchedRuleName ?? null,
+            target: `${targetUrl.protocol}//${targetUrl.host}`,
+            reason:
+              forwardDecision.mode === "proxy_forward"
+                ? forwardDecision.reason
+                : `Request reached local proxy while routing decision is direct: ${forwardDecision.reason}`
+          })
         };
 
         if (shouldCapture) {

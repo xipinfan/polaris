@@ -27,7 +27,7 @@ export async function createRuntime(): Promise<PolarisRuntime> {
   const certificateManager = new CertificateManager();
   await certificateManager.init();
   await proxyService.setCertificateInstalled(await certificateManager.isRootCertificateTrusted());
-  const proxyEngine = new ProxyEngine(requestService, mockService, certificateManager);
+  const proxyEngine = new ProxyEngine(requestService, mockService, certificateManager, proxyService);
 
   return {
     storage,

@@ -79,15 +79,40 @@ export class MockService {
   }
 
   async toggle(id: string, enabled: boolean): Promise<MockRule> {
-    const target = this.list().find((item) => item.id === id);
+    const rules = this.list();
+    const target = rules.find((item) => item.id === id);
     if (!target) {
       throw new Error("Mock rule not found");
     }
 
-    return this.update(id, {
-      ...target,
-      enabled
+    const now = new Date().toISOString();
+    const nextRules = rules.map((rule) => {
+      if (rule.id === id) {
+        return {
+          ...rule,
+          enabled,
+          updatedAt: now
+        };
+      }
+
+      if (
+        enabled &&
+        rule.enabled &&
+        rule.method === target.method &&
+        rule.url === target.url
+      ) {
+        return {
+          ...rule,
+          enabled: false,
+          updatedAt: now
+        };
+      }
+
+      return rule;
     });
+
+    await this.storage.setMockRules(nextRules);
+    return nextRules.find((rule) => rule.id === id)!;
   }
 
   async match(method: string, url: string): Promise<MockRule | undefined> {

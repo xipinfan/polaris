@@ -8,6 +8,9 @@ import {
   cx,
   getContentType,
   getProtocolLabel,
+  getRequestResolutionLabel,
+  getRequestResolutionMode,
+  getRequestResolutionTooltip,
   getStatusTone,
 } from "../../utils/trafficFormatters";
 
@@ -18,6 +21,24 @@ const statusCellToneClassMap = {
   muted: localStyles.statusCellMuted,
 };
 
+const resolutionBadgeToneClassMap = {
+  mock: localStyles.resolutionBadgeMock,
+  proxy_forward: localStyles.resolutionBadgeProxyForward,
+  direct: localStyles.resolutionBadgeDirect,
+  block: localStyles.resolutionBadgeBlock,
+  error: localStyles.resolutionBadgeError,
+  unknown: localStyles.resolutionBadgeUnknown,
+};
+
+const requestRowResolutionClassMap = {
+  mock: localStyles.requestRowMock,
+  proxy_forward: localStyles.requestRowProxyForward,
+  direct: localStyles.requestRowDirect,
+  block: localStyles.requestRowBlock,
+  error: localStyles.requestRowError,
+  unknown: "",
+};
+
 type TrafficRequestPaneProps = {
   requests: RequestRecord[];
   selected?: RequestRecord;
@@ -26,6 +47,9 @@ type TrafficRequestPaneProps = {
     errorCount: number;
     secureCount: number;
     avgDuration: number;
+    mockCount: number;
+    proxyForwardCount: number;
+    directCount: number;
   };
   visibleRequests: RequestRecord[];
   recordBodyRef: RefObject<HTMLDivElement | null>;
@@ -97,6 +121,9 @@ export function TrafficRequestPane({
                 ["errors", t("traffic.focus.errors")],
                 ["https", t("traffic.focus.https")],
                 ["debug", t("traffic.focus.debug")],
+                ["mock", t("traffic.focus.mock")],
+                ["proxyForward", t("traffic.focus.proxyForward")],
+                ["direct", t("traffic.focus.direct")],
               ] as const
             ).map(([value, label]) => (
               <button
@@ -116,6 +143,9 @@ export function TrafficRequestPane({
             <span>{t("traffic.metric.visible")} {summary.total}</span>
             <span>{t("traffic.metric.errors")} {summary.errorCount}</span>
             <span>{t("traffic.metric.https")} {summary.secureCount}</span>
+            <span>{t("traffic.metric.mock")} {summary.mockCount}</span>
+            <span>{t("traffic.metric.proxyForward")} {summary.proxyForwardCount}</span>
+            <span>{t("traffic.metric.direct")} {summary.directCount}</span>
             <span>{t("traffic.metric.avgDuration")} {summary.avgDuration} ms</span>
           </div>
         </div>
@@ -127,6 +157,7 @@ export function TrafficRequestPane({
           <span>{t("traffic.column.status")}</span>
           <span>{t("traffic.column.method")}</span>
           <span>{t("traffic.column.protocol")}</span>
+          <span>{t("traffic.column.route")}</span>
           <span>{t("traffic.column.host")}</span>
           <span>{t("traffic.column.path")}</span>
           <span>{t("traffic.column.type")}</span>
@@ -140,6 +171,7 @@ export function TrafficRequestPane({
                 localStyles.requestRow,
                 selected?.id === item.id && localStyles.requestRowActive,
                 item.statusCode >= 400 && localStyles.requestRowWarning,
+                requestRowResolutionClassMap[getRequestResolutionMode(item)],
               )}
               onClick={() => onSelectRequest(item.id)}
               type="button"
@@ -150,6 +182,16 @@ export function TrafficRequestPane({
               </span>
               <span>{item.method}</span>
               <span>{getProtocolLabel(item)}</span>
+              <span
+                className={cx(
+                  localStyles.resolutionBadge,
+                  resolutionBadgeToneClassMap[getRequestResolutionMode(item)],
+                )}
+                title={getRequestResolutionTooltip(item, t)}
+              >
+                <span className={localStyles.resolutionGlyph} aria-hidden="true" />
+                {getRequestResolutionLabel(item, t)}
+              </span>
               <span title={item.host}>{item.host}</span>
               <strong title={item.path}>{item.path}</strong>
               <span title={getContentType(item)}>{getContentType(item)}</span>

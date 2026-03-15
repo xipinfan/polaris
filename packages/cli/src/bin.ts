@@ -12,6 +12,7 @@ const corePackageJson = require.resolve("@polaris/core/package.json");
 const tsxPackageJson = require.resolve("tsx/package.json");
 const corePackageDir = path.dirname(corePackageJson);
 const daemonEntry = path.join(corePackageDir, "src", "app", "daemon.ts");
+const mcpStdioEntry = path.join(corePackageDir, "src", "app", "mcpStdio.ts");
 const tsxCli = path.join(path.dirname(tsxPackageJson), "dist", "cli.mjs");
 
 function getPolarisHomeDir(): string {
@@ -182,6 +183,39 @@ async function mcpUrlCommand(): Promise<void> {
   console.log(state?.urls?.mcp ?? "http://127.0.0.1:9002/mcp");
 }
 
+async function mcpStdioCommand(): Promise<void> {
+  const packArgIndex = process.argv.findIndex((arg) => arg === "--pack");
+  const requestedPack = packArgIndex >= 0 ? process.argv[packArgIndex + 1] : undefined;
+  if (packArgIndex >= 0 && !requestedPack) {
+    throw new Error("Missing value for --pack");
+  }
+
+  const childEnv = { ...process.env };
+  if (requestedPack) {
+    childEnv.POLARIS_MCP_PACK = requestedPack;
+  }
+
+  const child = spawn(process.execPath, [tsxCli, mcpStdioEntry], {
+    stdio: "inherit",
+    env: childEnv
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    child.once("error", reject);
+    child.once("exit", (code, signal) => {
+      if (typeof code === "number" && code !== 0) {
+        reject(new Error(`mcp-stdio exited with code ${code}`));
+        return;
+      }
+      if (signal) {
+        reject(new Error(`mcp-stdio exited with signal ${signal}`));
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
 async function main() {
   const command = process.argv[2] ?? "status";
 
@@ -198,9 +232,12 @@ async function main() {
     case "mcp-url":
       await mcpUrlCommand();
       return;
+    case "mcp-stdio":
+      await mcpStdioCommand();
+      return;
     default:
       console.error(`Unknown command: ${command}`);
-      console.error("Usage: polaris <start|stop|status|mcp-url>");
+      console.error("Usage: polaris <start|stop|status|mcp-url|mcp-stdio>");
       process.exitCode = 1;
   }
 }

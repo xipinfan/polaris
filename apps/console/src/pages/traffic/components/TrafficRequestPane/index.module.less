@@ -90,8 +90,8 @@
 }
 
 .metricRow {
-  grid-auto-flow: column;
-  grid-auto-columns: max-content;
+  display: flex;
+  flex-wrap: wrap;
   gap: 14px;
   color: #475467;
   font-size: 12px;
@@ -125,7 +125,7 @@
 .requestHeader,
 .requestRow {
   display: grid;
-  grid-template-columns: 42px 68px 72px 82px minmax(120px, 0.72fr) minmax(220px, 1.5fr) minmax(120px, 0.72fr) 78px;
+  grid-template-columns: 42px 68px 72px 82px 120px minmax(120px, 0.72fr) minmax(220px, 1.5fr) minmax(120px, 0.72fr) 78px;
   gap: 10px;
   align-items: center;
 }
@@ -175,6 +175,26 @@
   box-shadow: inset 3px 0 0 #3159c9;
 }
 
+.requestRowMock {
+  box-shadow: inset 3px 0 0 #c026d3;
+}
+
+.requestRowProxyForward {
+  box-shadow: inset 3px 0 0 #2563eb;
+}
+
+.requestRowDirect {
+  box-shadow: inset 3px 0 0 #16a34a;
+}
+
+.requestRowBlock {
+  box-shadow: inset 3px 0 0 #ea580c;
+}
+
+.requestRowError {
+  box-shadow: inset 3px 0 0 #dc2626;
+}
+
 .requestRowWarning {
   background: #fff8ef;
 }
@@ -211,6 +231,97 @@
   color: #667085;
 }
 
+.resolutionBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  max-width: 112px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  gap: 6px;
+}
+
+.resolutionGlyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  flex: 0 0 16px;
+}
+
+.resolutionBadgeMock .resolutionGlyph::before {
+  content: "M";
+}
+
+.resolutionBadgeProxyForward .resolutionGlyph::before {
+  content: "P";
+}
+
+.resolutionBadgeDirect .resolutionGlyph::before {
+  content: "D";
+}
+
+.resolutionBadgeBlock .resolutionGlyph::before {
+  content: "B";
+}
+
+.resolutionBadgeError .resolutionGlyph::before {
+  content: "E";
+}
+
+.resolutionBadgeUnknown .resolutionGlyph::before {
+  content: "?";
+}
+
+.resolutionBadgeMock {
+  color: #a21caf;
+  border-color: #f0abfc;
+  background: #fdf4ff;
+}
+
+.resolutionBadgeProxyForward {
+  color: #1d4ed8;
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.resolutionBadgeDirect {
+  color: #15803d;
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.resolutionBadgeBlock {
+  color: #c2410c;
+  border-color: #fdba74;
+  background: #fff7ed;
+}
+
+.resolutionBadgeError {
+  color: #b91c1c;
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.resolutionBadgeUnknown {
+  color: #475467;
+  border-color: #d0d5dd;
+  background: #f8fafc;
+}
+
 @media (max-width: 1280px) {
 .requestPane {
     height: auto;
@@ -231,7 +342,7 @@
 
 .requestHeader,
 .requestRow {
-    min-width: 980px;
+    min-width: 1120px;
   }
 }
 

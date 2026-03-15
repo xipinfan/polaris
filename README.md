@@ -1,4 +1,4 @@
-# Polaris
+﻿# Polaris
 
 Polaris 是一个面向本地开发联调的 API 工作台。
 
@@ -311,3 +311,94 @@ pnpm polaris:status
 - 如何开始使用
 
 更细的实现细节和开发背景，适合继续拆到单独文档中维护。
+
+---
+
+## MCP 接入（2026 更新）
+
+Polaris 现在同时支持两种 MCP 暴露方式：全量能力接入与按 pack（能力包）接入。
+
+### 1）启动 Polaris 并获取 MCP 地址
+
+```bash
+pnpm polaris:start
+pnpm polaris:status
+node packages/cli/dist/bin.js mcp-url
+```
+
+默认 MCP 地址（若未发生端口回退）：
+
+```text
+http://127.0.0.1:9002/mcp
+```
+
+### 2）Streamable HTTP MCP
+
+- 全量工具/资源：
+  - `http://127.0.0.1:<mcpPort>/mcp`
+- 按 pack 过滤的工具/资源：
+  - `http://127.0.0.1:<mcpPort>/mcp/mock`
+  - `http://127.0.0.1:<mcpPort>/mcp/proxy`
+  - `http://127.0.0.1:<mcpPort>/mcp/request`
+  - `http://127.0.0.1:<mcpPort>/mcp/ops`
+
+支持的 pack 别名：`mock`、`proxy`、`request`、`ops`。
+
+### 3）Legacy MCP HTTP（兼容模式）
+
+- 查看所有 pack：
+  - `GET /packs`
+- 查看某个 pack 的工具：
+  - `GET /packs/:pack/tools`
+- 通过 pack 过滤工具/资源：
+  - `GET /tools?pack=mock`
+  - `GET /resources?pack=request`
+- 按 pack 约束执行工具：
+  - `POST /invoke/:tool?pack=proxy`
+
+未知 pack 会返回结构化错误：
+
+```json
+{
+  "error": {
+    "code": "UNKNOWN_PACK",
+    "message": "Unknown MCP pack: <pack>",
+    "retryable": false
+  }
+}
+```
+
+### 4）stdio MCP
+
+使用工作区脚本：
+
+```bash
+pnpm mcp
+pnpm dev:mcp
+```
+
+或直接使用 CLI：
+
+```bash
+node packages/cli/dist/bin.js mcp-stdio
+node packages/cli/dist/bin.js mcp-stdio --pack mock
+```
+
+`--pack` 支持：`mock | proxy | request | ops`。
+
+### 5）Pack 定义
+
+- `mock_pack.v1`
+  - Mock 规则生命周期管理 + 活动分组管理
+- `proxy_pack.v1`
+  - 代理模式管理 + Host 规则管理 + 代理决策预览
+- `request_pack.v1`
+  - 抓包/保存请求查询 + 运行/回放 + 清理请求
+- `ops_pack.v1`
+  - 健康状态/运行配置/证书就绪性查询
+
+### 6）推荐接入策略
+
+- 对 AI Agent 默认使用 pack 接入，降低工具选择负担与上下文开销。
+- 保留全量 `/mcp` 入口用于管理与调试。
+- 保留 legacy 入口用于旧客户端兼容。

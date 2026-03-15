@@ -8,6 +8,9 @@ import {
   cx,
   getContentType,
   getProtocolLabel,
+  getRequestResolutionLabel,
+  getRequestResolutionMode,
+  getRequestResolutionSourceLabel,
 } from "../../utils/trafficFormatters";
 
 type TrafficOverviewTabProps = {
@@ -29,6 +32,15 @@ const buildFacts = (selected: RequestRecord, t: TranslateFn) => [
   [t("detail.duration"), `${selected.duration} ms`],
   [t("detail.capturedAt"), new Date(selected.createdAt).toLocaleString()],
 ];
+
+const decisionCardClassMap = {
+  mock: localStyles.decisionCardMock,
+  proxy_forward: localStyles.decisionCardProxyForward,
+  direct: localStyles.decisionCardDirect,
+  block: localStyles.decisionCardBlock,
+  error: localStyles.decisionCardError,
+  unknown: localStyles.decisionCardUnknown,
+};
 
 export function TrafficOverviewTab({
   inspectorBodyRef,
@@ -59,6 +71,32 @@ export function TrafficOverviewTab({
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className={cx(localStyles.decisionCard, decisionCardClassMap[getRequestResolutionMode(selected)])}>
+        <strong>{t("detail.resolution.title")}</strong>
+        <div className={localStyles.decisionRows}>
+          <div className={localStyles.decisionRow}>
+            <span>{t("detail.resolution.mode")}</span>
+            <strong>{getRequestResolutionLabel(selected, t)}</strong>
+          </div>
+          <div className={localStyles.decisionRow}>
+            <span>{t("detail.resolution.source")}</span>
+            <strong>{getRequestResolutionSourceLabel(selected, t)}</strong>
+          </div>
+          <div className={localStyles.decisionRow}>
+            <span>{t("detail.resolution.rule")}</span>
+            <strong>{selected.resolution?.matchedRuleName ?? selected.resolution?.matchedRuleId ?? "-"}</strong>
+          </div>
+          <div className={localStyles.decisionRow}>
+            <span>{t("detail.resolution.target")}</span>
+            <strong>{selected.resolution?.target ?? "-"}</strong>
+          </div>
+          <div className={localStyles.decisionRow}>
+            <span>{t("detail.resolution.reason")}</span>
+            <strong>{selected.resolution?.reason ?? t("detail.resolution.none")}</strong>
+          </div>
         </div>
       </section>
 

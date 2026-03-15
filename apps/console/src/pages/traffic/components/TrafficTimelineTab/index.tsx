@@ -7,6 +7,8 @@ import {
   formatRequestTime,
   getContentType,
   getProtocolLabel,
+  getRequestResolutionLabelByMode,
+  getRequestResolutionMode,
   getStatusTone,
 } from "../../utils/trafficFormatters";
 
@@ -28,6 +30,9 @@ export function TrafficTimelineTab({
   selected,
   t,
 }: TrafficTimelineTabProps) {
+  const resolutionMode = getRequestResolutionMode(selected);
+  const resolutionText = getRequestResolutionLabelByMode(resolutionMode, t);
+
   return (
     <div className={cx(localStyles.detailScroll, localStyles.root)} ref={inspectorBodyRef}>
       <div className={localStyles.timeline}>
@@ -84,6 +89,10 @@ export function TrafficTimelineTab({
         <div className={localStyles.timelineStat}>
           <span>{t("traffic.timeline.metric.protocol")}</span>
           <strong>{getProtocolLabel(selected)}</strong>
+        </div>
+        <div className={localStyles.timelineStat}>
+          <span>{t("traffic.column.route")}</span>
+          <strong>{resolutionText}</strong>
         </div>
         <div className={localStyles.timelineStat}>
           <span>{t("traffic.timeline.metric.source")}</span>

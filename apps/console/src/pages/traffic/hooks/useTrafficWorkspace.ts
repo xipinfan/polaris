@@ -10,6 +10,7 @@ import { useTrafficRequestsQuery, useTrafficSettingsQuery } from "../../../domai
 import { uiSelectors, workspaceSelectors } from "../../../stores/selectors";
 import { useUiStore } from "../../../stores/uiStore";
 import { useWorkspaceStore } from "../../../stores/workspaceStore";
+import { getRequestResolutionMode } from "../utils/trafficFormatters";
 
 export function useTrafficWorkspace() {
   const keyword = useUiStore(uiSelectors.trafficKeyword);
@@ -67,6 +68,12 @@ export function useTrafficWorkspace() {
         return requests.filter((item) => item.secure);
       case "debug":
         return requests.filter((item) => item.source === "debug");
+      case "mock":
+        return requests.filter((item) => getRequestResolutionMode(item) === "mock");
+      case "proxyForward":
+        return requests.filter((item) => getRequestResolutionMode(item) === "proxy_forward");
+      case "direct":
+        return requests.filter((item) => getRequestResolutionMode(item) === "direct");
       default:
         return requests;
     }
@@ -130,12 +137,20 @@ export function useTrafficWorkspace() {
             visibleRequests.length,
         )
       : 0;
+    const mockCount = visibleRequests.filter((item) => getRequestResolutionMode(item) === "mock").length;
+    const proxyForwardCount = visibleRequests.filter(
+      (item) => getRequestResolutionMode(item) === "proxy_forward"
+    ).length;
+    const directCount = visibleRequests.filter((item) => getRequestResolutionMode(item) === "direct").length;
 
     return {
       total: visibleRequests.length,
       errorCount,
       secureCount,
       avgDuration,
+      mockCount,
+      proxyForwardCount,
+      directCount,
     };
   }, [visibleRequests]);
 

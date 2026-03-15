@@ -2,11 +2,49 @@ import { randomUUID } from "node:crypto";
 import type { AppSetting, ProxyMode, ProxyRule } from "@polaris/shared-types";
 import { StorageAdapter } from "../storage/storageAdapter";
 
+export interface ProxyForwardDecision {
+  mode: "proxy_forward" | "direct";
+  source: "proxy_rules" | "proxy_global" | "none";
+  matchedRuleId?: string;
+  matchedRuleName?: string;
+  reason: string;
+}
+
 export class ProxyService {
   constructor(private readonly storage: StorageAdapter) {}
+  private readonly allowedModes: ProxyMode[] = ["direct", "global", "rules", "system"];
+  private readonly allowedActions: Array<ProxyRule["action"]> = ["proxy", "direct"];
 
   private normalizePattern(pattern: string): string {
-    return pattern.trim().toLowerCase().replace(/:\d+$/, "");
+    return String(pattern ?? "").trim().toLowerCase().replace(/:\d+$/, "");
+  }
+
+  private isValidRule(rule: Partial<ProxyRule> | undefined): rule is ProxyRule {
+    if (!rule) {
+      return false;
+    }
+
+    const normalizedPattern = this.normalizePattern(rule.pattern ?? "");
+    return (
+      typeof rule.id === "string" &&
+      normalizedPattern.length > 0 &&
+      rule.matchType === "host" &&
+      (rule.action === "proxy" || rule.action === "direct") &&
+      typeof rule.enabled === "boolean" &&
+      typeof rule.createdAt === "string" &&
+      typeof rule.updatedAt === "string"
+    );
+  }
+
+  private normalizedRules(): ProxyRule[] {
+    return this.storage
+      .getProxyRules()
+      .filter((rule) => this.isValidRule(rule))
+      .map((rule) => ({
+        ...rule,
+        pattern: this.normalizePattern(rule.pattern)
+      }))
+      .filter((rule) => rule.pattern.length > 0);
   }
 
   private matchesHostPattern(host: string, pattern: string): boolean {
@@ -30,6 +68,9 @@ export class ProxyService {
   }
 
   async setMode(mode: ProxyMode): Promise<ProxyMode> {
+    if (!this.allowedModes.includes(mode)) {
+      throw new Error("Invalid proxy mode");
+    }
     const settings = this.storage.getSettings();
     await this.storage.setSettings({
       ...settings,
@@ -54,17 +95,66 @@ export class ProxyService {
   }
 
   listRules(): ProxyRule[] {
-    return this.storage.getProxyRules();
+    return this.normalizedRules();
+  }
+
+  getForwardDecision(host: string): ProxyForwardDecision {
+    const normalizedHost = this.normalizePattern(host);
+    const mode = this.getMode();
+
+    if (!normalizedHost) {
+      return {
+        mode: "direct",
+        source: "none",
+        reason: "Host is empty"
+      };
+    }
+
+    if (mode === "global") {
+      return {
+        mode: "proxy_forward",
+        source: "proxy_global",
+        reason: "Proxy mode is global"
+      };
+    }
+
+    if (mode === "rules") {
+      const matchedRule = this.listRules().find((rule) => rule.enabled && this.matchesHostPattern(normalizedHost, rule.pattern));
+      if (!matchedRule) {
+        return {
+          mode: "direct",
+          source: "none",
+          reason: "No enabled proxy rule matched host"
+        };
+      }
+      return {
+        mode: matchedRule.action === "proxy" ? "proxy_forward" : "direct",
+        source: "proxy_rules",
+        matchedRuleId: matchedRule.id,
+        matchedRuleName: matchedRule.pattern,
+        reason: `Matched rule ${matchedRule.pattern} (${matchedRule.action})`
+      };
+    }
+
+    return {
+      mode: "direct",
+      source: "none",
+      reason: `Proxy mode is ${mode}`
+    };
   }
 
   isHostProxied(host: string): boolean {
-    return this.listRules().some(
-      (rule) => rule.enabled && rule.action === "proxy" && this.matchesHostPattern(host, rule.pattern)
-    );
+    return this.getForwardDecision(host).mode === "proxy_forward";
   }
 
   async upsertSiteRule(host: string, action: "proxy" | "direct"): Promise<ProxyRule> {
+    if (!this.allowedActions.includes(action)) {
+      throw new Error("Invalid proxy action");
+    }
     const pattern = this.normalizePattern(host);
+    if (!pattern) {
+      throw new Error("Host is required");
+    }
     const now = new Date().toISOString();
     const rules = this.listRules();
     const existing = rules.find((rule) => this.normalizePattern(rule.pattern) === pattern);
@@ -91,6 +181,9 @@ export class ProxyService {
 
   async removeSiteRule(host: string): Promise<void> {
     const pattern = this.normalizePattern(host);
+    if (!pattern) {
+      throw new Error("Host is required");
+    }
     const nextRules = this.listRules().filter((rule) => this.normalizePattern(rule.pattern) !== pattern);
     await this.storage.setProxyRules(nextRules);
   }

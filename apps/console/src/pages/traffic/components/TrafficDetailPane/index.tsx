@@ -5,6 +5,11 @@ import { uiSelectors } from "../../../../stores/selectors";
 import { useUiStore } from "../../../../stores/uiStore";
 import localStyles from "./index.module.less";
 import { cx } from "../../utils/trafficFormatters";
+import {
+  getRequestResolutionLabel,
+  getRequestResolutionMode,
+  getRequestResolutionTooltip,
+} from "../../utils/trafficFormatters";
 import { TrafficComposerTab } from "../TrafficComposerTab";
 import { TrafficOverviewTab } from "../TrafficOverviewTab";
 import { TrafficTimelineTab } from "../TrafficTimelineTab";
@@ -16,6 +21,15 @@ const methodBadgeClassMap = {
   PUT: localStyles.methodPut,
   PATCH: localStyles.methodPatch,
   DELETE: localStyles.methodDelete,
+};
+
+const resolutionBadgeClassMap = {
+  mock: localStyles.resolutionBadgeMock,
+  proxy_forward: localStyles.resolutionBadgeProxyForward,
+  direct: localStyles.resolutionBadgeDirect,
+  block: localStyles.resolutionBadgeBlock,
+  error: localStyles.resolutionBadgeError,
+  unknown: localStyles.resolutionBadgeUnknown,
 };
 
 type TrafficDetailPaneProps = {
@@ -110,6 +124,16 @@ export function TrafficDetailPane({
               <span className={localStyles.detailContextSeparator}>·</span>
               <span className={localStyles.detailContextHost} title={selected.host}>
                 {selected.host}
+              </span>
+              <span
+                className={cx(
+                  localStyles.resolutionBadge,
+                  resolutionBadgeClassMap[getRequestResolutionMode(selected)],
+                )}
+                title={getRequestResolutionTooltip(selected, t)}
+              >
+                <span className={localStyles.resolutionGlyph} aria-hidden="true" />
+                {getRequestResolutionLabel(selected, t)}
               </span>
             </div>
           </div>

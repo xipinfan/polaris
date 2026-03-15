@@ -1,4 +1,5 @@
 import type { Server } from "node:net";
+import { resolveMcpPackId } from "@polaris/mcp-contracts";
 import { createRuntime } from "./runtime";
 import { bindServerWithFallback } from "./ports";
 import { PolarisMcpStdioServer } from "../modules/mcp/stdioServer";
@@ -17,6 +18,11 @@ function closeServer(server: Server): Promise<void> {
 
 function waitForServer(server: Server): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (server.listening) {
+      resolve();
+      return;
+    }
+
     const cleanup = () => {
       server.off("error", onError);
       server.off("listening", onListening);
@@ -38,6 +44,11 @@ function waitForServer(server: Server): Promise<void> {
 }
 
 async function main() {
+  const packId = resolveMcpPackId(process.env.POLARIS_MCP_PACK ?? undefined);
+  if (process.env.POLARIS_MCP_PACK && !packId) {
+    throw new Error(`Unknown MCP pack: ${process.env.POLARIS_MCP_PACK}`);
+  }
+
   const runtime = await createRuntime();
   const settings = runtime.proxyService.getSettings();
   const shouldStartProxy = process.env.POLARIS_MCP_START_PROXY === "false" ? false : true;
@@ -55,7 +66,13 @@ async function main() {
     }
   }
 
-  const mcpServer = new PolarisMcpStdioServer(runtime.requestService, runtime.mockService, runtime.proxyService);
+  const mcpServer = new PolarisMcpStdioServer(
+    runtime.requestService,
+    runtime.mockService,
+    runtime.proxyService,
+    runtime.certificateManager,
+    packId
+  );
 
   let shuttingDown = false;
 
@@ -86,8 +103,8 @@ async function main() {
   await mcpServer.connect();
   console.error(
     shouldStartProxy
-      ? `Polaris MCP stdio server started with local proxy ${runtimeSettings.localProxyPort}`
-      : "Polaris MCP stdio server started without local proxy"
+      ? `Polaris MCP stdio server started with local proxy ${runtimeSettings.localProxyPort}${packId ? ` (pack=${packId})` : ""}`
+      : `Polaris MCP stdio server started without local proxy${packId ? ` (pack=${packId})` : ""}`
   );
 }
 

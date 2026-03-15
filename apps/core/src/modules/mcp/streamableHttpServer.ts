@@ -1,9 +1,17 @@
 import { randomUUID } from "node:crypto";
-import { type Express } from "express";
+import { type Express, type Request, type Response } from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
+import {
+  getMcpPackById,
+  getMcpResourceRegistryByPackId,
+  getMcpToolRegistryByPackId,
+  resolveMcpPackId,
+  type McpPackDefinition
+} from "@polaris/mcp-contracts";
 import { MockService } from "../mock/mockService";
+import { CertificateManager } from "../proxy/certificateManager";
 import { ProxyService } from "../proxy/proxyService";
 import { RequestService } from "../requests/requestService";
 import { createPolarisMcpSdkServer } from "./sdkServer";
@@ -12,6 +20,7 @@ interface SessionState {
   server: McpServer;
   transport: StreamableHTTPServerTransport;
   sessionId: string;
+  packId?: string;
   closing?: Promise<void>;
 }
 
@@ -21,13 +30,15 @@ export class PolarisMcpStreamableHttpServer {
   constructor(
     private readonly requestService: RequestService,
     private readonly mockService: MockService,
-    private readonly proxyService: ProxyService
+    private readonly proxyService: ProxyService,
+    private readonly certificateManager?: CertificateManager
   ) {}
 
   async createApp(): Promise<Express> {
     const app = createMcpExpressApp();
-    app.all("/mcp", async (req, res) => {
+    const handler = async (req: Request, res: Response, pack?: McpPackDefinition) => {
       const requestSessionId = this.getSessionId(req);
+      const requestedPackId = pack?.id;
       const existingSession = requestSessionId ? this.sessions.get(requestSessionId) : undefined;
 
       if (requestSessionId && !existingSession) {
@@ -42,7 +53,22 @@ export class PolarisMcpStreamableHttpServer {
         return;
       }
 
-      const session = existingSession ?? (await this.createSession());
+      if (existingSession && existingSession.packId !== requestedPackId) {
+        res.status(400).json({
+          jsonrpc: "2.0",
+          error: {
+            code: -32600,
+            message: "Session pack mismatch"
+          },
+          id: null
+        });
+        return;
+      }
+
+      const session = existingSession ?? (await this.createSession(requestedPackId));
+      if (!existingSession) {
+        session.packId = requestedPackId;
+      }
 
       try {
         await session.transport.handleRequest(req, res, req.body);
@@ -57,6 +83,45 @@ export class PolarisMcpStreamableHttpServer {
           await this.disposeSession(session, true);
         }
       }
+    };
+
+    app.all("/mcp", async (req, res) => handler(req, res));
+    app.all("/mcp/:pack", async (req, res) => {
+      const packId = resolveMcpPackId(req.params.pack);
+      if (!packId) {
+        res.status(404).json({
+          jsonrpc: "2.0",
+          error: {
+            code: -32602,
+            message: `Unknown MCP pack: ${req.params.pack}`,
+            data: {
+              code: "UNKNOWN_PACK",
+              message: `Unknown MCP pack: ${req.params.pack}`,
+              retryable: false
+            }
+          },
+          id: null
+        });
+        return;
+      }
+      const pack = getMcpPackById(packId);
+      if (!pack) {
+        res.status(404).json({
+          jsonrpc: "2.0",
+          error: {
+            code: -32602,
+            message: `Unknown MCP pack: ${req.params.pack}`,
+            data: {
+              code: "UNKNOWN_PACK",
+              message: `Unknown MCP pack: ${req.params.pack}`,
+              retryable: false
+            }
+          },
+          id: null
+        });
+        return;
+      }
+      await handler(req, res, pack);
     });
 
     return app;
@@ -73,12 +138,26 @@ export class PolarisMcpStreamableHttpServer {
     return Array.isArray(header) ? header[0] : header;
   }
 
-  private async createSession(): Promise<SessionState> {
-    const server = createPolarisMcpSdkServer(this.requestService, this.mockService, this.proxyService);
+  private async createSession(packId?: string): Promise<SessionState> {
+    const toolNames = new Set(getMcpToolRegistryByPackId(packId).map((tool) => tool.name));
+    const resourceNames = new Set(getMcpResourceRegistryByPackId(packId).map((resource) => resource.name));
+    const server = createPolarisMcpSdkServer(
+      this.requestService,
+      this.mockService,
+      this.proxyService,
+      this.certificateManager,
+      packId
+        ? {
+            allowedToolNames: toolNames,
+            allowedResourceNames: resourceNames
+          }
+        : {}
+    );
     const session: SessionState = {
       server,
       transport: undefined as never,
-      sessionId: ""
+      sessionId: "",
+      packId
     };
 
     const transport = new StreamableHTTPServerTransport({
