@@ -3,6 +3,7 @@ import { resolveMcpPackId } from "@polaris/mcp-contracts";
 import { createRuntime } from "./runtime";
 import { bindServerWithFallback } from "./ports";
 import { PolarisMcpStdioServer } from "../modules/mcp/stdioServer";
+import { defaultSettings } from "./config";
 
 function closeServer(server: Server): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -56,9 +57,13 @@ async function main() {
   let proxyServer: Server | undefined;
 
   if (shouldStartProxy) {
-    const proxyBinding = await bindServerWithFallback(() => runtime.proxyEngine.createServer(), settings.localProxyPort, new Set<number>());
+    const proxyBinding = await bindServerWithFallback(
+      () => runtime.proxyEngine.createServer(),
+      defaultSettings.localProxyPort,
+      new Set<number>()
+    );
     proxyServer = proxyBinding.server;
-    if (proxyBinding.port !== settings.localProxyPort) {
+    if (proxyBinding.port !== defaultSettings.localProxyPort) {
       runtimeSettings = await runtime.proxyService.setSettings({
         ...settings,
         localProxyPort: proxyBinding.port

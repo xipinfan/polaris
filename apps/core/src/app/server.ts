@@ -6,10 +6,14 @@ import { MpcServer } from "../modules/mcp/mcpServer";
 import { PolarisMcpStreamableHttpServer } from "../modules/mcp/streamableHttpServer";
 import { bindServerWithFallback } from "./ports";
 import { createRuntime } from "./runtime";
+import { defaultSettings } from "./config";
 
 export async function startServers() {
   const runtime = await createRuntime();
   const currentSettings = runtime.proxyService.getSettings();
+  const preferredProxyPort = defaultSettings.localProxyPort;
+  const preferredApiPort = defaultSettings.localApiPort;
+  const preferredMcpPort = defaultSettings.mcpPort;
   const legacyMcpServer = new MpcServer(
     runtime.requestService,
     runtime.mockService,
@@ -33,12 +37,12 @@ export async function startServers() {
   const usedPorts = new Set<number>();
   const { server: proxyServer, port: proxyPort } = await bindServerWithFallback(
     () => runtime.proxyEngine.createServer(),
-    currentSettings.localProxyPort,
+    preferredProxyPort,
     usedPorts
   );
   const { server: apiServer, port: apiPort } = await bindServerWithFallback(
     () => http.createServer(apiApp),
-    currentSettings.localApiPort,
+    preferredApiPort,
     usedPorts
   );
 
@@ -55,7 +59,7 @@ export async function startServers() {
 
       const mcpBinding = await bindServerWithFallback(
         () => http.createServer(mcpApp),
-        currentSettings.mcpPort,
+        preferredMcpPort,
         usedPorts
       );
       resolvedMcpHttpServer = mcpBinding.server;
