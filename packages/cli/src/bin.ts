@@ -191,6 +191,9 @@ async function mcpStdioCommand(): Promise<void> {
   }
 
   const childEnv = { ...process.env };
+  if (!childEnv.POLARIS_MCP_START_PROXY) {
+    childEnv.POLARIS_MCP_START_PROXY = "false";
+  }
   if (requestedPack) {
     childEnv.POLARIS_MCP_PACK = requestedPack;
   }

@@ -42,15 +42,6 @@ const requestRowResolutionClassMap = {
 type TrafficRequestPaneProps = {
   requests: RequestRecord[];
   selected?: RequestRecord;
-  summary: {
-    total: number;
-    errorCount: number;
-    secureCount: number;
-    avgDuration: number;
-    mockCount: number;
-    proxyForwardCount: number;
-    directCount: number;
-  };
   visibleRequests: RequestRecord[];
   recordBodyRef: RefObject<HTMLDivElement | null>;
   onSelectRequest: (id: string) => void;
@@ -60,7 +51,6 @@ type TrafficRequestPaneProps = {
 export function TrafficRequestPane({
   requests,
   selected,
-  summary,
   visibleRequests,
   recordBodyRef,
   onSelectRequest,
@@ -138,15 +128,6 @@ export function TrafficRequestPane({
                 {label}
               </button>
             ))}
-          </div>
-          <div className={localStyles.metricRow}>
-            <span>{t("traffic.metric.visible")} {summary.total}</span>
-            <span>{t("traffic.metric.errors")} {summary.errorCount}</span>
-            <span>{t("traffic.metric.https")} {summary.secureCount}</span>
-            <span>{t("traffic.metric.mock")} {summary.mockCount}</span>
-            <span>{t("traffic.metric.proxyForward")} {summary.proxyForwardCount}</span>
-            <span>{t("traffic.metric.direct")} {summary.directCount}</span>
-            <span>{t("traffic.metric.avgDuration")} {summary.avgDuration} ms</span>
           </div>
         </div>
       </div>

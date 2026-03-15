@@ -51,7 +51,7 @@ async function main() {
 
   const runtime = await createRuntime();
   const settings = runtime.proxyService.getSettings();
-  const shouldStartProxy = process.env.POLARIS_MCP_START_PROXY === "false" ? false : true;
+  const shouldStartProxy = process.env.POLARIS_MCP_START_PROXY === "true";
   let runtimeSettings = settings;
   let proxyServer: Server | undefined;
 
@@ -75,6 +75,7 @@ async function main() {
   );
 
   let shuttingDown = false;
+  let parentWatchdog: NodeJS.Timeout | undefined;
 
   const shutdown = async () => {
     if (shuttingDown) {
@@ -82,6 +83,10 @@ async function main() {
     }
 
     shuttingDown = true;
+    if (parentWatchdog) {
+      clearInterval(parentWatchdog);
+      parentWatchdog = undefined;
+    }
     await Promise.allSettled([mcpServer.close(), proxyServer ? closeServer(proxyServer) : Promise.resolve()]);
   };
 
@@ -93,7 +98,31 @@ async function main() {
     void shutdown().finally(() => process.exit(143));
   });
 
+  process.stdin.on("close", () => {
+    void shutdown().finally(() => process.exit(0));
+  });
+
+  process.stdin.on("end", () => {
+    void shutdown().finally(() => process.exit(0));
+  });
+
+  // Ensure we can observe stdin close/end when running under pipe transport.
+  if (!process.stdin.isTTY) {
+    process.stdin.resume();
+  }
+
+  const initialParentPid = process.ppid;
+  parentWatchdog = setInterval(() => {
+    if (initialParentPid > 1 && process.ppid === 1) {
+      void shutdown().finally(() => process.exit(0));
+    }
+  }, 3000);
+
   process.on("exit", () => {
+    if (parentWatchdog) {
+      clearInterval(parentWatchdog);
+      parentWatchdog = undefined;
+    }
     proxyServer?.close();
   });
 

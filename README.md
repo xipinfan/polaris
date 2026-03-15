@@ -402,3 +402,118 @@ node packages/cli/dist/bin.js mcp-stdio --pack mock
 - 对 AI Agent 默认使用 pack 接入，降低工具选择负担与上下文开销。
 - 保留全量 `/mcp` 入口用于管理与调试。
 - 保留 legacy 入口用于旧客户端兼容。
+
+### 7）CLI/AI 工具配置示例
+
+下面给出通用 MCP 客户端常见的两种配置方式。不同工具字段名可能不同，但核心是 `url`（HTTP）或 `command + args`（stdio）。
+
+#### A. 连接 Streamable HTTP MCP（推荐）
+
+先确认当前 MCP 地址：
+
+```bash
+pnpm polaris:status
+```
+
+通用示例（按 pack 连接，推荐）：
+
+```json
+{
+  "mcpServers": {
+    "polaris-request": {
+      "transport": "http",
+      "url": "http://127.0.0.1:9002/mcp/request"
+    },
+    "polaris-mock": {
+      "transport": "http",
+      "url": "http://127.0.0.1:9002/mcp/mock"
+    }
+  }
+}
+```
+
+如果你希望一个连接暴露全部能力：
+
+```json
+{
+  "mcpServers": {
+    "polaris-all": {
+      "transport": "http",
+      "url": "http://127.0.0.1:9002/mcp"
+    }
+  }
+}
+```
+
+#### B. 连接 stdio MCP（仅当工具不支持 HTTP MCP）
+
+如果你是通过 `npm i -g polaris` 安装，优先使用全局命令：
+
+```json
+{
+  "mcpServers": {
+    "polaris-proxy": {
+      "command": "polaris",
+      "args": [
+        "mcp-stdio",
+        "--pack",
+        "proxy"
+      ],
+      "env": {
+        "POLARIS_MCP_START_PROXY": "false"
+      }
+    }
+  }
+}
+```
+
+如果不想全局安装，也可以使用 `npx`：
+
+```json
+{
+  "mcpServers": {
+    "polaris-proxy": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "polaris",
+        "mcp-stdio",
+        "--pack",
+        "proxy"
+      ],
+      "env": {
+        "POLARIS_MCP_START_PROXY": "false"
+      }
+    }
+  }
+}
+```
+
+说明：
+
+- `--pack` 可选值：`mock | proxy | request | ops`。
+- `POLARIS_MCP_START_PROXY` 默认建议为 `false`，避免 stdio 进程额外占用本地代理端口。
+- 如果你确实希望 stdio 进程同时拉起本地代理，可显式改为 `true`。
+- 只有在“本地仓库开发模式”下，才建议使用 `node packages/cli/dist/bin.js ...` 这种路径方式。
+
+#### C. 多工具拆分建议
+
+对支持多个 MCP server 的 AI 工具，建议按职责拆分：
+
+- 代码/调试助手：接 `request + mock`
+- 网络问题排查助手：接 `proxy + ops`
+- 管理员助手：接 `all` 或 `ops`
+
+这样可以减少模型可见工具数量，降低工具选择错误和上下文负担。
+
+#### D. 其他可用接入方案
+
+- Streamable HTTP（推荐）
+  - 适合长期稳定接入与多工具共享
+  - 地址示例：`http://127.0.0.1:9002/mcp/request`
+- stdio（兼容）
+  - 适合仅支持命令启动 MCP 的工具
+  - 推荐用全局 `polaris mcp-stdio --pack <pack>`
+- Legacy HTTP（兼容旧客户端）
+  - 使用 `/tools`、`/resources`、`/invoke/:tool` 接口
+  - 适合尚未完整支持 Streamable MCP 的集成

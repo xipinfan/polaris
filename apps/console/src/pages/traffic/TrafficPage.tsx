@@ -118,7 +118,6 @@ export function TrafficPage() {
           recordBodyRef={workspace.recordBodyRef}
           requests={workspace.requests}
           selected={workspace.selected}
-          summary={workspace.summary}
           t={t}
           visibleRequests={workspace.visibleRequests}
         />
