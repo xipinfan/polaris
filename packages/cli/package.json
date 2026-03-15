@@ -1,5 +1,5 @@
 {
-  "name": "polaris",
+  "name": "polaris-proxy",
   "version": "0.1.0",
   "type": "module",
   "bin": {
@@ -15,11 +15,13 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@polaris/core": "workspace:*",
+    "@polaris/core": "*",
     "tsx": "^4.19.3"
   },
   "devDependencies": {
+    "@polaris/core": "workspace:*",
     "@types/node": "^22.13.10",
     "typescript": "^5.8.2"
   }
 }
+
