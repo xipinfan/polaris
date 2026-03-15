@@ -1,4 +1,4 @@
-import localStyles from "./index.module.less";
+﻿import localStyles from "./index.module.less";
 
 type SettingsOverviewProps = {
   isOnline: boolean;

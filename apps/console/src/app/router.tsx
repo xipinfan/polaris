@@ -1,6 +1,7 @@
 ﻿import { Suspense, lazy } from "react";
 import { createBrowserRouter, NavLink, Navigate, Outlet } from "react-router-dom";
 import { useConsoleI18n } from "../i18n/I18nProvider";
+import { RouteErrorBoundary } from "./RouteErrorBoundary";
 import styles from "./AppLayout.module.css";
 
 const HomePage = lazy(() => import("../pages/home/HomePage").then((module) => ({ default: module.HomePage })));
@@ -46,6 +47,7 @@ export const router = createBrowserRouter([
   {
     path: "/",
     element: <AppLayout />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       { index: true, element: <LazyPage><HomePage /></LazyPage> },
       { path: "traffic", element: <LazyPage><TrafficPage /></LazyPage> },
@@ -58,3 +60,4 @@ export const router = createBrowserRouter([
     ],
   },
 ]);
+

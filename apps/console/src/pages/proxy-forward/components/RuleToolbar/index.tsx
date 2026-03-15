@@ -46,9 +46,8 @@ export function RuleToolbar({ filteredCount }: RuleToolbarProps) {
         <Select<SortMode>
           onChange={setSortMode}
           options={[
-            { label: "最近更新", value: "updated" },
-            { label: "最近命中", value: "hits" },
             { label: "创建时间", value: "created" },
+            { label: "最近命中", value: "hits" },
           ]}
           value={sortMode}
         />

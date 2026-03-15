@@ -11,6 +11,8 @@ type HomeHeroProps = {
   primaryProxyLabel: string;
   primaryProxyAction: "direct" | "rules";
   onGoDebug: () => void;
+  onGoMock: () => void;
+  onGoSettings: () => void;
   onGoTraffic: () => void;
   onSetProxyMode: (mode: "direct" | "rules") => void;
   t: TranslateFn;
@@ -21,6 +23,8 @@ export function HomeHero({
   primaryProxyLabel,
   primaryProxyAction,
   onGoDebug,
+  onGoMock,
+  onGoSettings,
   onGoTraffic,
   onSetProxyMode,
   t,
@@ -68,6 +72,27 @@ export function HomeHero({
               <Text type="secondary">{getProxyModeLabel(snapshot.status.proxyMode)}</Text>
             </Card>
           </div>
+        </div>
+      </Card>
+
+      <Card bordered={false} className={localStyles.sideCard}>
+        <div className={localStyles.sideSection}>
+          <span className={localStyles.eyebrow}>下一步</span>
+          <Title level={4}>{t("home.nextActionTitle")}</Title>
+          <Paragraph>{t("home.nextActionBody")}</Paragraph>
+        </div>
+        <div className={localStyles.sideActions}>
+          <Button block onClick={onGoMock}>{t("home.quick.mock")}</Button>
+          <Button block onClick={onGoSettings}>{t("home.quick.settings")}</Button>
+        </div>
+        <div className={localStyles.tagCluster}>
+          <Tag bordered={false} color={snapshot.status.mcpEnabled ? "success" : "default"}>
+            {snapshot.status.mcpEnabled ? t("home.mcpEnabled") : t("home.mcpDisabled")}
+          </Tag>
+          <Tag bordered={false}>{t("home.mockRules", { count: snapshot.mockRules.length })}</Tag>
+          <Tag bordered={false}>
+            {t("home.activeRequests", { count: snapshot.status.activeRequestCount })}
+          </Tag>
         </div>
       </Card>
     </section>

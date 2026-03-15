@@ -7,29 +7,29 @@
 .sidebar {
   display: grid;
   grid-template-rows: auto 1fr;
-  gap: 12px;
+  gap: 14px;
   align-content: start;
   min-height: 100vh;
-  padding: 14px 10px;
+  padding: 16px 12px;
   background: #162235;
   color: #eef3fb;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .brand {
-  padding: 8px 10px;
+  padding: 10px 12px;
 }
 
 .brand h1 {
   margin: 0;
-  font-size: 17px;
+  font-size: 22px;
   line-height: 1;
   letter-spacing: -0.03em;
 }
 
 .brand p {
-  margin: 5px 0 0;
-  font-size: 11px;
+  margin: 7px 0 0;
+  font-size: 13px;
   color: rgba(238, 243, 251, 0.52);
 }
 
@@ -43,13 +43,13 @@
   position: relative;
   display: flex;
   align-items: center;
-  min-height: 34px;
-  padding: 7px 12px 7px 14px;
+  min-height: 42px;
+  padding: 9px 14px 9px 16px;
   border: 1px solid transparent;
-  border-radius: 11px;
+  border-radius: 12px;
   background: transparent;
   color: rgba(238, 243, 251, 0.7);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -85,6 +85,10 @@
   font-size: 13px;
 }
 
+.routeError {
+  padding: 24px 26px 36px;
+}
+
 @media (max-width: 1180px) {
 .shell {
     grid-template-columns: 1fr;
@@ -118,6 +122,10 @@
 
 @media (max-width: 700px) {
 .content {
+    padding: 16px;
+  }
+
+.routeError {
     padding: 16px;
   }
 }

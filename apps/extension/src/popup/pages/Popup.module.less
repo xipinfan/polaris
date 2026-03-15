@@ -1,0 +1,249 @@
+﻿@bg-start: #dbe2ea;
+@bg-end: #d6dde7;
+@panel-border: rgba(198, 209, 224, 0.9);
+@panel-bg: rgba(252, 253, 255, 0.92);
+@text-main: #14263f;
+@text-muted: #5f7088;
+@accent: #3f61b7;
+@accent-deep: #2d4f98;
+:global(:root) {
+  font-family: "Avenir Next", "Segoe UI Variable", "PingFang SC", sans-serif;
+}
+:global(body) {
+  margin: 0;
+  background:
+    radial-gradient(circle at 8% -20%, rgba(74, 101, 150, 0.16), transparent 42%),
+    radial-gradient(circle at 94% 0%, rgba(127, 154, 195, 0.12), transparent 36%),
+    linear-gradient(180deg, @bg-start 0%, @bg-end 100%);
+}
+.shell {
+  width: 390px;
+  min-height: 620px;
+  padding: 14px;
+  color: @text-main;
+  display: grid;
+  gap: 10px;
+}
+.hero,
+.card {
+  border-radius: 18px;
+  border: 1px solid @panel-border;
+  background: @panel-bg;
+  box-shadow: 0 10px 22px rgba(29, 47, 78, 0.08);
+}
+.hero {
+  padding: 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  background:
+    radial-gradient(circle at right top, rgba(143, 176, 226, 0.2), transparent 38%),
+    linear-gradient(142deg, #223d67 0%, #2d4f7e 56%, #345986 100%);
+
+  h1 {
+    margin: 4px 0 0;
+    color: #f6f9ff;
+    font-size: 26px;
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+
+  p {
+    margin: 8px 0 0;
+    color: rgba(232, 240, 252, 0.9);
+    font-size: 12px;
+    line-height: 1.55;
+  }
+}
+.brandLabel {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(203, 219, 243, 0.4);
+  color: rgba(237, 245, 255, 0.95);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 9px;
+}
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+.statusOnline {
+  color: #0f5132;
+  background: rgba(218, 245, 229, 0.92);
+  border-color: rgba(111, 190, 149, 0.62);
+
+  .statusDot {
+    background: #1d9a57;
+  }
+}
+.statusOffline {
+  color: #7f1d1d;
+  background: rgba(255, 228, 225, 0.94);
+  border-color: rgba(227, 137, 122, 0.62);
+
+  .statusDot {
+    background: #d24136;
+  }
+}
+.card {
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  h2 {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    color: @text-main;
+  }
+}
+.modeChip,
+.hostChip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(179, 193, 216, 0.68);
+  background: #edf2fb;
+  color: @accent-deep;
+  font-size: 11px;
+  font-weight: 600;
+}
+.hostChip {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+
+  article {
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(204, 216, 235, 0.84);
+    background: linear-gradient(180deg, #f7f9fe 0%, #eef3fb 100%);
+    display: grid;
+    gap: 4px;
+  }
+
+  span {
+    color: @text-muted;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  strong {
+    color: @text-main;
+    font-size: 13px;
+    line-height: 1.2;
+  }
+}
+.message,
+.helpText {
+  margin: 0;
+  color: @text-muted;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.modeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.modeButton,
+.primaryButton,
+.secondaryButton {
+  border-radius: 12px;
+  border: 1px solid rgba(168, 185, 213, 0.72);
+  cursor: pointer;
+  transition: all 160ms ease;
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+}
+.modeButton {
+  padding: 10px;
+  text-align: left;
+  background: #f3f7ff;
+
+  strong {
+    display: block;
+    color: @text-main;
+    font-size: 12px;
+  }
+
+  span {
+    display: block;
+    margin-top: 4px;
+    color: @text-muted;
+    font-size: 10px;
+    line-height: 1.5;
+  }
+}
+.modeButtonActive {
+  border-color: rgba(73, 104, 174, 0.74);
+  background: linear-gradient(140deg, #2c4f8c 0%, #223f72 100%);
+
+  strong {
+    color: #f6f9ff;
+  }
+
+  span {
+    color: rgba(224, 236, 255, 0.88);
+  }
+}
+.primaryButton {
+  min-height: 38px;
+  padding: 0 12px;
+  color: #f4f8ff;
+  font-size: 12px;
+  font-weight: 700;
+  border-color: rgba(65, 95, 159, 0.75);
+  background: linear-gradient(135deg, @accent 0%, @accent-deep 100%);
+}
+.actionGrid {
+  display: grid;
+  gap: 8px;
+}
+.secondaryButton {
+  min-height: 34px;
+  padding: 0 10px;
+  background: #f1f5fb;
+  color: #2b4264;
+  font-size: 12px;
+  font-weight: 600;
+}

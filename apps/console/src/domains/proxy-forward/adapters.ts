@@ -1,22 +1,28 @@
-﻿import type { ProxyRule } from "@polaris/shared-types";
+import type { ProxyRule } from "@polaris/shared-types";
 import { readPersistence } from "../../lib/persistence";
-import type { StoredGroup } from "../../pages/proxy-forward/types";
 import {
   activeGroupStorageKey,
   groupsStorageKey,
   normalizeGroups,
-} from "../../pages/proxy-forward/utils/proxyForwardHelpers";
-import type { ProxyForwardGroupsData } from "./types";
+  syncActiveGroupRulesFromBackend,
+} from "./state";
+import type { ProxyForwardGroupsData, StoredGroup } from "./types";
 
 export function buildProxyForwardGroupsData(backendRules: ProxyRule[]): ProxyForwardGroupsData {
   const normalized = normalizeGroups(
     readPersistence<StoredGroup[]>(groupsStorageKey, []),
-    backendRules,
     readPersistence<string | null>(activeGroupStorageKey, null),
+    backendRules,
+  );
+
+  const groups = syncActiveGroupRulesFromBackend(
+    normalized.groups,
+    normalized.activeGroupId,
+    backendRules,
   );
 
   return {
-    groups: normalized.groups,
+    groups,
     activeGroupId: normalized.activeGroupId,
   };
 }

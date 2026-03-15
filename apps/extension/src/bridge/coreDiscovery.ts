@@ -1,7 +1,9 @@
 const API_PORT_STORAGE_KEY = "polaris.apiPort";
-const CONSOLE_PORT_CANDIDATES = Array.from({ length: 100 }, (_, index) => 5173 + index);
+const CONSOLE_PORT_STORAGE_KEY = "polaris.consolePort";
+const CONSOLE_PORT_CANDIDATES = Array.from({ length: 15 }, (_, index) => 5173 + index);
 const API_PORT_CANDIDATES = Array.from({ length: 100 }, (_, index) => 9001 + index);
 let cachedApiBaseUrl: string | null = null;
+let cachedConsoleBaseUrl: string | null = null;
 
 async function getStoredApiPort(): Promise<number | null> {
   return new Promise((resolve) => {
@@ -15,6 +17,21 @@ async function getStoredApiPort(): Promise<number | null> {
 async function setStoredApiPort(port: number): Promise<void> {
   return new Promise((resolve) => {
     chrome.storage.local.set({ [API_PORT_STORAGE_KEY]: port }, () => resolve());
+  });
+}
+
+async function getStoredConsolePort(): Promise<number | null> {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(CONSOLE_PORT_STORAGE_KEY, (result) => {
+      const value = result[CONSOLE_PORT_STORAGE_KEY];
+      resolve(Number.isInteger(value) ? value : null);
+    });
+  });
+}
+
+async function setStoredConsolePort(port: number): Promise<void> {
+  return new Promise((resolve) => {
+    chrome.storage.local.set({ [CONSOLE_PORT_STORAGE_KEY]: port }, () => resolve());
   });
 }
 
@@ -56,19 +73,37 @@ export async function getApiBaseUrl(): Promise<string> {
 }
 
 export async function getConsoleBaseUrl(): Promise<string> {
-  for (const port of CONSOLE_PORT_CANDIDATES) {
+  if (cachedConsoleBaseUrl) {
+    return cachedConsoleBaseUrl;
+  }
+
+  const stored = await getStoredConsolePort();
+  const candidates = [...new Set([stored, ...CONSOLE_PORT_CANDIDATES].filter((item): item is number => Boolean(item)))];
+  for (const port of candidates) {
+    let timer: ReturnType<typeof setTimeout> | null = null;
     try {
-      const response = await fetch(`http://127.0.0.1:${port}/`, { method: "GET" });
+      const controller = new AbortController();
+      timer = setTimeout(() => controller.abort(), 800);
+      const response = await fetch(`http://127.0.0.1:${port}/`, {
+        method: "GET",
+        signal: controller.signal,
+      });
       if (!response.ok) {
         continue;
       }
 
       const html = await response.text();
-      if (html.includes("Polaris Console")) {
-        return `http://127.0.0.1:${port}`;
+      if (html.includes("<div id=\"root\">") || html.includes("Polaris") || html.includes("北极星")) {
+        await setStoredConsolePort(port);
+        cachedConsoleBaseUrl = `http://127.0.0.1:${port}`;
+        return cachedConsoleBaseUrl;
       }
     } catch {
       continue;
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
     }
   }
 

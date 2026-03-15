@@ -12,17 +12,17 @@ import { SettingsProxyModeCard } from "./components/SettingsProxyModeCard";
 import styles from "./SettingsPage.module.less";
 
 const proxyModeLabels: Record<string, string> = {
-  direct: "鐩磋繛",
-  global: "鍏ㄥ眬",
-  rules: "瑙勫垯",
-  system: "绯荤粺",
+  direct: "直连",
+  global: "全局",
+  rules: "规则",
+  system: "系统",
 };
 
 const proxyModeDescriptions = [
-  { key: "direct", title: "鐩磋繛妯″紡", descriptionKey: "settings.proxy.direct" as ConsoleMessageKey },
-  { key: "global", title: "鍏ㄥ眬浠ｇ悊", descriptionKey: "settings.proxy.global" as ConsoleMessageKey },
-  { key: "rules", title: "瑙勫垯浠ｇ悊", descriptionKey: "settings.proxy.rules" as ConsoleMessageKey },
-  { key: "system", title: "璺熼殢绯荤粺", descriptionKey: "settings.proxy.system" as ConsoleMessageKey },
+  { key: "direct", title: "直连模式", descriptionKey: "settings.proxy.direct" as ConsoleMessageKey },
+  { key: "global", title: "全局代理", descriptionKey: "settings.proxy.global" as ConsoleMessageKey },
+  { key: "rules", title: "规则代理", descriptionKey: "settings.proxy.rules" as ConsoleMessageKey },
+  { key: "system", title: "跟随系统", descriptionKey: "settings.proxy.system" as ConsoleMessageKey },
 ];
 
 const mcpTools = [
@@ -77,7 +77,7 @@ export function SettingsPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerCopy}>
-          <span className={styles.pageEyebrow}>绯荤粺璁剧疆</span>
+          <span className={styles.pageEyebrow}>管理与基础配置</span>
           <h2>{t("settings.title")}</h2>
           <p>{t("settings.subtitle")}</p>
         </div>
@@ -92,33 +92,34 @@ export function SettingsPage() {
           t={t}
         />
 
-        <section className={styles.split}>
-          <SettingsLanguageCard
-            locale={locale}
-            localeLabel={t(localeLabelKey)}
-            setLocale={setLocale}
-            t={t}
-          />
-          <SettingsProxyModeCard
-            allRuleCount={rules.length}
-            currentMode={settings.currentProxyMode ?? "system"}
-            currentModeLabel={currentModeLabel}
-            enabledRuleCount={activeRules.length}
-            modeItems={proxyModeDescriptions}
-            t={t}
-          />
-        </section>
+        <section className={styles.contentGrid}>
+          <div className={styles.mainColumn}>
+            <SettingsProxyModeCard
+              allRuleCount={rules.length}
+              currentMode={settings.currentProxyMode ?? "system"}
+              currentModeLabel={currentModeLabel}
+              enabledRuleCount={activeRules.length}
+              modeItems={proxyModeDescriptions}
+              t={t}
+            />
+            <SettingsHttpsCard
+              certificateInstalled={Boolean(settings.certificateInstalled)}
+              rootCertificateUrl={rootCertificateUrl}
+              t={t}
+            />
+            <SettingsExtensionCard t={t} />
+          </div>
 
-        <section className={styles.split}>
-          <SettingsHttpsCard
-            certificateInstalled={Boolean(settings.certificateInstalled)}
-            rootCertificateUrl={rootCertificateUrl}
-            t={t}
-          />
-          <SettingsMcpCard enabled={Boolean(settings.mcpEnabled)} t={t} tools={mcpTools} />
+          <div className={styles.sideColumn}>
+            <SettingsLanguageCard
+              locale={locale}
+              localeLabel={t(localeLabelKey)}
+              setLocale={setLocale}
+              t={t}
+            />
+            <SettingsMcpCard enabled={Boolean(settings.mcpEnabled)} t={t} tools={mcpTools} />
+          </div>
         </section>
-
-        <SettingsExtensionCard t={t} />
       </div>
     </div>
   );

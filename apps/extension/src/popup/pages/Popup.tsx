@@ -1,27 +1,65 @@
-import { useEffect, useMemo, useState } from "react";
-import type { ProxyMode, ProxyRule, ServiceStatus } from "@polaris/shared-types";
+﻿import { useEffect, useMemo, useState } from "react";
+import type {
+  ProxyMode,
+  ProxyRule,
+  ServiceStatus,
+} from "@polaris/shared-types";
 import { useExtensionI18n } from "../i18n/I18nProvider";
-import { applyBrowserProxyMode, openBrowserCertificateSettings } from "../../bridge/browserProxyBridge";
+import {
+  applyBrowserProxyMode,
+  openBrowserCertificateSettings,
+} from "../../bridge/browserProxyBridge";
 import { getConsoleBaseUrl } from "../../bridge/coreDiscovery";
 import { coreBridge } from "../../bridge/coreBridge";
+import { buildSitePatterns, matchesPattern } from "../utils/sitePatterns";
+import styles from "./Popup.module.less";
+
+type ModeItem = { mode: ProxyMode; label: string; description: string };
 
 export function Popup() {
   const [status, setStatus] = useState<ServiceStatus | null>(null);
-  const [host, setHost] = useState<string>("");
+  const [host, setHost] = useState("");
   const [rules, setRules] = useState<ProxyRule[]>([]);
   const [message, setMessage] = useState("");
   const { t } = useExtensionI18n();
 
-  const modes: { mode: ProxyMode; label: string; description: string }[] = [
-    { mode: "direct", label: t("popup.mode.direct.label"), description: t("popup.mode.direct.desc") },
-    { mode: "global", label: t("popup.mode.global.label"), description: t("popup.mode.global.desc") },
-    { mode: "rules", label: t("popup.mode.rules.label"), description: t("popup.mode.rules.desc") },
-    { mode: "system", label: t("popup.mode.system.label"), description: t("popup.mode.system.desc") }
+  const modes: ModeItem[] = [
+    {
+      mode: "direct",
+      label: t("popup.mode.direct.label"),
+      description: t("popup.mode.direct.desc"),
+    },
+    {
+      mode: "global",
+      label: t("popup.mode.global.label"),
+      description: t("popup.mode.global.desc"),
+    },
+    {
+      mode: "rules",
+      label: t("popup.mode.rules.label"),
+      description: t("popup.mode.rules.desc"),
+    },
+    {
+      mode: "system",
+      label: t("popup.mode.system.label"),
+      description: t("popup.mode.system.desc"),
+    },
   ];
+
+  const modeLabel = useMemo(
+    () =>
+      modes.find((item) => item.mode === status?.proxyMode)?.label ??
+      status?.proxyMode ??
+      "-",
+    [modes, status?.proxyMode],
+  );
 
   const load = async () => {
     try {
-      const [nextStatus, nextRules] = await Promise.all([coreBridge.health(), coreBridge.listRules()]);
+      const [nextStatus, nextRules] = await Promise.all([
+        coreBridge.health(),
+        coreBridge.listRules(),
+      ]);
       setStatus(nextStatus);
       setRules(nextRules);
     } catch (error) {
@@ -31,50 +69,62 @@ export function Popup() {
   };
 
   useEffect(() => {
-    load();
+    void load();
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const tabUrl = tabs[0]?.url;
-      if (!tabUrl) {
-        return;
-      }
+      if (!tabUrl) return;
       try {
-        setHost(new URL(tabUrl).host);
+        setHost(new URL(tabUrl).hostname.toLowerCase());
       } catch {
         setHost("");
       }
     });
   }, []);
 
+  const sitePatterns = useMemo(() => buildSitePatterns(host), [host]);
+
   const activeForSite = useMemo(
-    () => rules.some((rule) => rule.pattern === host && rule.enabled && rule.action === "proxy"),
-    [host, rules]
+    () =>
+      rules.some(
+        (rule) =>
+          rule.enabled &&
+          rule.action === "proxy" &&
+          (sitePatterns.includes(rule.pattern.toLowerCase()) || matchesPattern(host, rule.pattern)),
+      ),
+    [host, rules, sitePatterns],
   );
   const online = Boolean(status?.online);
 
   const openConsole = async (pathname = "") => {
-    const baseUrl = await getConsoleBaseUrl();
-    await chrome.tabs.create({ url: `${baseUrl}${pathname}` });
+    try {
+      const baseUrl = await getConsoleBaseUrl();
+      await chrome.tabs.create({ url: `${baseUrl}${pathname}` });
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : t("popup.error.switch"),
+      );
+    }
   };
 
   const switchMode = async (mode: ProxyMode) => {
-    if (!status) {
-      return;
-    }
+    if (!status) return;
     await coreBridge.setProxyMode(mode);
     await applyBrowserProxyMode(mode, status);
     await load();
-    setMessage(t("popup.message.switch", { mode: modes.find((item) => item.mode === mode)?.label ?? mode }));
+    setMessage(
+      t("popup.message.switch", {
+        mode: modes.find((item) => item.mode === mode)?.label ?? mode,
+      }),
+    );
   };
 
   const toggleCurrentSite = async () => {
-    if (!host || !status) {
-      return;
-    }
+    if (!host || !status) return;
     if (activeForSite) {
-      await coreBridge.removeSiteRule(host);
+      await Promise.all(sitePatterns.map((pattern) => coreBridge.removeSiteRule(pattern)));
       setMessage(t("popup.message.removeRule", { host }));
     } else {
-      await coreBridge.addSiteRule(host);
+      await Promise.all(sitePatterns.map((pattern) => coreBridge.addSiteRule(pattern)));
       setMessage(t("popup.message.addRule", { host }));
     }
     await coreBridge.setProxyMode("rules");
@@ -83,96 +133,130 @@ export function Popup() {
   };
 
   return (
-    <div className="popup-shell">
-      <section className="popup-hero">
-        <h1>Polaris</h1>
-        <p>{t("popup.hero")}</p>
+    <div className={styles.shell}>
+      <header className={styles.hero}>
+        <div>
+          <span className={styles.brandLabel}>Polaris Extension</span>
+          <h1>Polaris</h1>
+        </div>
+        <span
+          className={`${styles.statusBadge} ${online ? styles.statusOnline : styles.statusOffline}`}
+        >
+          <span className={styles.statusDot} />
+          {online ? t("popup.online") : t("popup.offline")}
+        </span>
+      </header>
+
+      <section className={styles.card}>
+        <div className={styles.cardHeader}>
+          <h2>{t("popup.status")}</h2>
+          <span className={styles.modeChip}>{modeLabel}</span>
+        </div>
+        <div className={styles.metrics}>
+          <article>
+            <span>{t("popup.mode")}</span>
+            <strong>{modeLabel}</strong>
+          </article>
+          <article>
+            <span>{t("popup.proxyPort")}</span>
+            <strong>{status?.proxyPort ?? "-"}</strong>
+          </article>
+          <article>
+            <span>{t("popup.rules")}</span>
+            <strong>{rules.length}</strong>
+          </article>
+        </div>
+        {message ? <p className={styles.message}>{message}</p> : null}
       </section>
 
-      <div className="popup-stack">
-        <section className="popup-card">
-          <div className="popup-card-head">
-            <h2>{t("popup.status")}</h2>
-            <span className={`popup-status ${online ? "" : "offline"}`}>
-              <span className="popup-dot"></span>
-              {online ? t("popup.online") : t("popup.offline")}
-            </span>
-          </div>
-          <div className="popup-metrics">
-            <div>
-              <span>{t("popup.mode")}</span>
-              <strong>{status?.proxyMode ?? "-"}</strong>
-            </div>
-            <div>
-              <span>{t("popup.proxyPort")}</span>
-              <strong>{status?.proxyPort ?? "-"}</strong>
-            </div>
-            <div>
-              <span>{t("popup.rules")}</span>
-              <strong>{rules.length}</strong>
-            </div>
-          </div>
-          {message ? <p className="popup-hint">{message}</p> : null}
-        </section>
-
-        <section className="popup-card">
-          <div className="popup-card-head">
-            <h2>{t("popup.proxyModes")}</h2>
-          </div>
-          <div className="popup-mode-grid">
-            {modes.map((item) => (
-              <button
-                key={item.mode}
-                disabled={!online}
-                className={`popup-mode-card ${status?.proxyMode === item.mode ? "active" : ""}`}
-                onClick={() => switchMode(item.mode).catch((error) => setMessage(error instanceof Error ? error.message : t("popup.error.switch")))}
-              >
-                <strong>{item.label}</strong>
-                <span>{item.description}</span>
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <section className="popup-card">
-          <div className="popup-card-head">
-            <h2>{t("popup.currentSite")}</h2>
-            <span className="popup-chip">{host || t("popup.noHost")}</span>
-          </div>
-          <button
-            className="popup-primary"
-            disabled={!online || !host}
-            onClick={() => toggleCurrentSite().catch((error) => setMessage(error instanceof Error ? error.message : t("popup.error.switch")))}
-          >
-            {activeForSite ? t("popup.removeSiteRule") : t("popup.proxyThisSite")}
-          </button>
-          <p className="popup-hint">{t("popup.siteHint")}</p>
-        </section>
-
-        <section className="popup-card">
-          <div className="popup-card-head">
-            <h2>{t("popup.quickLinks")}</h2>
-          </div>
-          <div className="popup-actions">
-            <button className="popup-secondary" onClick={() => void openConsole()}>
-              {t("popup.openConsole")}
-            </button>
-            <button className="popup-secondary" onClick={() => void openConsole("/settings")}>
-              {t("popup.openSettings")}
-            </button>
+      <section className={styles.card}>
+        <div className={styles.cardHeader}>
+          <h2>{t("popup.proxyModes")}</h2>
+        </div>
+        <div className={styles.modeGrid}>
+          {modes.map((item) => (
             <button
-              className="popup-secondary"
+              key={item.mode}
+              type="button"
+              disabled={!online}
+              className={`${styles.modeButton} ${status?.proxyMode === item.mode ? styles.modeButtonActive : ""}`}
               onClick={() =>
-                openBrowserCertificateSettings().catch((error) =>
-                  setMessage(error instanceof Error ? error.message : t("popup.error.openCertSettings"))
+                switchMode(item.mode).catch((error) =>
+                  setMessage(
+                    error instanceof Error
+                      ? error.message
+                      : t("popup.error.switch"),
+                  ),
                 )
               }
             >
-              {t("popup.openCertSettings")}
+              <strong>{item.label}</strong>
+              <span>{item.description}</span>
             </button>
-          </div>
-        </section>
-      </div>
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.card}>
+        <div className={styles.cardHeader}>
+          <h2>{t("popup.currentSite")}</h2>
+          <span className={styles.hostChip}>{host || t("popup.noHost")}</span>
+        </div>
+        <button
+          type="button"
+          className={styles.primaryButton}
+          disabled={!online || !host}
+          onClick={() =>
+            toggleCurrentSite().catch((error) =>
+              setMessage(
+                error instanceof Error
+                  ? error.message
+                  : t("popup.error.switch"),
+              ),
+            )
+          }
+        >
+          {activeForSite ? t("popup.removeSiteRule") : t("popup.proxyThisSite")}
+        </button>
+        <p className={styles.helpText}>{t("popup.siteHint")}</p>
+      </section>
+
+      <section className={styles.card}>
+        <div className={styles.cardHeader}>
+          <h2>{t("popup.quickLinks")}</h2>
+        </div>
+        <div className={styles.actionGrid}>
+          <button
+            type="button"
+            className={styles.secondaryButton}
+            onClick={() => void openConsole("")}
+          >
+            {t("popup.openConsole")}
+          </button>
+          <button
+            type="button"
+            className={styles.secondaryButton}
+            onClick={() => void openConsole("/settings")}
+          >
+            {t("popup.openSettings")}
+          </button>
+          <button
+            type="button"
+            className={styles.secondaryButton}
+            onClick={() =>
+              openBrowserCertificateSettings().catch((error) =>
+                setMessage(
+                  error instanceof Error
+                    ? error.message
+                    : t("popup.error.openCertSettings"),
+                ),
+              )
+            }
+          >
+            {t("popup.openCertSettings")}
+          </button>
+        </div>
+      </section>
     </div>
   );
 }

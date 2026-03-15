@@ -5,6 +5,22 @@ import { StorageAdapter } from "../storage/storageAdapter";
 export class ProxyService {
   constructor(private readonly storage: StorageAdapter) {}
 
+  private normalizePattern(pattern: string): string {
+    return pattern.trim().toLowerCase().replace(/:\d+$/, "");
+  }
+
+  private matchesHostPattern(host: string, pattern: string): boolean {
+    const normalizedHost = this.normalizePattern(host);
+    const normalizedPattern = this.normalizePattern(pattern);
+
+    if (normalizedPattern.startsWith("*.")) {
+      const suffix = normalizedPattern.slice(2);
+      return normalizedHost === suffix || normalizedHost.endsWith(`.${suffix}`);
+    }
+
+    return normalizedHost === normalizedPattern;
+  }
+
   getSettings(): AppSetting {
     return this.storage.getSettings();
   }
@@ -42,19 +58,22 @@ export class ProxyService {
   }
 
   isHostProxied(host: string): boolean {
-    return this.listRules().some((rule) => rule.enabled && rule.action === "proxy" && rule.pattern === host);
+    return this.listRules().some(
+      (rule) => rule.enabled && rule.action === "proxy" && this.matchesHostPattern(host, rule.pattern)
+    );
   }
 
   async upsertSiteRule(host: string, action: "proxy" | "direct"): Promise<ProxyRule> {
+    const pattern = this.normalizePattern(host);
     const now = new Date().toISOString();
     const rules = this.listRules();
-    const existing = rules.find((rule) => rule.pattern === host);
+    const existing = rules.find((rule) => this.normalizePattern(rule.pattern) === pattern);
 
     const nextRule: ProxyRule = existing
       ? { ...existing, action, enabled: true, updatedAt: now }
       : {
           id: randomUUID(),
-          pattern: host,
+          pattern,
           matchType: "host",
           action,
           enabled: true,
@@ -71,7 +90,8 @@ export class ProxyService {
   }
 
   async removeSiteRule(host: string): Promise<void> {
-    const nextRules = this.listRules().filter((rule) => rule.pattern !== host);
+    const pattern = this.normalizePattern(host);
+    const nextRules = this.listRules().filter((rule) => this.normalizePattern(rule.pattern) !== pattern);
     await this.storage.setProxyRules(nextRules);
   }
 
@@ -82,10 +102,21 @@ export class ProxyService {
     const port = this.storage.getSettings().localProxyPort;
 
     return `
+function matchesHost(host, pattern) {
+  if (pattern.indexOf("*.") === 0) {
+    const suffix = pattern.slice(2);
+    return host === suffix || host.endsWith("." + suffix);
+  }
+  return host === pattern;
+}
+
 function FindProxyForURL(url, host) {
-  const hosts = ${JSON.stringify(rules)};
-  if (hosts.includes(host)) {
-    return "PROXY 127.0.0.1:${port}";
+  const patterns = ${JSON.stringify(rules)};
+  const normalizedHost = String(host || "").toLowerCase();
+  for (let i = 0; i < patterns.length; i += 1) {
+    if (matchesHost(normalizedHost, String(patterns[i] || "").toLowerCase())) {
+      return "PROXY 127.0.0.1:${port}";
+    }
   }
   return "DIRECT";
 }`.trim();

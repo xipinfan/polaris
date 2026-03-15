@@ -1,10 +1,10 @@
 ﻿import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { FilterMode, SortMode } from "../pages/proxy-forward/types";
+import type { FilterMode, SortMode } from "../domains/proxy-forward/types";
 import type { TrafficFocusMode, TrafficInspectorTab } from "../pages/traffic/types";
 import { zustandPersistStorage } from "./persist";
 
-const UI_STORE_VERSION = 1;
+const UI_STORE_VERSION = 2;
 
 type UiStoreState = {
   trafficKeyword: string;
@@ -66,7 +66,7 @@ const initialUiState: UiPersistedState & Pick<UiStoreState, "trafficInspectorTab
   proxyGroupSearch: "",
   proxyRuleSearch: "",
   proxyFilterMode: "all",
-  proxySortMode: "updated",
+  proxySortMode: "created",
 
   mockGroupSearch: "",
 };
@@ -118,10 +118,15 @@ export const useUiStore = create<UiStoreState>()(
         }
 
         const legacy = persistedState as Partial<UiPersistedState>;
+        const normalizedSortMode =
+          legacy.proxySortMode === "hits" || legacy.proxySortMode === "created"
+            ? legacy.proxySortMode
+            : "created";
 
         return {
           ...initialUiState,
           ...legacy,
+          proxySortMode: normalizedSortMode,
         } as unknown as UiStoreState;
       },
     },
@@ -129,3 +134,4 @@ export const useUiStore = create<UiStoreState>()(
 );
 
 export type { UiStoreState };
+

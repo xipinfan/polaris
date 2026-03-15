@@ -57,6 +57,14 @@ function createCorsHeaders(req: IncomingMessage): Record<string, string> {
   };
 }
 
+function isLoopbackHost(hostname: string): boolean {
+  return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "::1";
+}
+
+function isPolarisControlPlaneRequest(targetUrl: URL): boolean {
+  return isLoopbackHost(targetUrl.hostname) && targetUrl.pathname.startsWith("/api/");
+}
+
 export class ProxyEngine {
   constructor(
     private readonly requestService: RequestService,
@@ -148,6 +156,7 @@ export class ProxyEngine {
 
     const absoluteUrl = req.url.startsWith("http") ? req.url : `${protocol}//${req.headers.host}${req.url}`;
     const targetUrl = new URL(absoluteUrl);
+    const shouldCapture = !isPolarisControlPlaneRequest(targetUrl);
     const requestBuffer = await collectBody(req);
     const requestHeaders = sanitizeProxyHeaders(req.headers);
     requestHeaders.host = targetUrl.host;
@@ -181,7 +190,9 @@ export class ProxyEngine {
         secure: targetUrl.protocol === "https:"
       };
 
-      await this.requestService.capture(mockRecord);
+      if (shouldCapture) {
+        await this.requestService.capture(mockRecord);
+      }
       return;
     }
 
@@ -226,7 +237,9 @@ export class ProxyEngine {
           secure: targetUrl.protocol === "https:"
         };
 
-        await this.requestService.capture(record);
+        if (shouldCapture) {
+          await this.requestService.capture(record);
+        }
       });
     });
 

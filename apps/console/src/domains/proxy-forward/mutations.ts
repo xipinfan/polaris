@@ -13,12 +13,21 @@ export async function applyActiveProxyForwardGroup(
   api: ProxyForwardMutationApi,
 ) {
   const currentRules = await api.listProxyRules();
-  await Promise.all(currentRules.map((rule) => api.removeSiteRule(rule.pattern)));
-  await Promise.all(
+
+  for (const rule of currentRules) {
+    await api.removeSiteRule(rule.pattern);
+  }
+
+  const enabledRulesByHost = new Map(
     group.rules
       .filter((rule) => rule.enabled)
-      .map((rule) => api.upsertSiteRule(rule.pattern, rule.action)),
+      .map((rule) => [rule.pattern, rule.action] as const),
   );
+
+  for (const [host, action] of enabledRulesByHost) {
+    await api.upsertSiteRule(host, action);
+  }
+
   return group;
 }
 

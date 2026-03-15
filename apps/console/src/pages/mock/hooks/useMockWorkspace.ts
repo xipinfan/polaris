@@ -50,14 +50,14 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
 
   const selectedGroup = useWorkspaceStore(workspaceSelectors.mockSelectedGroup);
   const selectedRuleId = useWorkspaceStore(workspaceSelectors.mockSelectedRuleId);
-  const editingId = useWorkspaceStore((state) => state.mockEditingId);
-  const isModalOpen = useWorkspaceStore((state) => state.mockModalOpen);
+  const editingId = useWorkspaceStore(workspaceSelectors.mockEditingId);
+  const isModalOpen = useWorkspaceStore(workspaceSelectors.mockModalOpen);
   const groupMenuName = useWorkspaceStore(workspaceSelectors.mockGroupMenuName);
   const ruleMenuId = useWorkspaceStore(workspaceSelectors.mockRuleMenuId);
   const collapsedBlocks = useWorkspaceStore(workspaceSelectors.mockCollapsedBlocks);
-  const customGroups = useWorkspaceStore((state) => state.mockCustomGroups);
-  const groupMeta = useWorkspaceStore((state) => state.mockGroupMeta);
-  const storedForm = useWorkspaceStore((state) => state.mockForm);
+  const customGroups = useWorkspaceStore(workspaceSelectors.mockCustomGroups);
+  const groupMeta = useWorkspaceStore(workspaceSelectors.mockGroupMeta);
+  const storedForm = useWorkspaceStore(workspaceSelectors.mockForm);
 
   const setSelectedGroup = useWorkspaceStore((state) => state.setMockSelectedGroup);
   const setSelectedRuleId = useWorkspaceStore((state) => state.setMockSelectedRuleId);
@@ -138,7 +138,6 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
         const rightUrl = getUrlSummary(right.url);
         const urlDiff = leftUrl.blockKey.localeCompare(rightUrl.blockKey, "zh-CN");
         if (urlDiff !== 0) return urlDiff;
-        if (left.enabled !== right.enabled) return left.enabled ? -1 : 1;
         const methodDiff = getMethodWeight(left.method) - getMethodWeight(right.method);
         if (methodDiff !== 0) return methodDiff;
         const leftScene = getRuleScene(left, defaultGroup);

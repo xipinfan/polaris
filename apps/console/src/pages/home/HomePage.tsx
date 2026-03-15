@@ -131,6 +131,8 @@ export function HomePage() {
         <>
           <HomeHero
             onGoDebug={() => navigate("/debug")}
+            onGoMock={() => navigate("/mock")}
+            onGoSettings={() => navigate("/settings")}
             onGoTraffic={() => navigate("/traffic")}
             onSetProxyMode={setProxyMode}
             primaryProxyAction={primaryProxyAction}
@@ -139,12 +141,9 @@ export function HomePage() {
             t={t}
           />
           <HomeContent
-            activeRequestCount={snapshot.status.activeRequestCount}
             enabledMockCount={enabledMockCount}
-            mcpEnabled={snapshot.status.mcpEnabled}
             mockRuleCount={snapshot.mockRules.length}
             onGoMock={() => navigate("/mock")}
-            onGoSettings={() => navigate("/settings")}
             onGoTraffic={() => navigate("/traffic")}
             quickEntries={quickEntries}
             recentMocks={recentMocks}

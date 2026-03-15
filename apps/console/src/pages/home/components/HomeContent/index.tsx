@@ -3,17 +3,14 @@ import type { TranslateFn } from "../../../../i18n/I18nProvider";
 import localStyles from "./index.module.less";
 import type { HomeQuickEntry, HomeRecentMock } from "../../types";
 
-const { Paragraph, Title } = Typography;
+const { Title } = Typography;
 
 type HomeContentProps = {
   enabledMockCount: number;
   quickEntries: HomeQuickEntry[];
   recentMocks: HomeRecentMock[];
-  mcpEnabled: boolean;
   mockRuleCount: number;
-  activeRequestCount: number;
   onGoMock: () => void;
-  onGoSettings: () => void;
   onGoTraffic: () => void;
   t: TranslateFn;
 };
@@ -22,37 +19,13 @@ export function HomeContent({
   enabledMockCount,
   quickEntries,
   recentMocks,
-  mcpEnabled,
   mockRuleCount,
-  activeRequestCount,
   onGoMock,
-  onGoSettings,
   onGoTraffic,
   t,
 }: HomeContentProps) {
   return (
     <>
-      <section className={`${localStyles.hero} ${localStyles.root}`}>
-        <Card bordered={false} className={localStyles.sideCard}>
-          <div className={localStyles.sideSection}>
-            <span className={localStyles.eyebrow}>下一步</span>
-            <Title level={4}>{t("home.nextActionTitle")}</Title>
-            <Paragraph>{t("home.nextActionBody")}</Paragraph>
-          </div>
-          <div className={localStyles.sideActions}>
-            <Button block onClick={onGoMock}>{t("home.quick.mock")}</Button>
-            <Button block onClick={onGoSettings}>{t("home.quick.settings")}</Button>
-          </div>
-          <div className={localStyles.tagCluster}>
-            <Tag bordered={false} color={mcpEnabled ? "success" : "default"}>
-              {mcpEnabled ? t("home.mcpEnabled") : t("home.mcpDisabled")}
-            </Tag>
-            <Tag bordered={false}>{t("home.mockRules", { count: mockRuleCount })}</Tag>
-            <Tag bordered={false}>{t("home.activeRequests", { count: activeRequestCount })}</Tag>
-          </div>
-        </Card>
-      </section>
-
       <section className={localStyles.contentGrid}>
         <Card
           bordered={false}

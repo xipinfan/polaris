@@ -5,6 +5,16 @@
   align-items: stretch;
 }
 
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
 .heroMain {
   position: relative;
   overflow: hidden;
@@ -142,34 +152,106 @@
   letter-spacing: -0.05em;
 }
 
+.sideCard {
+  align-self: stretch;
+  border-radius: 28px;
+  border: 1px solid rgba(221, 227, 236, 0.96);
+  background: #fcfcfd;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08) !important;
+}
+
+.sideCard :global(.ant-card-body) {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+  padding: 24px;
+  height: 100%;
+}
+
+.sideSection {
+  display: grid;
+  gap: 8px;
+}
+
+.sideSection :global(.ant-typography) {
+  margin: 0;
+  color: #101828;
+}
+
+.sideSection :global(h4.ant-typography) {
+  font-size: 24px;
+  line-height: 1.12;
+  letter-spacing: -0.04em;
+}
+
+.sideSection :global(p.ant-typography) {
+  color: #667085;
+  line-height: 1.65;
+}
+
+.sideActions {
+  display: grid;
+  gap: 10px;
+}
+
+.sideActions :global(.ant-btn) {
+  border-color: #dbe2ec;
+  background: #ffffff;
+  color: #1f2937;
+}
+
+.sideActions :global(.ant-btn:hover) {
+  border-color: #d1dae7;
+  background: #ffffff;
+  color: #111827;
+}
+
+.tagCluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tagCluster :global(.ant-tag) {
+  margin-inline-end: 0;
+  min-height: 28px;
+  padding: 5px 11px;
+  font-size: 12px;
+  color: #475467;
+  background: #f3f5f8;
+}
+
 @media (max-width: 1280px) {
-.hero {
+  .hero {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 900px) {
-.metricGrid {
+  .metricGrid {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 700px) {
-.heroMain :global(.ant-card-body) {
+  .heroMain :global(.ant-card-body),
+  .sideCard :global(.ant-card-body) {
     padding: 18px;
   }
 
-.heroText :global(h1.ant-typography) {
+  .heroText :global(h1.ant-typography) {
     font-size: 30px;
   }
 
-.heroActions {
+  .heroActions {
     display: grid;
     grid-template-columns: 1fr;
   }
 
-.heroActions :global(.ant-btn) {
+  .heroActions :global(.ant-btn) {
     width: 100%;
   }
 }
+
+
 

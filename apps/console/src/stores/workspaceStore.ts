@@ -1,5 +1,5 @@
 ﻿import { create } from "zustand";
-import type { RuleView, StoredForwardRule, StoredGroup } from "../pages/proxy-forward/types";
+import type { RuleView, StoredForwardRule, StoredGroup } from "../domains/proxy-forward/types";
 import type { MockFormState, GroupMetaMap } from "../pages/mock/types";
 
 type WorkspaceStoreState = {
@@ -118,3 +118,4 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set) => ({
 }));
 
 export type { WorkspaceStoreState };
+

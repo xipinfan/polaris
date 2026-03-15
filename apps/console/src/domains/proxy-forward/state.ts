@@ -1,22 +1,18 @@
-﻿import type { ProxyRule, RequestRecord } from "@polaris/shared-types";
-import { persistenceKeys } from "../../../lib/persistence";
-import type { RuleView, StoredForwardRule, StoredGroup } from "../types";
+﻿import type { ProxyRule } from "@polaris/shared-types";
+import { persistenceKeys } from "../../lib/persistence";
+import type { StoredForwardRule, StoredGroup } from "./types";
 
 export const groupsStorageKey = persistenceKeys.proxyForward.groups;
 export const activeGroupStorageKey = persistenceKeys.proxyForward.activeGroup;
-export const defaultGroupLabel = "默认组";
-export const defaultMatchMode = "精确匹配";
-export const defaultMatchValue = "继承原请求";
+const defaultGroupLabel = "默认组";
+const defaultMatchMode = "精确匹配";
+const defaultMatchValue = "继承原请求";
 
-export function classNames(...values: Array<string | false | null | undefined>) {
-  return values.filter(Boolean).join(" ");
-}
-
-export function createId(prefix: string) {
+function createId(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-export function sanitizeText(value: unknown, fallback: string) {
+function sanitizeText(value: unknown, fallback: string) {
   const next =
     typeof value === "string"
       ? value.trim()
@@ -29,7 +25,7 @@ export function sanitizeText(value: unknown, fallback: string) {
   return next;
 }
 
-export function derivePath(source: unknown) {
+function derivePath(source: unknown) {
   const next = sanitizeText(source, "/");
   if (next.startsWith("/")) {
     return next;
@@ -41,7 +37,7 @@ export function derivePath(source: unknown) {
   }
 }
 
-export function parseSourceUrl(input: unknown): {
+function parseSourceUrl(input: unknown): {
   host: string;
   path: string;
   normalizedUrl: string;
@@ -74,7 +70,6 @@ export function parseSourceUrl(input: unknown): {
     }
   }
 
-  // Fallback for host/path or host-only text.
   const withoutProtocol = raw.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "");
   const slashIndex = withoutProtocol.indexOf("/");
   const hostPart = slashIndex >= 0 ? withoutProtocol.slice(0, slashIndex) : withoutProtocol;
@@ -92,7 +87,7 @@ export function parseSourceUrl(input: unknown): {
   };
 }
 
-export function derivePattern(
+function derivePattern(
   pattern: string | null | undefined,
   sourceUrl?: string | null | undefined,
   targetUrl?: string | null | undefined,
@@ -115,7 +110,7 @@ export function derivePattern(
   return "api.example.com";
 }
 
-export function buildRuleUrl(pattern: string, path: string, sourceUrl?: string | null | undefined) {
+function buildRuleUrl(pattern: string, path: string, sourceUrl?: string | null | undefined) {
   const safeSourceUrl = sanitizeText(sourceUrl, "");
   if (safeSourceUrl) {
     return safeSourceUrl;
@@ -123,36 +118,7 @@ export function buildRuleUrl(pattern: string, path: string, sourceUrl?: string |
   return `https://${pattern}${derivePath(path)}`;
 }
 
-export function formatTime(value: string | null | undefined) {
-  if (!value) {
-    return "暂无";
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return new Intl.DateTimeFormat("zh-CN", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
-
-function isToday(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return false;
-  }
-  const now = new Date();
-  return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate()
-  );
-}
-
-export function buildStoredRuleFromBackend(
+function buildStoredRuleFromBackend(
   rule: ProxyRule,
   current?: Partial<StoredForwardRule>,
 ): StoredForwardRule {
@@ -160,6 +126,7 @@ export function buildStoredRuleFromBackend(
   const pattern = derivePattern(current?.pattern ?? rule.pattern, parsedSource?.normalizedUrl, current?.targetUrl);
   const path = derivePath(current?.path ?? parsedSource?.path ?? "/");
   const targetUrl = sanitizeText(current?.targetUrl, `http://127.0.0.1:9000${path}`);
+
   return {
     id: rule.id,
     name: sanitizeText(current?.name, pattern),
@@ -184,13 +151,12 @@ export function buildStoredRuleFromBackend(
     responseHeaderPreview: current?.responseHeaderPreview ?? '{\n  "x-proxy-source": "polaris"\n}',
     responseDelay: current?.responseDelay ?? 0,
     fallbackPolicy: current?.fallbackPolicy ?? "closed",
-    // Keep local timeline stable so list ordering does not jump after backend sync.
     createdAt: sanitizeText(current?.createdAt, rule.createdAt),
     updatedAt: sanitizeText(current?.updatedAt, rule.updatedAt),
   };
 }
 
-export function buildGroupFromRules(name: string, rules: ProxyRule[]): StoredGroup {
+function buildGroupFromRules(name: string, rules: ProxyRule[]): StoredGroup {
   return {
     id: createId("proxy-group"),
     name,
@@ -198,15 +164,15 @@ export function buildGroupFromRules(name: string, rules: ProxyRule[]): StoredGro
   };
 }
 
-export function buildEmptyRule(activeGroupName: string): StoredForwardRule {
+function buildEmptyRule(groupName: string): StoredForwardRule {
   const pattern = "api.example.com";
-  const sourceUrl = `https://${pattern}/v1/resource`;
+  const url = `https://${pattern}/v1/resource`;
   return {
     id: createId("proxy-rule"),
-    name: sourceUrl,
+    name: url,
     pattern,
     method: "GET",
-    url: sourceUrl,
+    url,
     path: "/v1/resource",
     priority: 100,
     action: "proxy",
@@ -221,7 +187,7 @@ export function buildEmptyRule(activeGroupName: string): StoredForwardRule {
     rewritePath: "/v1/resource",
     rewriteQuery: "",
     headerStrategy: "keep",
-    requestHeaderPreview: '{\n  "x-group": "' + activeGroupName + '"\n}',
+    requestHeaderPreview: '{\n  "x-group": "' + groupName + '"\n}',
     responseHeaderPreview: '{\n  "x-proxy-source": "polaris"\n}',
     responseDelay: 0,
     fallbackPolicy: "closed",
@@ -317,10 +283,12 @@ export function normalizeGroups(
       activeGroupId: defaultGroup.id,
     };
   }
+
   const activeGroupId =
     storedActiveGroupId && safeStoredGroups.some((group) => group.id === storedActiveGroupId)
       ? storedActiveGroupId
       : safeStoredGroups[0].id;
+
   return { groups: safeStoredGroups, activeGroupId };
 }
 
@@ -348,36 +316,4 @@ export function syncActiveGroupRulesFromBackend(
 
     return { ...group, rules };
   });
-}
-
-export function buildRuleStats(rule: StoredForwardRule, requests: RequestRecord[]): RuleView {
-  const normalizedRuleHost = sanitizeText(rule.pattern, "").toLowerCase();
-  const normalizedRulePath = derivePath(rule.path);
-  const normalizedRuleMethod = sanitizeText(rule.method, "GET").toUpperCase();
-
-  const recentRecords = requests
-    .filter((request) => {
-      const hostMatched = sanitizeText(request.host, "").toLowerCase() === normalizedRuleHost;
-      if (!hostMatched) {
-        return false;
-      }
-
-      const requestPath = derivePath(request.path);
-      if (requestPath !== normalizedRulePath) {
-        return false;
-      }
-
-      return sanitizeText(request.method, "GET").toUpperCase() === normalizedRuleMethod;
-    })
-    .sort((left, right) => {
-      return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
-    });
-  return {
-    ...rule,
-    hitCountToday: recentRecords.filter((record) => isToday(record.createdAt)).length,
-    recentErrorCount: recentRecords.filter((record) => record.statusCode >= 400).length,
-    lastHitAt: recentRecords[0]?.createdAt ?? null,
-    latestRecord: recentRecords[0] ?? null,
-    recentRecords: recentRecords.slice(0, 10),
-  };
 }

@@ -47,4 +47,27 @@ describe("applyActiveProxyForwardGroup", () => {
     await expect(applyActiveProxyForwardGroup(group, api as any)).rejects.toThrow("remove failed");
     expect(api.upsertSiteRule).not.toHaveBeenCalled();
   });
+
+  it("deduplicates enabled rules by host before upsert", async () => {
+    const api = {
+      listProxyRules: vi.fn().mockResolvedValue([]),
+      removeSiteRule: vi.fn().mockResolvedValue({}),
+      upsertSiteRule: vi.fn().mockResolvedValue({}),
+      setProxyMode: vi.fn(),
+    };
+
+    const group: SetActiveGroupInput["group"] = {
+      id: "g1",
+      name: "G1",
+      rules: [
+        { id: "1", pattern: "dup.com", action: "proxy", enabled: true },
+        { id: "2", pattern: "dup.com", action: "proxy", enabled: true },
+      ] as any,
+    };
+
+    await applyActiveProxyForwardGroup(group, api as any);
+
+    expect(api.upsertSiteRule).toHaveBeenCalledTimes(1);
+    expect(api.upsertSiteRule).toHaveBeenCalledWith("dup.com", "proxy");
+  });
 });

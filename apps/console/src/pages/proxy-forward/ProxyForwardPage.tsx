@@ -1,12 +1,20 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import type { RequestRecord } from "@polaris/shared-types";
+import { useQueryClient } from "@tanstack/react-query";
 import type { MenuProps } from "antd";
-import { useSetActiveProxyForwardGroupMutation, useRemoveProxyForwardSiteRuleMutation, useUpsertProxyForwardSiteRuleMutation } from "../../domains/proxy-forward/mutations";
+import { Modal } from "antd";
+import {
+  useRemoveProxyForwardSiteRuleMutation,
+  useSetActiveProxyForwardGroupMutation,
+  useUpsertProxyForwardSiteRuleMutation,
+} from "../../domains/proxy-forward/mutations";
 import { useProxyForwardGroupsQuery } from "../../domains/proxy-forward/queries";
 import { useTrafficRequestsQuery } from "../../domains/traffic/queries";
 import { useToast } from "../../features/feedback/ToastProvider";
 import { writePersistence } from "../../lib/persistence";
+import { queryKeys } from "../../lib/query/queryKeys";
 import { toastQueryError } from "../../lib/query/queryOptions";
+import { toUserMessage } from "../../services/apiErrors";
 import { uiSelectors, workspaceSelectors } from "../../stores/selectors";
 import { useUiStore } from "../../stores/uiStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
@@ -16,59 +24,53 @@ import { OverviewHeader } from "./components/OverviewHeader";
 import { RuleBlocks } from "./components/RuleBlocks";
 import { RuleEditorModal } from "./components/RuleEditorModal";
 import { RuleToolbar } from "./components/RuleToolbar";
-import { TrafficDetailDrawer } from "./components/TrafficDetailDrawer";
-import type {
-  RuleView,
-  StoredForwardRule,
-  StoredGroup,
-} from "./types";
+import type { RuleView, StoredForwardRule, StoredGroup } from "./types";
 import {
   activeGroupStorageKey,
   buildEmptyRule,
   buildGroupFromRules,
   buildRuleStats,
-  buildRuleUrl,
   createId,
   defaultGroupLabel,
-  defaultMatchMode,
-  defaultMatchValue,
+  derivePath,
+  parseSourceUrl,
   groupsStorageKey,
   sanitizeText,
 } from "./utils/proxyForwardHelpers";
-import { countPreviewEntries } from "./utils/proxyForwardLabels";
 import styles from "./ProxyForwardPage.module.less";
 
 const fallbackGroup = buildGroupFromRules(defaultGroupLabel, []);
 
 export function ProxyForwardPage() {
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
   const groupsQuery = useProxyForwardGroupsQuery();
   const trafficQuery = useTrafficRequestsQuery({}, { autoRefresh: true });
   const setActiveGroupMutation = useSetActiveProxyForwardGroupMutation();
   const upsertRuleMutation = useUpsertProxyForwardSiteRuleMutation();
   const removeRuleMutation = useRemoveProxyForwardSiteRuleMutation();
+  const [pendingRuleIds, setPendingRuleIds] = useState<Record<string, boolean>>({});
 
-  const [groups, setGroups] = useState<StoredGroup[]>([fallbackGroup]);
   const requests = trafficQuery.data ?? ([] as RequestRecord[]);
 
   const groupSearch = useUiStore(uiSelectors.proxyGroupSearch);
   const ruleSearch = useUiStore(uiSelectors.proxyRuleSearch);
   const filterMode = useUiStore(uiSelectors.proxyFilterMode);
   const sortMode = useUiStore(uiSelectors.proxySortMode);
-  const activeGroupId = useWorkspaceStore(workspaceSelectors.proxyActiveGroupId);
+  const setProxyRuleSearch = useUiStore((state) => state.setProxyRuleSearch);
+  const setProxyFilterMode = useUiStore((state) => state.setProxyFilterMode);
+  const storeActiveGroupId = useWorkspaceStore(workspaceSelectors.proxyActiveGroupId);
   const headerMenuOpen = useWorkspaceStore(workspaceSelectors.proxyHeaderMenuOpen);
-  const drawerRule = useWorkspaceStore(workspaceSelectors.proxyDrawerRule);
   const editingRule = useWorkspaceStore(workspaceSelectors.proxyEditingRule);
   const editingGroup = useWorkspaceStore(workspaceSelectors.proxyEditingGroup);
   const proxyRuleForm = useWorkspaceStore(workspaceSelectors.proxyRuleForm);
   const isRuleModalOpen = useWorkspaceStore(workspaceSelectors.proxyRuleModalOpen);
   const isGroupModalOpen = useWorkspaceStore(workspaceSelectors.proxyGroupModalOpen);
-  const submitting = useWorkspaceStore((state) => state.proxySubmitting);
-  const groupName = useWorkspaceStore((state) => state.proxyGroupName);
+  const submitting = useWorkspaceStore(workspaceSelectors.proxySubmitting);
+  const groupName = useWorkspaceStore(workspaceSelectors.proxyGroupName);
 
   const setActiveGroupId = useWorkspaceStore((state) => state.setProxyActiveGroupId);
   const setHeaderMenuOpen = useWorkspaceStore((state) => state.setProxyHeaderMenuOpen);
-  const setDrawerRule = useWorkspaceStore((state) => state.setProxyDrawerRule);
   const setEditingRule = useWorkspaceStore((state) => state.setProxyEditingRule);
   const setEditingGroup = useWorkspaceStore((state) => state.setProxyEditingGroup);
   const setProxyRuleForm = useWorkspaceStore((state) => state.setProxyRuleForm);
@@ -77,6 +79,13 @@ export function ProxyForwardPage() {
   const setSubmitting = useWorkspaceStore((state) => state.setProxySubmitting);
   const setGroupName = useWorkspaceStore((state) => state.setProxyGroupName);
 
+  const groups = groupsQuery.data?.groups ?? [fallbackGroup];
+  const queryActiveGroupId = groupsQuery.data?.activeGroupId ?? groups[0]?.id ?? fallbackGroup.id;
+  const activeGroupId =
+    storeActiveGroupId && groups.some((group) => group.id === storeActiveGroupId)
+      ? storeActiveGroupId
+      : queryActiveGroupId;
+
   const ruleForm = proxyRuleForm ?? buildEmptyRule(defaultGroupLabel);
 
   const setRuleForm = (updater: (current: StoredForwardRule) => StoredForwardRule) => {
@@ -84,11 +93,14 @@ export function ProxyForwardPage() {
     setProxyRuleForm(next);
   };
 
-  const persistGroups = (nextGroups: StoredGroup[], nextActiveGroupId: string) => {
-    setGroups(nextGroups);
-    setActiveGroupId(nextActiveGroupId);
+  const commitGroups = (nextGroups: StoredGroup[], nextActiveGroupId: string) => {
     writePersistence(groupsStorageKey, nextGroups);
     writePersistence(activeGroupStorageKey, nextActiveGroupId);
+    setActiveGroupId(nextActiveGroupId);
+    queryClient.setQueryData(queryKeys.proxyForward.groups, {
+      groups: nextGroups,
+      activeGroupId: nextActiveGroupId,
+    });
   };
 
   const refetchProxyData = async () => {
@@ -107,17 +119,11 @@ export function ProxyForwardPage() {
   };
 
   useEffect(() => {
-    if (!groupsQuery.data) {
+    if (!activeGroupId || storeActiveGroupId === activeGroupId) {
       return;
     }
-    persistGroups(groupsQuery.data.groups, groupsQuery.data.activeGroupId);
-  }, [groupsQuery.data]);
-
-  useEffect(() => {
-    if (!activeGroupId) {
-      setActiveGroupId(fallbackGroup.id);
-    }
-  }, [activeGroupId, setActiveGroupId]);
+    setActiveGroupId(activeGroupId);
+  }, [activeGroupId, setActiveGroupId, storeActiveGroupId]);
 
   useEffect(() => {
     if (groupsQuery.error) {
@@ -132,15 +138,18 @@ export function ProxyForwardPage() {
   }, [trafficQuery.error, showToast]);
 
   const visibleGroups = useMemo(() => {
-    const keyword = groupSearch.trim().toLowerCase();
+    const keyword = sanitizeText(groupSearch, "").toLowerCase();
     return groups.filter((group) => !keyword || group.name.toLowerCase().includes(keyword));
   }, [groupSearch, groups]);
 
   const activeGroup = groups.find((group) => group.id === activeGroupId) ?? groups[0] ?? null;
-  const rules = useMemo(() => (activeGroup ? activeGroup.rules.map((rule) => buildRuleStats(rule, requests)) : []), [activeGroup, requests]);
+  const rules = useMemo(
+    () => (activeGroup ? activeGroup.rules.map((rule) => buildRuleStats(rule, requests)) : []),
+    [activeGroup, requests],
+  );
 
   const filteredRules = useMemo(() => {
-    const keyword = ruleSearch.trim().toLowerCase();
+    const keyword = sanitizeText(ruleSearch, "").toLowerCase();
     const next = rules.filter((rule) => {
       if (keyword && !`${rule.name} ${rule.pattern}`.toLowerCase().includes(keyword)) {
         return false;
@@ -161,25 +170,11 @@ export function ProxyForwardPage() {
       if (sortMode === "hits") {
         return right.hitCountToday - left.hitCountToday;
       }
-      if (sortMode === "created") {
-        return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
-      }
-      return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+      return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
     });
 
     return next;
   }, [filterMode, ruleSearch, rules, sortMode]);
-
-  const urlBlocks = useMemo(
-    () =>
-      filteredRules.map((rule) => ({
-        key: `${rule.pattern}${rule.path}`,
-        fullUrl: rule.url || buildRuleUrl(rule.pattern, rule.path),
-        host: rule.pattern || "未设置 Host",
-        rules: [rule],
-      })),
-    [filteredRules],
-  );
 
   const overview = useMemo(() => {
     const total = activeGroup?.rules.length ?? 0;
@@ -189,17 +184,52 @@ export function ProxyForwardPage() {
     return { total, enabled, hits, errors };
   }, [activeGroup, rules]);
 
+  const updateActiveGroupRules = (
+    currentGroups: StoredGroup[],
+    updater: (rules: StoredForwardRule[]) => StoredForwardRule[],
+  ) =>
+    currentGroups.map((group) =>
+      group.id === activeGroupId ? { ...group, rules: updater(group.rules) } : group,
+    );
+
+  const hasOtherEnabledRuleWithPattern = (
+    pattern: string,
+    excludeRuleId: string,
+    candidateRules: StoredForwardRule[],
+  ) =>
+    candidateRules.some(
+      (item) =>
+        item.id !== excludeRuleId &&
+        item.enabled &&
+        sanitizeText(item.pattern, "").toLowerCase() === sanitizeText(pattern, "").toLowerCase(),
+    );
+
+  const normalizeHost = (host: unknown) => sanitizeText(host, "").toLowerCase();
+
+  const setRulePending = (ruleId: string, pending: boolean) => {
+    setPendingRuleIds((current) => {
+      if (pending) {
+        return { ...current, [ruleId]: true };
+      }
+      const { [ruleId]: _removed, ...rest } = current;
+      return rest;
+    });
+  };
+
   const handleSelectGroup = async (groupId: string) => {
     if (groupId === activeGroupId) return;
     const nextGroup = groups.find((group) => group.id === groupId);
     if (!nextGroup) return;
 
+    const previousGroupId = activeGroupId;
+    commitGroups(groups, groupId);
+
     setSubmitting(true);
     try {
       await setActiveGroupMutation.mutateAsync({ group: nextGroup });
-      await refetchProxyData();
       showToast("分组已切换", "success");
     } catch (error) {
+      commitGroups(groups, previousGroupId);
       toastQueryError(showToast, error, "分组切换失败");
     } finally {
       setSubmitting(false);
@@ -207,38 +237,68 @@ export function ProxyForwardPage() {
   };
 
   const handleToggleRule = async (rule: RuleView, checked: boolean) => {
+    if (pendingRuleIds[rule.id]) {
+      return;
+    }
+    setRulePending(rule.id, true);
+    const previousGroups = groups;
+    const nextGroups = updateActiveGroupRules(previousGroups, (activeRules) =>
+      activeRules.map((item) => (item.id === rule.id ? { ...item, enabled: checked } : item)),
+    );
+    commitGroups(nextGroups, activeGroupId);
+
     try {
       if (checked) {
-        await upsertRuleMutation.mutateAsync({ host: rule.pattern, action: rule.action });
+        await upsertRuleMutation.mutateAsync({
+          host: normalizeHost(rule.pattern),
+          action: rule.action,
+        });
       } else {
-        await removeRuleMutation.mutateAsync({ host: rule.pattern });
+        const activeRules = nextGroups.find((group) => group.id === activeGroupId)?.rules ?? [];
+        const shouldRemoveHost = !hasOtherEnabledRuleWithPattern(rule.pattern, rule.id, activeRules);
+        if (shouldRemoveHost) {
+          await removeRuleMutation.mutateAsync({ host: normalizeHost(rule.pattern) });
+        }
       }
-      await refetchProxyData();
     } catch (error) {
+      commitGroups(previousGroups, activeGroupId);
       toastQueryError(showToast, error, "规则状态更新失败");
+    } finally {
+      setRulePending(rule.id, false);
     }
   };
 
   const handleDeleteRule = async (rule: StoredForwardRule) => {
-    const nextGroups = groups.map((group) =>
-      group.id === activeGroupId ? { ...group, rules: group.rules.filter((item) => item.id !== rule.id) } : group,
+    if (pendingRuleIds[rule.id]) {
+      return;
+    }
+    setRulePending(rule.id, true);
+    const previousGroups = groups;
+    const nextGroups = updateActiveGroupRules(previousGroups, (activeRules) =>
+      activeRules.filter((item) => item.id !== rule.id),
     );
-    persistGroups(nextGroups, activeGroupId);
+    commitGroups(nextGroups, activeGroupId);
 
     try {
       if (rule.enabled) {
-        await removeRuleMutation.mutateAsync({ host: rule.pattern });
+        const activeRules = nextGroups.find((group) => group.id === activeGroupId)?.rules ?? [];
+        const shouldRemoveHost = !hasOtherEnabledRuleWithPattern(rule.pattern, rule.id, activeRules);
+        if (shouldRemoveHost) {
+          await removeRuleMutation.mutateAsync({ host: normalizeHost(rule.pattern) });
+        }
       }
-      await refetchProxyData();
       showToast("规则已删除", "success");
     } catch (error) {
+      commitGroups(previousGroups, activeGroupId);
       toastQueryError(showToast, error, "规则删除失败");
+    } finally {
+      setRulePending(rule.id, false);
     }
   };
 
   const openCreateRule = () => {
     setEditingRule(null);
-    setProxyRuleForm(buildEmptyRule(defaultGroupLabel));
+    setProxyRuleForm(buildEmptyRule(activeGroup?.name ?? defaultGroupLabel));
     setIsRuleModalOpen(true);
   };
 
@@ -249,61 +309,157 @@ export function ProxyForwardPage() {
   };
 
   const handleSaveRule = async () => {
-    const pattern = ruleForm.pattern.trim().toLowerCase();
+    if (submitting) {
+      return;
+    }
+    const sourceUrlInput = sanitizeText(ruleForm.url, "");
+    const parsedSource = parseSourceUrl(sourceUrlInput);
+    const normalizedPath = parsedSource?.path ?? derivePath(ruleForm.path);
+    const pattern =
+      parsedSource?.host ?? sanitizeText(ruleForm.pattern, "").toLowerCase();
     if (!pattern) {
-      showToast("请填写站点，例如 api.example.com", "error");
+      showToast("请填写有效的来源 URL，例如 https://api.example.com/v1/resource", "error");
       return;
     }
 
+    setSubmitting(true);
+
+    const collidedRule = activeGroup?.rules.find(
+      (rule) =>
+        rule.id !== editingRule?.id &&
+        sanitizeText(rule.pattern, "").toLowerCase() === pattern &&
+        derivePath(rule.path) === normalizedPath &&
+        sanitizeText(rule.method, "GET").toUpperCase() ===
+          sanitizeText(ruleForm.method, "GET").toUpperCase(),
+    );
+
     const nextRule: StoredForwardRule = {
       ...ruleForm,
-      id: editingRule?.id ?? createId("proxy-rule"),
-      name: ruleForm.name.trim() || pattern,
+      id: editingRule?.id ?? collidedRule?.id ?? createId("proxy-rule"),
+      name:
+        sanitizeText(ruleForm.name, "") ||
+        parsedSource?.normalizedUrl ||
+        sourceUrlInput ||
+        pattern,
       pattern,
-      url: ruleForm.url.trim() || `https://${pattern}${ruleForm.path || "/"}`,
-      path: ruleForm.path.trim() || "/",
+      url: parsedSource?.normalizedUrl ?? (sourceUrlInput || `https://${pattern}${normalizedPath}`),
+      path: normalizedPath,
       createdAt: editingRule?.createdAt ?? new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    const nextGroups = groups.map((group) => {
-      if (group.id !== activeGroupId) return group;
-      const exists = group.rules.some((rule) => rule.id === nextRule.id);
-      return {
-        ...group,
-        rules: exists ? group.rules.map((rule) => (rule.id === nextRule.id ? nextRule : rule)) : [nextRule, ...group.rules],
-      };
+    const previousGroups = groups;
+    const nextGroups = updateActiveGroupRules(previousGroups, (activeRules) => {
+      const exists = activeRules.some((rule) => rule.id === nextRule.id);
+      return exists
+        ? activeRules.map((rule) => (rule.id === nextRule.id ? nextRule : rule))
+        : [nextRule, ...activeRules];
     });
-    persistGroups(nextGroups, activeGroupId);
+    commitGroups(nextGroups, activeGroupId);
+
+    const previousPattern = editingRule?.pattern;
+    const patternChanged = !!editingRule && previousPattern !== nextRule.pattern;
 
     try {
-      if (nextRule.enabled) {
-        await upsertRuleMutation.mutateAsync({ host: nextRule.pattern, action: nextRule.action });
-      } else if (editingRule?.enabled) {
-        await removeRuleMutation.mutateAsync({ host: editingRule.pattern });
+      if (editingRule?.enabled && patternChanged && previousPattern) {
+        const nextActiveRules = nextGroups.find((group) => group.id === activeGroupId)?.rules ?? [];
+        const shouldRemovePreviousHost = !hasOtherEnabledRuleWithPattern(
+          previousPattern,
+          editingRule.id,
+          nextActiveRules,
+        );
+        if (shouldRemovePreviousHost) {
+          await removeRuleMutation.mutateAsync({ host: normalizeHost(previousPattern) });
+        }
       }
-      await refetchProxyData();
+      if (nextRule.enabled) {
+        await upsertRuleMutation.mutateAsync({
+          host: normalizeHost(nextRule.pattern),
+          action: nextRule.action,
+        });
+      } else if (editingRule?.enabled && !patternChanged) {
+        const nextActiveRules = nextGroups.find((group) => group.id === activeGroupId)?.rules ?? [];
+        const shouldRemoveHost = !hasOtherEnabledRuleWithPattern(
+          editingRule.pattern,
+          editingRule.id,
+          nextActiveRules,
+        );
+        if (shouldRemoveHost) {
+          await removeRuleMutation.mutateAsync({ host: normalizeHost(editingRule.pattern) });
+        }
+      }
+      setProxyFilterMode("all");
+      setProxyRuleSearch("");
       setIsRuleModalOpen(false);
       showToast(editingRule ? "规则已更新" : "规则已创建", "success");
     } catch (error) {
-      toastQueryError(showToast, error, "规则保存失败");
+      await groupsQuery.refetch();
+      setProxyFilterMode("all");
+      setProxyRuleSearch("");
+      setIsRuleModalOpen(false);
+      showToast(
+        `${editingRule ? "规则已更新" : "规则已创建"}，但导入失败：${toUserMessage(
+          error,
+          "请稍后重试",
+        )}`,
+        "error",
+      );
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleSaveGroup = () => {
-    const nextName = groupName.trim();
+    const nextName = sanitizeText(groupName, "");
     if (!nextName) {
       showToast("请填写分组名称", "error");
       return;
     }
     if (editingGroup) {
-      persistGroups(groups.map((group) => (group.id === editingGroup.id ? { ...group, name: nextName } : group)), activeGroupId);
+      commitGroups(
+        groups.map((group) => (group.id === editingGroup.id ? { ...group, name: nextName } : group)),
+        activeGroupId,
+      );
     } else {
-      persistGroups([...groups, { id: createId("proxy-group"), name: nextName, rules: [] }], activeGroupId);
+      commitGroups([...groups, { id: createId("proxy-group"), name: nextName, rules: [] }], activeGroupId);
     }
     setIsGroupModalOpen(false);
   };
 
+  const handleDeleteGroup = async (group: StoredGroup) => {
+    if (submitting) {
+      return;
+    }
+    if (groups.length <= 1) {
+      showToast("至少保留一个分组，无法删除", "error");
+      return;
+    }
+
+    const previousGroups = groups;
+    const previousActiveGroupId = activeGroupId;
+    const nextGroups = groups.filter((item) => item.id !== group.id);
+    const isDeletingActive = group.id === activeGroupId;
+    const nextActiveGroupId = isDeletingActive ? nextGroups[0]?.id ?? activeGroupId : activeGroupId;
+    const nextActiveGroup = nextGroups.find((item) => item.id === nextActiveGroupId);
+
+    commitGroups(nextGroups, nextActiveGroupId);
+
+    if (!isDeletingActive || !nextActiveGroup) {
+      showToast("分组已删除", "success");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await setActiveGroupMutation.mutateAsync({ group: nextActiveGroup });
+      showToast("分组已删除，并切换到新分组", "success");
+    } catch (error) {
+      commitGroups(previousGroups, previousActiveGroupId);
+      toastQueryError(showToast, error, "分组删除失败");
+    } finally {
+      setSubmitting(false);
+    }
+  };
   const buildGroupMenu = (group: StoredGroup): MenuProps["items"] => [
     {
       key: "rename",
@@ -314,33 +470,22 @@ export function ProxyForwardPage() {
         setIsGroupModalOpen(true);
       },
     },
-  ];
-
-  const buildRuleMenu = (rule: StoredForwardRule): MenuProps["items"] => [
     {
-      key: "remove",
-      label: "删除规则",
+      key: "delete",
+      label: "删除分组",
       danger: true,
       onClick: () => {
-        void handleDeleteRule(rule);
+        Modal.confirm({
+          title: `删除分组「${group.name}」？`,
+          content: "分组内规则会一并删除，且不可恢复。",
+          okText: "删除",
+          okButtonProps: { danger: true },
+          cancelText: "取消",
+          onOk: () => handleDeleteGroup(group),
+        });
       },
     },
   ];
-
-  const requestHeaderCount = useMemo(() => countPreviewEntries(ruleForm.requestHeaderPreview), [ruleForm.requestHeaderPreview]);
-  const responseHeaderCount = useMemo(() => countPreviewEntries(ruleForm.responseHeaderPreview), [ruleForm.responseHeaderPreview]);
-  const resolvedTargetUrl = ruleForm.forwardMode === "direct" ? ruleForm.url : ruleForm.targetUrl;
-  const rewriteSummary = [
-    ruleForm.rewriteHost ? `Host ${ruleForm.rewriteHost}` : "",
-    ruleForm.rewritePath ? `Path ${ruleForm.rewritePath}` : "",
-    ruleForm.rewriteQuery ? `Query ${ruleForm.rewriteQuery}` : "",
-  ].filter(Boolean).join(" · ");
-
-  const getMatchSummary = (rule: StoredForwardRule) =>
-    `${sanitizeText(rule.matchMode, defaultMatchMode)} · Query ${sanitizeText(rule.queryMatch, defaultMatchValue)} · Header ${sanitizeText(rule.headerMatch, defaultMatchValue)} · Body ${sanitizeText(rule.bodyMatch, defaultMatchValue)}`;
-
-  const getActionSummary = (rule: StoredForwardRule) =>
-    `转发到 ${sanitizeText(rule.targetUrl, buildRuleUrl(rule.pattern, rule.path))}`;
 
   return (
     <div className={styles.page}>
@@ -352,16 +497,64 @@ export function ProxyForwardPage() {
         </div>
       </header>
       <div className={styles.workspace}>
-        <GroupSidebar buildGroupMenu={buildGroupMenu} onSelectGroup={(id) => void handleSelectGroup(id)} setEditingGroup={setEditingGroup} setGroupName={setGroupName} setIsGroupModalOpen={setIsGroupModalOpen} submitting={submitting} visibleGroups={visibleGroups} />
+        <GroupSidebar
+          buildGroupMenu={buildGroupMenu}
+          onSelectGroup={(id) => void handleSelectGroup(id)}
+          setEditingGroup={setEditingGroup}
+          setGroupName={setGroupName}
+          setIsGroupModalOpen={setIsGroupModalOpen}
+          submitting={submitting}
+          visibleGroups={visibleGroups}
+        />
         <section className={styles.main}>
-          <OverviewHeader activeGroup={activeGroup} activeGroupId={activeGroupId} groups={groups} headerMenuOpen={headerMenuOpen} onLoad={() => void refetchProxyData()} onOpenCreateRule={openCreateRule} overview={overview} setEditingGroup={setEditingGroup} setGroupName={setGroupName} setHeaderMenuOpen={setHeaderMenuOpen} setIsGroupModalOpen={setIsGroupModalOpen} />
+          <OverviewHeader
+            activeGroup={activeGroup}
+            activeGroupId={activeGroupId}
+            groups={groups}
+            headerMenuOpen={headerMenuOpen}
+            onLoad={() => void refetchProxyData()}
+            onOpenCreateRule={openCreateRule}
+            overview={overview}
+            setEditingGroup={setEditingGroup}
+            setGroupName={setGroupName}
+            setHeaderMenuOpen={setHeaderMenuOpen}
+            setIsGroupModalOpen={setIsGroupModalOpen}
+          />
           <RuleToolbar filteredCount={filteredRules.length} />
-          <RuleBlocks buildRuleMenu={buildRuleMenu} getActionSummary={getActionSummary} getMatchSummary={getMatchSummary} onOpenDrawer={setDrawerRule} onOpenEditRule={openEditRule} onToggleRule={(rule, checked) => void handleToggleRule(rule, checked)} urlBlocks={urlBlocks} />
+          <RuleBlocks
+            rules={filteredRules}
+            isRulePending={(ruleId) => pendingRuleIds[ruleId] === true}
+            onDeleteRule={(rule) => void handleDeleteRule(rule)}
+            onOpenEditRule={openEditRule}
+            onToggleRule={(rule, checked) => void handleToggleRule(rule, checked)}
+          />
         </section>
       </div>
-      <TrafficDetailDrawer onClose={() => setDrawerRule(null)} rule={drawerRule} />
-      <RuleEditorModal activeGroup={activeGroup} activeGroupId={activeGroupId} editingRule={editingRule} groups={groups} isOpen={isRuleModalOpen} onCancel={() => setIsRuleModalOpen(false)} onSave={() => void handleSaveRule()} requestHeaderCount={requestHeaderCount} resolvedTargetUrl={resolvedTargetUrl} responseHeaderCount={responseHeaderCount} rewriteSummary={rewriteSummary} ruleForm={ruleForm} setRuleForm={setRuleForm} submitting={submitting} />
-      <GroupEditorModal editingGroup={editingGroup} groupName={groupName} isOpen={isGroupModalOpen} onCancel={() => setIsGroupModalOpen(false)} onSave={handleSaveGroup} setGroupName={setGroupName} />
+      <RuleEditorModal
+        activeGroup={activeGroup}
+        activeGroupId={activeGroupId}
+        editingRule={editingRule}
+        groups={groups}
+        isOpen={isRuleModalOpen}
+        onCancel={() => setIsRuleModalOpen(false)}
+        onSave={() => void handleSaveRule()}
+        ruleForm={ruleForm}
+        setRuleForm={setRuleForm}
+        submitting={submitting}
+      />
+      <GroupEditorModal
+        editingGroup={editingGroup}
+        groupName={groupName}
+        isOpen={isGroupModalOpen}
+        onCancel={() => setIsGroupModalOpen(false)}
+        onSave={handleSaveGroup}
+        setGroupName={setGroupName}
+      />
     </div>
   );
 }
+
+
+
+
+

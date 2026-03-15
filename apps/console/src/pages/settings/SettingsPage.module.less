@@ -47,16 +47,26 @@
   gap: 16px;
 }
 
-.split {
+.contentGrid {
   display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
   gap: 14px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
 }
 
-@media (max-width: 1080px) {
-.split {
+.mainColumn,
+.sideColumn {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.sideColumn {
+  gap: 18px;
+}
+
+@media (max-width: 1180px) {
+  .contentGrid {
     grid-template-columns: 1fr;
   }
 }
-

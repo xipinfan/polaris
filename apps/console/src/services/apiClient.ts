@@ -112,7 +112,8 @@ export const apiClient = {
     request<{ mode: ProxyMode }>("/proxy-mode", { method: "POST", body: JSON.stringify({ mode }) }),
   upsertSiteRule: (host: string, action: "proxy" | "direct") =>
     request<ProxyRule>("/proxy-rules/site", { method: "POST", body: JSON.stringify({ host, action }) }),
-  removeSiteRule: (host: string) => request<{ host: string }>(`/proxy-rules/site/${host}`, { method: "DELETE" }),
+  removeSiteRule: (host: string) =>
+    request<{ host: string }>(`/proxy-rules/site/${encodeURIComponent(host)}`, { method: "DELETE" }),
   runRequest: (body: RunRequestInput) => request<RequestRecord>("/debug/run", { method: "POST", body: JSON.stringify(body) }),
   settings: () => request<AppSetting>("/settings")
 };
