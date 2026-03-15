@@ -26,20 +26,28 @@ export function HomePage() {
   const setProxyMode = async (mode: "direct" | "rules") => {
     try {
       await setProxyModeMutation.mutateAsync(mode);
-      showToast(mode === "direct" ? t("common.switchedDirect") : t("common.switchedRules"));
+      showToast(
+        mode === "direct"
+          ? t("common.switchedDirect")
+          : t("common.switchedRules"),
+      );
       await overviewQuery.refetch();
     } catch (error) {
       toastQueryError(showToast, error, "切换模式失败");
     }
   };
 
-  const primaryProxyAction = snapshot?.status.proxyMode === "rules" ? "direct" : "rules";
-  const primaryProxyLabel = primaryProxyAction === "rules" ? t("home.enableRules") : t("home.backDirect");
+  const primaryProxyAction =
+    snapshot?.status.proxyMode === "rules" ? "direct" : "rules";
+  const primaryProxyLabel =
+    primaryProxyAction === "rules"
+      ? t("home.enableRules")
+      : t("home.backDirect");
 
   const recentMocks: HomeRecentMock[] = useMemo(
     () =>
       snapshot
-        ? snapshot.mockRules.slice(0, 5).map((rule) => ({
+        ? snapshot.mockRules.slice(0, 3).map((rule) => ({
             id: rule.id,
             title: rule.name,
             meta: `${rule.method} 路 ${rule.url}`,
@@ -48,7 +56,8 @@ export function HomePage() {
     [snapshot],
   );
 
-  const enabledMockCount = snapshot?.mockRules.filter((rule) => rule.enabled).length ?? 0;
+  const enabledMockCount =
+    snapshot?.mockRules.filter((rule) => rule.enabled).length ?? 0;
 
   const quickEntries: HomeQuickEntry[] = snapshot
     ? [
@@ -59,7 +68,9 @@ export function HomePage() {
           title: t("home.quick.traffic"),
           points: [
             t("home.metric.recentRequests"),
-            t("home.activeRequests", { count: snapshot.status.activeRequestCount }),
+            t("home.activeRequests", {
+              count: snapshot.status.activeRequestCount,
+            }),
           ],
           action: t("home.viewAll"),
           primary: true,
@@ -93,7 +104,10 @@ export function HomePage() {
           index: "04",
           label: t("home.flow.save"),
           title: t("home.quick.settings"),
-          points: ["Manage local service and certificate", "Review proxy mode and port"],
+          points: [
+            "Manage local service and certificate",
+            "Review proxy mode and port",
+          ],
           action: t("home.quick.settings"),
           primary: false,
           onClick: () => navigate("/settings"),
@@ -105,7 +119,6 @@ export function HomePage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerCopy}>
-          <span className={styles.eyebrow}>{t("home.title")}</span>
           <Title level={2}>{t("home.title")}</Title>
           <Paragraph>{t("home.subtitle")}</Paragraph>
         </div>
@@ -126,7 +139,10 @@ export function HomePage() {
           }}
         />
       ) : !snapshot ? (
-        <StatusState title="暂无数据" description="当前没有可展示的服务快照。" />
+        <StatusState
+          title="暂无数据"
+          description="当前没有可展示的服务快照。"
+        />
       ) : (
         <>
           <HomeHero

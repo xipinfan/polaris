@@ -20,6 +20,13 @@ V1 研发完成后，用户应可以完成以下完整闭环：
 * 可以通过 MCP 读取请求和调用基础工具
 * 系统内部预留扩展机制，但不开放第三方安装
 
+结合当前实现，V1 还已补充：
+
+* 代理转发工作台
+* HTTPS 根证书下载与就绪检查
+* Mock 激活分组
+* 更完整的 MCP tools / resources / pack
+
 ---
 
 ## 1.2 V1 不纳入本轮开发的能力
@@ -180,6 +187,7 @@ HTTPS 证书能力至少要具备最小可用链路，但 V1 说明和安装引�
 * A-5-6 V1 生效策略定义
 * A-5-7 命中次数统计
 * A-5-8 最近命中时间记录
+* A-5-9 Mock 激活分组
 
 ### 产出
 
@@ -187,6 +195,7 @@ HTTPS 证书能力至少要具备最小可用链路，但 V1 说明和安装引�
 * Mock 可启停
 * Mock 命中可替代真实返回
 * 命中统计可被界面读取
+* 可切换当前激活分组
 
 ### V1 需要先定的规则
 
@@ -239,11 +248,33 @@ HTTPS 证书能力至少要具备最小可用链路，但 V1 说明和安装引�
 
   * list_requests
   * get_request_detail
+  * list_saved_requests
+  * get_saved_request_detail
   * save_request
+  * update_saved_request
+  * delete_saved_request
   * replay_request
+  * clear_requests
+  * list_mock_rules
+  * get_mock_rule_detail
   * create_mock_rule
+  * update_mock_rule
+  * delete_mock_rule
   * enable_mock_rule
+  * get_active_mock_group
+  * set_active_mock_group
   * run_request
+  * list_proxy_rules
+  * get_proxy_mode
+  * get_proxy_decision
+  * set_proxy_mode
+  * upsert_proxy_rule
+  * remove_proxy_rule
+  * get_service_health
+  * get_runtime_settings
+  * get_certificate_status
+  * get_certificate_install_guide
+  * verify_https_interception_ready
 * A-7-5 V1 resources 实现：
 
   * 最近请求列表
@@ -252,11 +283,13 @@ HTTPS 证书能力至少要具备最小可用链路，但 V1 说明和安装引�
   * 当前代理模式
   * 当前代理规则列表
 * A-7-6 MCP 开关与配置读取
+* A-7-7 MCP pack 注册与按 pack 暴露
 
 ### 产出
 
 * MCP 服务可被外部客户端连接
 * 基础 tools / resources 可用
+* 支持 request / mock / proxy / ops 四类 pack
 
 ---
 
@@ -297,6 +330,13 @@ V1 仅预留扩展机制，不开放安装。
 * A-9-4 Mock 类 hook 占位
 * A-9-5 MCP 注册扩展点占位
 * A-9-6 UI slot 元数据协议输出（给 Console 预留）
+
+### 当前占位明细
+
+* 请求 hook：`onRequestCaptured`、`beforeRequestReplay`、`afterRequestReplay`、`beforeRequestSave`、`afterRequestSave`
+* Mock hook：`beforeMockCreate`、`afterMockCreate`、`beforeMockMatch`、`afterMockHit`、`beforeMockResponse`
+* MCP hook：`registerTool`、`registerResource`、`beforeToolInvoke`、`afterToolInvoke`
+* UI slot：`request-detail-actions`、`mock-toolbar`、`debug-header`、`settings-extension-panel`
 
 ### 产出
 
@@ -344,6 +384,7 @@ V1 仅预留扩展机制，不开放安装。
 * B-2-3 最近保存项模块
 * B-2-4 快捷入口模块
 * B-2-5 服务离线状态处理
+* B-2-6 当前实现中的最近 Mock / 工作流入口增强
 
 ### 产出
 
@@ -395,6 +436,10 @@ V1 仅预留扩展机制，不开放安装。
 
 * 已保存请求的完整管理闭环
 
+### 当前状态补充
+
+当前实现已具备已保存请求的完整 API 能力，但独立页面仍处于未正式落地状态，页面能力部分由实时请求页、调试页与 API 能力承接。
+
 ---
 
 ## B-5 Mock 页
@@ -413,11 +458,14 @@ V1 仅预留扩展机制，不开放安装。
 * B-5-6 命中次数 / 最近命中展示
 * B-5-7 复制一份逻辑
 * B-5-8 删除确认流程
+* B-5-9 Mock 分组侧栏
+* B-5-10 激活分组切换
 
 ### 产出
 
 * Mock 管理闭环
 * 多方案管理界面最小可用
+* 多分组切换最小可用
 
 ### UI 注意
 
@@ -462,6 +510,8 @@ V1 仅预留扩展机制，不开放安装。
 * B-7-4 MCP 接入说明模块
 * B-7-5 扩展能力预留模块
 * B-7-6 复制地址 / 查看工具列表交互
+* B-7-7 语言切换模块
+* B-7-8 根证书下载与证书状态展示
 
 ### 产出
 
@@ -486,6 +536,38 @@ V1 仅预留扩展机制，不开放安装。
 
 * UI 扩展点占位完成
 * 不影响 V1 正常使用
+
+### 当前状态补充
+
+当前实现已明确落位：
+
+* 请求详情操作区 slot
+* 调试页顶部 slot
+* 设置页扩展区 slot
+
+Mock 页工具栏 slot 已有统一命名约定，可继续补完整体占位。
+
+---
+
+## B-9 代理转发页
+
+### 目标
+
+为规则代理模式提供增强工作台，承载分组、规则编辑、命中观察与激活状态切换。
+
+### 任务
+
+* B-9-1 分组侧栏
+* B-9-2 分组切换逻辑
+* B-9-3 规则列表
+* B-9-4 规则编辑弹层
+* B-9-5 规则启停与同步 Core
+* B-9-6 分组新建、重命名、删除
+
+### 产出
+
+* 代理转发工作台最小可用
+* 规则与 Core 代理规则联动可用
 
 ---
 
@@ -989,6 +1071,12 @@ V1 仅预留扩展机制，不开放安装。
 * [ ] create_mock_rule 可用
 * [ ] enable_mock_rule 可用
 * [ ] run_request 可用
+* [ ] list_saved_requests 可用
+* [ ] list_mock_rules 可用
+* [ ] list_proxy_rules 可用
+* [ ] get_proxy_mode 可用
+* [ ] get_certificate_status 可用
+* [ ] verify_https_interception_ready 可用
 
 ---
 
@@ -998,6 +1086,17 @@ V1 仅预留扩展机制，不开放安装。
 * [ ] 请求 / Mock / MCP hook 有占位
 * [ ] Web Console 有 UI slot 占位
 * [ ] 设置页有扩展能力说明
+* [ ] slot 命名与 SDK 常量统一
+
+---
+
+## 10.7 增强能力
+
+* [ ] 代理转发页可用
+* [ ] Mock 激活分组可切换
+* [ ] 可下载根证书
+* [ ] 设置页可查看证书就绪状态
+* [ ] MCP pack 可按类别暴露
 
 ---
 

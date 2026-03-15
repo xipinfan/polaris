@@ -278,12 +278,18 @@ Web 控制台，负责：
 
 ## 8.1 顶层导航
 
+V1 原始导航为：
+
 * 首页
 * 实时请求
 * 已保存请求
 * Mock
 * 调试
 * 设置
+
+结合当前实现，Web Console 已额外落地一页增强工作台：
+
+* 代理转发
 
 ## 8.2 页面职责
 
@@ -294,6 +300,10 @@ Web 控制台，负责：
 ### 实时请求
 
 查看代理捕获的请求和响应。
+
+### 代理转发
+
+管理站点级代理转发规则、分组、命中流量观察与当前激活分组。
 
 ### 已保存请求
 
@@ -538,6 +548,16 @@ Web 控制台，负责：
 * 高级字段如响应头默认折叠
 * 创建流程尽量短
 * 一个接口多个 Mock 方案
+* 允许通过轻量分组机制管理多套 Mock 方案，并在同一时间仅激活一个分组
+
+### V1 增补说明
+
+结合当前实现，Mock 在 V1 中额外补充以下增强能力：
+
+* 支持轻量 Mock 分组
+* 系统记录当前激活的 Mock 分组
+* 同一 Method + URL 下允许存在多个方案，但同一时间仅启用一个方案
+* 界面支持复制规则、切换分组、查看命中次数与最近命中时间
 
 ---
 
@@ -598,12 +618,16 @@ Web 控制台，负责：
 * 本地代理端口
 * 本地 API 地址
 * MCP 服务地址
+* 当前语言
 
 #### 证书与抓包设置
 
 * HTTPS 抓包说明
 * 证书安装引导
 * 常见问题
+* 根证书下载地址
+* 证书是否已受信任
+* HTTPS 抓包是否已具备基础就绪条件
 
 #### 代理说明
 
@@ -616,11 +640,13 @@ Web 控制台，负责：
 * MCP 是否启用
 * MCP 地址 / 接入方式说明
 * 示例工具列表
+* 当前支持的工具包（request / mock / proxy / ops）
 
 #### 扩展能力（预留）
 
 * 扩展机制预留说明
 * 当前版本未开放第三方扩展安装
+* UI slot 占位说明
 
 ### 原则
 
@@ -882,6 +908,27 @@ V1 中：
 * currentProxyMode
 * certificateInstalled
 * mcpEnabled
+* activeMockGroup
+
+### 当前实现中的补充对象字段
+
+除 PRD 初版字段外，当前实现已在核心对象中补充以下信息，用于支撑更丰富的工作台体验：
+
+#### RequestRecord 补充字段
+
+* `source`：请求来源（`proxy | debug`）
+* `secure`：是否为 HTTPS 请求
+* `resolution`：请求决策结果，描述当前请求是直连、代理转发还是命中 Mock
+
+#### RequestResolution
+
+* `mode`：`direct | mock | proxy_forward | block | error`
+* `source`：`mock_engine | proxy_rules | proxy_global | none`
+* `matchedRuleId`
+* `matchedRuleName`
+* `target`
+* `reason`
+* `decidedAt`
 
 ---
 
@@ -901,6 +948,40 @@ MCP 是北极星对外的能力暴露层，不承担推理能力，只负责工�
 * `enable_mock_rule`
 * `run_request`
 
+结合当前实现，V1 已额外落地以下增强工具：
+
+* `list_saved_requests`
+* `get_saved_request_detail`
+* `update_saved_request`
+* `delete_saved_request`
+* `clear_requests`
+* `list_mock_rules`
+* `get_mock_rule_detail`
+* `update_mock_rule`
+* `delete_mock_rule`
+* `get_active_mock_group`
+* `set_active_mock_group`
+* `list_proxy_rules`
+* `get_proxy_mode`
+* `get_proxy_decision`
+* `set_proxy_mode`
+* `upsert_proxy_rule`
+* `remove_proxy_rule`
+* `get_service_health`
+* `get_runtime_settings`
+* `get_certificate_status`
+* `get_certificate_install_guide`
+* `verify_https_interception_ready`
+
+### MCP 工具包补充
+
+当前实现还支持按工具包暴露能力：
+
+* `request_pack.v1`
+* `mock_pack.v1`
+* `proxy_pack.v1`
+* `ops_pack.v1`
+
 ## 14.3 V1 暴露的 Resources
 
 * 最近请求列表
@@ -908,6 +989,14 @@ MCP 是北极星对外的能力暴露层，不承担推理能力，只负责工�
 * Mock 规则列表
 * 当前代理模式
 * 当前代理规则列表
+
+对应资源命名为：
+
+* `recent_requests`
+* `saved_requests`
+* `mock_rules`
+* `proxy_mode`
+* `proxy_rules`
 
 ## 14.4 设计原则
 
@@ -1042,7 +1131,6 @@ V1 不承载扩展逻辑，只保留固定能力。
 
 * `registerTool`
 * `registerResource`
-* `registerPromptTemplate`
 * `beforeToolInvoke`
 * `afterToolInvoke`
 
@@ -1059,6 +1147,13 @@ V1 不承载扩展逻辑，只保留固定能力。
 * Mock 页工具栏
 * 调试页顶部操作区
 * 设置页“扩展能力”分组
+
+当前实现中的 slot 标识建议统一为：
+
+* `request-detail-actions`
+* `mock-toolbar`
+* `debug-header`
+* `settings-extension-panel`
 
 ---
 
@@ -1198,6 +1293,9 @@ V1 不需要对外公开 SDK，但应保证内部模型先统一。
 * 设置页完善
 * MCP Resources
 * UI 扩展位占位
+* 代理转发工作台
+* HTTPS 证书下载与安装引导
+* Mock 激活分组
 
 ## 18.3 P2
 
@@ -1206,6 +1304,16 @@ V1 不需要对外公开 SDK，但应保证内部模型先统一。
 * 更细筛选
 * MCP 调用日志
 * 存储适配层进一步抽象
+
+### 当前实现中已提前落地的增强项
+
+以下内容在当前代码中已先于原始优先级落地，可视为 V1 的增强补充：
+
+* 请求复制为 Curl
+* 更细粒度的实时请求聚焦筛选
+* 代理转发规则分组工作台
+* 更完整的 MCP tool / resource 集合
+* HTTPS 证书状态查询与安装指引
 
 ---
 
@@ -1287,4 +1395,4 @@ V1 不做：
 
 # 22. V1 一句话总结
 
-**北极星 V1 是一个轻量、通俗、可本地运行的接口工作台，帮助研发快速开启代理、查看真实请求、保存与重放请求、创建基础 Mock，并通过 MCP 向外部 AI 暴露这些能力，同时在架构上预留未来扩展空间。**
+**北极星 V1 是一个轻量、通俗、可本地运行的接口工作台，帮助研发快速开启代理、查看真实请求、保存与重放请求、创建基础 Mock，并通过 MCP 向外部 AI 暴露这些能力；结合当前实现，V1 还补充了代理转发工作台、HTTPS 证书就绪能力、Mock 激活分组与更完整的 MCP 工具体系，同时在架构上预留未来扩展空间。**

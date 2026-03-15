@@ -30,10 +30,13 @@ export function HomeContent({
         <Card
           bordered={false}
           className={localStyles.workbenchCard}
-          extra={<Button onClick={onGoTraffic} type="link">{t("home.viewAll")}</Button>}
+          extra={
+            <Button onClick={onGoTraffic} type="link">
+              {t("home.viewAll")}
+            </Button>
+          }
           title={
             <div className={localStyles.cardTitleBlock}>
-              <span className={localStyles.eyebrow}>工作流入口</span>
               <Title level={4}>{t("home.module.traffic")}</Title>
             </div>
           }
@@ -42,7 +45,11 @@ export function HomeContent({
             {quickEntries.map((item) => (
               <Card
                 bordered={false}
-                className={item.primary ? localStyles.actionCardPrimary : localStyles.actionCard}
+                className={
+                  item.primary
+                    ? localStyles.actionCardPrimary
+                    : localStyles.actionCard
+                }
                 key={item.key}
               >
                 <div className={localStyles.actionCardHead}>
@@ -55,7 +62,10 @@ export function HomeContent({
                     <li key={point}>{point}</li>
                   ))}
                 </ul>
-                <Button onClick={item.onClick} type={item.primary ? "primary" : "default"}>
+                <Button
+                  onClick={item.onClick}
+                  type={item.primary ? "primary" : "default"}
+                >
                   {item.action}
                 </Button>
               </Card>
@@ -67,17 +77,23 @@ export function HomeContent({
           <Card
             bordered={false}
             className={localStyles.summaryCard}
-            extra={<Button onClick={onGoMock} type="link">{t("home.quick.mock")}</Button>}
+            extra={
+              <Button onClick={onGoMock} type="link">
+                {t("home.quick.mock")}
+              </Button>
+            }
             title={
               <div className={localStyles.cardTitleBlock}>
-                <span className={localStyles.eyebrow}>Mock 概览</span>
                 <Title level={4}>{t("home.quick.mock")}</Title>
               </div>
             }
           >
             <div className={localStyles.summaryStats}>
               <Card bordered={false} className={localStyles.summaryStatCard}>
-                <Statistic title={t("home.metric.mockVariants")} value={mockRuleCount} />
+                <Statistic
+                  title={t("home.metric.mockVariants")}
+                  value={mockRuleCount}
+                />
               </Card>
               <Card bordered={false} className={localStyles.summaryStatCard}>
                 <Statistic title="启用规则" value={enabledMockCount} />
@@ -90,7 +106,6 @@ export function HomeContent({
             className={localStyles.resumeCard}
             title={
               <div className={localStyles.cardTitleBlock}>
-                <span className={localStyles.eyebrow}>继续处理</span>
                 <Title level={4}>{t("home.resumeTitle")}</Title>
               </div>
             }
@@ -111,7 +126,11 @@ export function HomeContent({
                 dataSource={recentMocks}
                 renderItem={(item) => (
                   <List.Item className={localStyles.resumeItem}>
-                    <button className={localStyles.resumeButton} onClick={onGoMock} type="button">
+                    <button
+                      className={localStyles.resumeButton}
+                      onClick={onGoMock}
+                      type="button"
+                    >
                       <div className={localStyles.resumeMarker} />
                       <div className={localStyles.resumeContent}>
                         <div className={localStyles.resumeTop}>
@@ -131,4 +150,3 @@ export function HomeContent({
     </>
   );
 }
-

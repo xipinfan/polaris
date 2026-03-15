@@ -37,6 +37,7 @@ export function useTrafficWorkspace() {
   const deferredKeyword = useDeferredValue(keyword);
   const recordBodyRef = useRef<HTMLDivElement | null>(null);
   const inspectorBodyRef = useRef<HTMLDivElement | null>(null);
+  const sessionStartedAtRef = useRef<number>(Date.now());
   const previousVisibleCountRef = useRef(0);
   const userPinnedSelectionRef = useRef(false);
 
@@ -61,21 +62,26 @@ export function useTrafficWorkspace() {
     : undefined;
 
   const visibleRequests = useMemo(() => {
+    const sessionRequests = requests.filter((item) => {
+      const createdAtMs = Date.parse(item.createdAt);
+      return Number.isNaN(createdAtMs) || createdAtMs >= sessionStartedAtRef.current;
+    });
+
     switch (focusMode) {
       case "errors":
-        return requests.filter((item) => item.statusCode >= 400);
+        return sessionRequests.filter((item) => item.statusCode >= 400);
       case "https":
-        return requests.filter((item) => item.secure);
+        return sessionRequests.filter((item) => item.secure);
       case "debug":
-        return requests.filter((item) => item.source === "debug");
+        return sessionRequests.filter((item) => item.source === "debug");
       case "mock":
-        return requests.filter((item) => getRequestResolutionMode(item) === "mock");
+        return sessionRequests.filter((item) => getRequestResolutionMode(item) === "mock");
       case "proxyForward":
-        return requests.filter((item) => getRequestResolutionMode(item) === "proxy_forward");
+        return sessionRequests.filter((item) => getRequestResolutionMode(item) === "proxy_forward");
       case "direct":
-        return requests.filter((item) => getRequestResolutionMode(item) === "direct");
+        return sessionRequests.filter((item) => getRequestResolutionMode(item) === "direct");
       default:
-        return requests;
+        return sessionRequests;
     }
   }, [focusMode, requests]);
 
