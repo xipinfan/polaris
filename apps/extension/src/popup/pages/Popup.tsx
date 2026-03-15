@@ -135,9 +135,12 @@ export function Popup() {
   return (
     <div className={styles.shell}>
       <header className={styles.hero}>
-        <div>
+        <div className={styles.heroBrand}>
+          <img alt="" className={styles.heroMark} src="/polaris-mark.svg" />
+          <div>
           <span className={styles.brandLabel}>Polaris Extension</span>
           <h1>Polaris</h1>
+          </div>
         </div>
         <span
           className={`${styles.statusBadge} ${online ? styles.statusOnline : styles.statusOffline}`}

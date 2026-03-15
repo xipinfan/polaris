@@ -24,8 +24,13 @@ function AppLayout() {
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
         <div className={styles.brand}>
-          <h1>北极星</h1>
-          <p>本地接口工作台</p>
+          <div className={styles.brandRow}>
+            <img alt="" className={styles.brandMark} src="/polaris-mark.svg" />
+            <div>
+              <h1>北极星</h1>
+              <p>本地接口工作台</p>
+            </div>
+          </div>
         </div>
         <nav className={styles.nav}>
           <NavLink className={getNavClassName} to="/">{t("nav.home")}</NavLink>
