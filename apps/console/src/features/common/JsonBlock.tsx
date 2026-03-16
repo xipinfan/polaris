@@ -1,6 +1,7 @@
 import { formatJson } from "@polaris/shared-utils";
 import { useToast } from "../feedback/ToastProvider";
 import { useConsoleI18n } from "../../i18n/I18nProvider";
+import { copyTextToClipboard } from "../../utils/clipboard";
 import styles from "./JsonBlock.module.css";
 
 export function JsonBlock({ title, value }: { title: string; value: unknown }) {
@@ -9,8 +10,12 @@ export function JsonBlock({ title, value }: { title: string; value: unknown }) {
   const formatted = formatJson(value ?? {});
 
   const copy = async () => {
-    await navigator.clipboard.writeText(formatted);
-    showToast(t("common.copied"));
+    try {
+      await copyTextToClipboard(formatted);
+      showToast(t("common.copied"));
+    } catch {
+      showToast("复制失败", "error");
+    }
   };
 
   return (

@@ -3,6 +3,7 @@ import cors from "cors";
 import express from "express";
 import { createApiRouter } from "../api/routes/createApiRouter";
 import { MpcServer } from "../modules/mcp/mcpServer";
+import { PolarisMcpSseServer } from "../modules/mcp/sseServer";
 import { PolarisMcpStreamableHttpServer } from "../modules/mcp/streamableHttpServer";
 import { bindServerWithFallback } from "./ports";
 import { createRuntime } from "./runtime";
@@ -21,6 +22,12 @@ export async function startServers() {
     runtime.certificateManager
   );
   const streamableMcpServer = new PolarisMcpStreamableHttpServer(
+    runtime.requestService,
+    runtime.mockService,
+    runtime.proxyService,
+    runtime.certificateManager
+  );
+  const sseMcpServer = new PolarisMcpSseServer(
     runtime.requestService,
     runtime.mockService,
     runtime.proxyService,
@@ -53,8 +60,8 @@ export async function startServers() {
     if (currentSettings.mcpEnabled) {
       const mcpApp = express();
       mcpApp.use(cors());
-      mcpApp.use(express.json({ limit: "2mb" }));
       mcpApp.use(await streamableMcpServer.createApp());
+      mcpApp.use(await sseMcpServer.createApp());
       mcpApp.use(legacyMcpServer.createApp());
 
       const mcpBinding = await bindServerWithFallback(
@@ -82,7 +89,8 @@ export async function startServers() {
       new Promise((resolve) => proxyServer.close(() => resolve(null))),
       new Promise((resolve) => apiServer.close(() => resolve(null))),
       mcpServerToClose ? new Promise((resolve) => mcpServerToClose.close(() => resolve(null))) : Promise.resolve(null),
-      streamableMcpServer.close()
+      streamableMcpServer.close(),
+      sseMcpServer.close()
     ]);
     throw error;
   }
@@ -92,6 +100,7 @@ export async function startServers() {
     proxyServer,
     mcpHttpServer: resolvedMcpHttpServer,
     streamableMcpServer,
+    sseMcpServer,
     extensionHost: runtime.extensionHost,
     certificateManager: runtime.certificateManager,
     proxyService: runtime.proxyService,

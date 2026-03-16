@@ -5,6 +5,7 @@ import type { MockFormState, GroupMetaMap } from "../pages/mock/types";
 type WorkspaceStoreState = {
   trafficSelectedRequestId?: string;
   trafficCertificateModalOpen: boolean;
+  trafficSessionStartedAt: number;
 
   proxyActiveGroupId: string;
   proxyMenuGroupId: string | null;
@@ -32,6 +33,7 @@ type WorkspaceStoreState = {
 
   setTrafficSelectedRequestId: (id?: string) => void;
   setTrafficCertificateModalOpen: (open: boolean) => void;
+  setTrafficSessionStartedAt: (timestamp: number) => void;
 
   setProxyActiveGroupId: (id: string) => void;
   setProxyMenuGroupId: (id: string | null) => void;
@@ -61,6 +63,7 @@ type WorkspaceStoreState = {
 export const useWorkspaceStore = create<WorkspaceStoreState>((set) => ({
   trafficSelectedRequestId: undefined,
   trafficCertificateModalOpen: false,
+  trafficSessionStartedAt: Date.now(),
 
   proxyActiveGroupId: "",
   proxyMenuGroupId: null,
@@ -88,6 +91,7 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set) => ({
 
   setTrafficSelectedRequestId: (id) => set({ trafficSelectedRequestId: id }),
   setTrafficCertificateModalOpen: (open) => set({ trafficCertificateModalOpen: open }),
+  setTrafficSessionStartedAt: (timestamp) => set({ trafficSessionStartedAt: timestamp }),
 
   setProxyActiveGroupId: (id) => set({ proxyActiveGroupId: id }),
   setProxyMenuGroupId: (id) => set({ proxyMenuGroupId: id }),

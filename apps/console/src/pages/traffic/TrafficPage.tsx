@@ -4,6 +4,7 @@ import { buildCurl } from "../../features/common/curl";
 import { useToast } from "../../features/feedback/ToastProvider";
 import { useConsoleI18n } from "../../i18n/I18nProvider";
 import { toastQueryError } from "../../lib/query/queryOptions";
+import { copyTextToClipboard } from "../../utils/clipboard";
 import { TrafficCertificateModal } from "./components/TrafficCertificateModal";
 import { TrafficDetailPane } from "./components/TrafficDetailPane";
 import { TrafficRequestPane } from "./components/TrafficRequestPane";
@@ -24,8 +25,12 @@ export function TrafficPage() {
     : "#";
 
   const copyText = async (value: string) => {
-    await navigator.clipboard.writeText(value);
-    showToast(t("common.copied"));
+    try {
+      await copyTextToClipboard(value);
+      showToast(t("common.copied"));
+    } catch {
+      showToast("复制失败", "error");
+    }
   };
 
   const replaySelected = async () => {
@@ -60,8 +65,12 @@ export function TrafficPage() {
     if (!workspace.selected) {
       return;
     }
-    await navigator.clipboard.writeText(buildCurl(workspace.selected));
-    showToast(t("common.curlCopied"));
+    try {
+      await copyTextToClipboard(buildCurl(workspace.selected));
+      showToast(t("common.curlCopied"));
+    } catch {
+      showToast("复制失败", "error");
+    }
   };
 
   const openInDebug = () => {
@@ -104,8 +113,13 @@ export function TrafficPage() {
         isOpen={workspace.isCertificateModalOpen}
         onClose={() => workspace.setIsCertificateModalOpen(false)}
         onCopyUrl={() => {
-          void navigator.clipboard.writeText(rootCertificateUrl);
-          showToast(t("traffic.certificate.copied"));
+          void copyTextToClipboard(rootCertificateUrl)
+            .then(() => {
+              showToast(t("traffic.certificate.copied"));
+            })
+            .catch(() => {
+              showToast("复制失败", "error");
+            });
         }}
         rootCertificateUrl={rootCertificateUrl}
         settings={workspace.settings}

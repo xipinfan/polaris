@@ -31,13 +31,14 @@ export function useTrafficWorkspace() {
 
   const selectedId = useWorkspaceStore(workspaceSelectors.trafficSelectedRequestId);
   const isCertificateModalOpen = useWorkspaceStore(workspaceSelectors.trafficCertificateModalOpen);
+  const trafficSessionStartedAt = useWorkspaceStore(workspaceSelectors.trafficSessionStartedAt);
   const setSelectedId = useWorkspaceStore((state) => state.setTrafficSelectedRequestId);
   const setIsCertificateModalOpen = useWorkspaceStore((state) => state.setTrafficCertificateModalOpen);
+  const setTrafficSessionStartedAt = useWorkspaceStore((state) => state.setTrafficSessionStartedAt);
 
   const deferredKeyword = useDeferredValue(keyword);
   const recordBodyRef = useRef<HTMLDivElement | null>(null);
   const inspectorBodyRef = useRef<HTMLDivElement | null>(null);
-  const sessionStartedAtRef = useRef<number>(Date.now());
   const previousVisibleCountRef = useRef(0);
   const userPinnedSelectionRef = useRef(false);
 
@@ -64,7 +65,7 @@ export function useTrafficWorkspace() {
   const visibleRequests = useMemo(() => {
     const sessionRequests = requests.filter((item) => {
       const createdAtMs = Date.parse(item.createdAt);
-      return Number.isNaN(createdAtMs) || createdAtMs >= sessionStartedAtRef.current;
+      return Number.isNaN(createdAtMs) || createdAtMs >= trafficSessionStartedAt;
     });
 
     switch (focusMode) {
@@ -83,7 +84,7 @@ export function useTrafficWorkspace() {
       default:
         return sessionRequests;
     }
-  }, [focusMode, requests]);
+  }, [focusMode, requests, trafficSessionStartedAt]);
 
   useEffect(() => {
     if (visibleRequests.length === 0) {
@@ -173,6 +174,7 @@ export function useTrafficWorkspace() {
     await clearRequestsMutation.mutateAsync();
     userPinnedSelectionRef.current = false;
     setSelectedId(undefined);
+    setTrafficSessionStartedAt(Date.now());
     await requestsQuery.refetch();
   };
 

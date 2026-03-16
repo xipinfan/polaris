@@ -119,7 +119,7 @@ export class MockService {
     await this.extensionHost.emit("beforeMockMatch", { method, url });
     const activeGroup = this.getActiveGroup();
     return this.list().find((rule) => {
-      if (!rule.enabled || rule.method !== method.toUpperCase() || rule.url !== url) {
+      if (!rule.enabled || rule.method !== method.toUpperCase() || !url.includes(rule.url)) {
         return false;
       }
 

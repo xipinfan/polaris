@@ -6,6 +6,7 @@ import { useToast } from "../../features/feedback/ToastProvider";
 import { useConsoleI18n } from "../../i18n/I18nProvider";
 import { toastQueryError } from "../../lib/query/queryOptions";
 import { UiSlotPlaceholder } from "../../features/slots/UiSlotPlaceholder";
+import { copyTextToClipboard } from "../../utils/clipboard";
 import { DebugRequestForm } from "./components/DebugRequestForm";
 import { DebugResponsePanel } from "./components/DebugResponsePanel";
 import styles from "./DebugPage.module.css";
@@ -116,7 +117,13 @@ export function DebugPage() {
           method={method}
           name={name}
           onCopyCurl={(curlText) => {
-            void navigator.clipboard.writeText(curlText).then(() => showToast(t("common.curlCopied")));
+            void copyTextToClipboard(curlText)
+              .then(() => {
+                showToast(t("common.curlCopied"));
+              })
+              .catch(() => {
+                showToast("复制失败", "error");
+              });
           }}
           onReset={resetDraft}
           onRun={() => void runRequest()}

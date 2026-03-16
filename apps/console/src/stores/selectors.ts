@@ -19,6 +19,7 @@ export const uiSelectors = {
 export const workspaceSelectors = {
   trafficSelectedRequestId: (state: ReturnType<typeof useWorkspaceStore.getState>) => state.trafficSelectedRequestId,
   trafficCertificateModalOpen: (state: ReturnType<typeof useWorkspaceStore.getState>) => state.trafficCertificateModalOpen,
+  trafficSessionStartedAt: (state: ReturnType<typeof useWorkspaceStore.getState>) => state.trafficSessionStartedAt,
   proxyActiveGroupId: (state: ReturnType<typeof useWorkspaceStore.getState>) => state.proxyActiveGroupId,
   proxyMenuGroupId: (state: ReturnType<typeof useWorkspaceStore.getState>) => state.proxyMenuGroupId,
   proxyHeaderMenuOpen: (state: ReturnType<typeof useWorkspaceStore.getState>) => state.proxyHeaderMenuOpen,

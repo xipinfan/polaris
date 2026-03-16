@@ -1,5 +1,6 @@
 import { useToast } from "../feedback/ToastProvider";
 import { useConsoleI18n } from "../../i18n/I18nProvider";
+import { copyTextToClipboard } from "../../utils/clipboard";
 import styles from "./KeyValueBlock.module.css";
 
 type KeyValueMap = Record<string, unknown> | null | undefined;
@@ -30,8 +31,12 @@ export function KeyValueBlock({
   const entries = normalizeEntries(value);
   const copy = async () => {
     const content = entries.map((entry) => `${entry.key}: ${entry.value}`).join("\n");
-    await navigator.clipboard.writeText(content);
-    showToast(t("common.copied"));
+    try {
+      await copyTextToClipboard(content);
+      showToast(t("common.copied"));
+    } catch {
+      showToast("复制失败", "error");
+    }
   };
 
   return (
@@ -60,9 +65,13 @@ export function KeyValueBlock({
                   <button
                     className={`${styles.inlineCopyButton} inline-copy-button`}
                     onClick={() => {
-                      void navigator.clipboard.writeText(entry.value).then(() => {
-                        showToast(t("common.copied"));
-                      });
+                      void copyTextToClipboard(entry.value)
+                        .then(() => {
+                          showToast(t("common.copied"));
+                        })
+                        .catch(() => {
+                          showToast("复制失败", "error");
+                        });
                     }}
                     type="button"
                   >

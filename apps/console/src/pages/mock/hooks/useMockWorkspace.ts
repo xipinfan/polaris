@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo } from "react";
 import type { MockRule } from "@polaris/shared-types";
+import * as React from "react";
 import {
   useCreateMockRuleMutation,
   useDeleteMockRuleMutation,
@@ -36,6 +37,7 @@ type UseMockWorkspaceArgs = {
 };
 
 export function useMockWorkspace({ defaultGroup, locationState, pathname, showToast, t }: UseMockWorkspaceArgs) {
+  const isInitializedRef = React.useRef(false);
   const rulesQuery = useMockRulesQuery();
   const activeGroupQuery = useMockActiveGroupQuery();
 
@@ -79,8 +81,12 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
   const rules = rulesQuery.data ?? [];
 
   useEffect(() => {
+    if (isInitializedRef.current) {
+      return;
+    }
     setCustomGroups(() => readPersistence<string[]>(groupsStorageKey, []));
     setGroupMeta(() => readPersistence<GroupMetaMap>(groupMetaStorageKey, {}));
+    isInitializedRef.current = true;
   }, [setCustomGroups, setGroupMeta]);
 
   useEffect(() => {
@@ -94,7 +100,9 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
   useEffect(() => {
     const active = activeGroupQuery.data?.group;
     if (active) {
-      setSelectedGroup(active);
+      if (active !== selectedGroup) {
+        setSelectedGroup(active);
+      }
       return;
     }
     if (!selectedGroup) {

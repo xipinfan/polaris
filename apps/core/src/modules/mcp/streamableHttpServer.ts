@@ -181,7 +181,7 @@ export class PolarisMcpStreamableHttpServer {
     return session;
   }
 
-  private disposeSession(session: SessionState, closeTransport: boolean): Promise<void> {
+  private async disposeSession(session: SessionState, closeTransport: boolean): Promise<void> {
     if (session.closing) {
       return session.closing;
     }
@@ -190,11 +190,15 @@ export class PolarisMcpStreamableHttpServer {
       this.sessions.delete(session.sessionId);
     }
 
-    session.closing = Promise.allSettled([
-      session.server.close(),
-      closeTransport ? session.transport.close() : Promise.resolve()
-    ]).then(() => undefined);
+    session.closing = this.closeSession(session, closeTransport);
 
     return session.closing;
+  }
+
+  private async closeSession(session: SessionState, closeTransport: boolean): Promise<void> {
+    await session.server.close().catch(() => undefined);
+    if (closeTransport) {
+      await session.transport.close().catch(() => undefined);
+    }
   }
 }
