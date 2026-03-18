@@ -2,3 +2,7 @@ node_modules
 dist
 .run-logs/
 apps/core/data/
+.e2e/
+e2e/__screenshots__/
+playwright-report/
+test-results/

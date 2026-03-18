@@ -23,10 +23,13 @@ function getInstallGuideForPlatform(certificatePath?: string) {
     return {
       platform: "win32",
       steps: [
-        `Open the certificate file in Explorer${certificatePath ? ` (${certificatePath})` : ""}.`,
-        "Click Install Certificate and choose Current User.",
-        "Select Place all certificates in the following store.",
-        "Choose Trusted Root Certification Authorities and finish the wizard."
+        `Download or locate the Polaris root certificate${certificatePath ? ` (${certificatePath})` : ""}.`,
+        "In Edge, open edge://certificate-manager/ (or Settings -> Privacy, search, and services -> Security -> Manage certificates).",
+        "In Chrome, open chrome://settings/certificates and click Manage certificates.",
+        "Import the certificate into Current User -> Trusted Root Certification Authorities.",
+        "Confirm the subject Polaris Development Root CA exists in Trusted Root Certification Authorities.",
+        "Optional PowerShell check: Get-ChildItem Cert:\\CurrentUser\\Root | Where-Object { $_.Subject -like '*Polaris Development Root CA*' }",
+        "Restart Edge/Chrome and verify certificate trust status again from Polaris."
       ]
     };
   }

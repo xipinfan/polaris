@@ -32,16 +32,16 @@ function AppLayout() {
             </div>
           </div>
         </div>
-        <nav className={styles.nav}>
-          <NavLink className={getNavClassName} to="/">{t("nav.home")}</NavLink>
-          <NavLink className={getNavClassName} to="/traffic">{t("nav.traffic")}</NavLink>
-          <NavLink className={getNavClassName} to="/proxy-forward">{t("nav.proxyForward")}</NavLink>
-          <NavLink className={getNavClassName} to="/mock">{t("nav.mock")}</NavLink>
-          <NavLink className={getNavClassName} to="/debug">{t("nav.debug")}</NavLink>
-          <NavLink className={getNavClassName} to="/settings">{t("nav.settings")}</NavLink>
+        <nav className={styles.nav} data-testid="app-nav">
+          <NavLink className={getNavClassName} data-testid="nav-home" to="/">{t("nav.home")}</NavLink>
+          <NavLink className={getNavClassName} data-testid="nav-traffic" to="/traffic">{t("nav.traffic")}</NavLink>
+          <NavLink className={getNavClassName} data-testid="nav-proxy-forward" to="/proxy-forward">{t("nav.proxyForward")}</NavLink>
+          <NavLink className={getNavClassName} data-testid="nav-mock" to="/mock">{t("nav.mock")}</NavLink>
+          <NavLink className={getNavClassName} data-testid="nav-debug" to="/debug">{t("nav.debug")}</NavLink>
+          <NavLink className={getNavClassName} data-testid="nav-settings" to="/settings">{t("nav.settings")}</NavLink>
         </nav>
       </aside>
-      <main className={styles.content}>
+      <main className={styles.content} data-testid="app-content">
         <Outlet />
       </main>
     </div>

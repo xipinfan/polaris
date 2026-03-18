@@ -10,7 +10,7 @@ type DebugResponsePanelProps = {
 export function DebugResponsePanel({ response, t }: DebugResponsePanelProps) {
   if (!response) {
     return (
-      <div className={localStyles.empty}>
+      <div className={localStyles.empty} data-testid="debug-response-empty">
         <h3>{t("debug.waitTitle")}</h3>
         <p>{t("debug.waitBody")}</p>
       </div>
@@ -27,6 +27,7 @@ export function DebugResponsePanel({ response, t }: DebugResponsePanelProps) {
           </div>
           <span
             className={`${localStyles.statusBadge} ${response.statusCode >= 400 ? localStyles.statusWarning : ""}`}
+            data-testid="debug-response-status"
           >
             {response.statusCode}
           </span>

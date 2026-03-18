@@ -23,7 +23,7 @@
   grid-template-rows: auto auto minmax(0, 1fr);
   gap: 14px;
   min-height: 0;
-  --proxy-main-panels-height: calc(100vh - 204ox);
+  --proxy-main-panels-height: calc(100vh - 204px);
   height: var(--proxy-main-panels-height);
   min-height: var(--proxy-main-panels-height);
   max-height: var(--proxy-main-panels-height);
@@ -61,6 +61,13 @@
   overflow-y: auto;
   overflow-x: visible;
   align-content: start;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.groupList::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .groupItem {
@@ -222,4 +229,3 @@
     overflow: visible;
   }
 }
-

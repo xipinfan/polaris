@@ -45,6 +45,7 @@ export function DebugRequestForm({
   return (
     <form
       className={localStyles.form}
+      data-testid="debug-request-form"
       onSubmit={(event) => {
         event.preventDefault();
         onRun();
@@ -56,39 +57,43 @@ export function DebugRequestForm({
         </div>
       </div>
       <input
+        data-testid="debug-name-input"
         onChange={(event) => setName(event.target.value)}
         placeholder={t("debug.namePlaceholder")}
         value={name}
       />
-      <select onChange={(event) => setMethod(event.target.value)} value={method}>
+      <select data-testid="debug-method-select" onChange={(event) => setMethod(event.target.value)} value={method}>
         <option>GET</option>
         <option>POST</option>
         <option>PUT</option>
         <option>DELETE</option>
       </select>
       <input
+        data-testid="debug-url-input"
         onChange={(event) => setUrl(event.target.value)}
         placeholder={t("debug.urlPlaceholder")}
         value={url}
       />
       <textarea
+        data-testid="debug-body-input"
         onChange={(event) => setBody(event.target.value)}
         placeholder={t("debug.bodyPlaceholder")}
         rows={12}
         value={body}
       />
       <div className={localStyles.buttonGrid}>
-        <button className={localStyles.primaryAction} type="submit">
+        <button className={localStyles.primaryAction} data-testid="debug-send-button" type="submit">
           {t("debug.send")}
         </button>
-        <button className={localStyles.ghostButton} onClick={onSave} type="button">
+        <button className={localStyles.ghostButton} data-testid="debug-save-button" onClick={onSave} type="button">
           {t("debug.save")}
         </button>
-        <button className={localStyles.ghostButton} onClick={onReset} type="button">
+        <button className={localStyles.ghostButton} data-testid="debug-clear-button" onClick={onReset} type="button">
           {t("debug.clear")}
         </button>
         <button
           className={localStyles.ghostButton}
+          data-testid="debug-copy-curl-button"
           onClick={() => onCopyCurl(buildCurl(currentDraft))}
           type="button"
         >

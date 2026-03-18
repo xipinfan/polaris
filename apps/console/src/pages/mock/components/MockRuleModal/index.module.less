@@ -157,6 +157,7 @@
   padding: 28px;
   background: rgba(15, 23, 42, 0.28);
   backdrop-filter: blur(14px);
+  overflow: hidden;
 }
 
 .modalCard {
@@ -249,6 +250,13 @@
   overflow: auto;
   padding-right: 4px;
   padding-bottom: 16px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.modalSections::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .modalSection {
@@ -329,10 +337,18 @@
   min-height: 132px;
   padding: 14px 16px;
   resize: vertical;
+  overflow: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   font-size: 12px;
   line-height: 1.7;
   background: linear-gradient(180deg, rgba(246, 248, 251, 0.98) 0%, rgba(241, 244, 248, 0.98) 100%);
+}
+
+.codeEditor::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .codeEditorCompact {

@@ -214,6 +214,13 @@
   min-height: 0;
   overflow: auto;
   padding: 0 0 4px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.ruleTableBody::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .ruleBlock {
@@ -518,6 +525,20 @@
   }
 }
 
+@media (max-width: 1100px) {
+.main,
+.ruleTable {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+  }
+
+.ruleTableBody {
+    overflow: visible;
+  }
+}
+
 @media (max-width: 860px) {
 .main,
 .ruleTable {
@@ -539,6 +560,16 @@
 .ruleActions,
 .ruleStatus {
     justify-content: flex-start;
+  }
+
+.overviewActions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+.primaryButton,
+.secondaryButton {
+    min-height: 40px;
   }
 }
 

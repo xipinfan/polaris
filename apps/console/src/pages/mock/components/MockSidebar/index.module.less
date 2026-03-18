@@ -108,6 +108,13 @@
   overflow-y: auto;
   overflow-x: visible;
   align-content: start;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.groupList::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .groupItem {
@@ -319,6 +326,19 @@
     min-height: 0;
     max-height: none;
     overflow: visible;
+  }
+}
+
+@media (max-width: 1100px) {
+.sidebar {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+  }
+
+.groupList {
+    max-height: none;
   }
 }
 

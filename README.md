@@ -19,6 +19,7 @@ Polaris 的目标很简单：
 - [Web Console 使用说明](/E:/code/polaris/docs/console.md)
 - [浏览器扩展使用说明](/E:/code/polaris/docs/extension.md)
 - [开发说明](/E:/code/polaris/docs/development.md)
+- [E2E 与视觉测试](/E:/code/polaris/docs/e2e-testing.md)
 
 ## 适合谁
 

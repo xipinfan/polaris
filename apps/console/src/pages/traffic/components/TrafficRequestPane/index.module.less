@@ -114,12 +114,25 @@
 
 .requestTable {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   border: 1px solid #e6ebf2;
   border-radius: 20px;
   overflow: hidden;
   background: #ffffff;
+}
+
+.requestScroll {
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.requestScroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .requestHeader,
@@ -138,12 +151,12 @@
   color: #667085;
   font-size: 11px;
   font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .requestList {
-  min-height: 0;
-  height: 100%;
-  overflow-y: auto;
   background: #ffffff;
 }
 
@@ -341,13 +354,42 @@
     grid-template-columns: 1fr;
   }
 
-.requestTable {
-    overflow: auto;
+.filterGridSecondary {
+    align-items: stretch;
+  }
+
+.segmentedControl {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+    overflow: visible;
+    padding: 4px;
+  }
+
+.segmentedButton {
+    flex: 0 0 auto;
+    min-width: 86px;
   }
 
 .requestHeader,
 .requestRow {
     min-width: 1120px;
+  }
+}
+
+@media (max-width: 760px) {
+.segmentedControl {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+.segmentedControl::-webkit-scrollbar {
+    width: 0;
+    height: 0;
   }
 }
 

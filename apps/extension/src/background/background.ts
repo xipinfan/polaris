@@ -114,8 +114,11 @@ function stopHealthCheck(): void {
 }
 
 function openCertificateSettings(): Promise<void> {
+  const isEdge = navigator.userAgent.includes("Edg/");
+  const targetUrl = isEdge ? "edge://certificate-manager/" : "chrome://settings/certificates";
+
   return new Promise((resolve, reject) => {
-    chrome.tabs.create({ url: "chrome://settings/certificates" }, () => {
+    chrome.tabs.create({ url: targetUrl }, () => {
       if (chrome.runtime.lastError) {
         reject(new Error(chrome.runtime.lastError.message));
         return;

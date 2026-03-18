@@ -89,7 +89,7 @@
 
 .content {
   width: 100%;
-  padding: 24px 26px 36px;
+  padding: 24px 26px calc(52px + env(safe-area-inset-bottom));
 }
 
 .pageSkeleton {
@@ -108,8 +108,10 @@
   }
 
 .sidebar {
+    grid-template-rows: auto auto;
     min-height: auto;
     padding: 14px 14px 16px;
+    align-content: start;
   }
 
   .brand {
@@ -129,19 +131,40 @@
 .nav {
     grid-auto-flow: column;
     grid-auto-columns: minmax(112px, 1fr);
-    overflow: auto;
+    overflow: visible;
     padding-bottom: 2px;
   }
 
 .navLink {
     justify-content: center;
+    min-height: 44px;
+    padding: 10px 16px;
     white-space: nowrap;
+  }
+}
+
+@media (max-width: 980px) {
+.nav {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+.nav::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
+.navLink {
+    scroll-snap-align: start;
   }
 }
 
 @media (max-width: 700px) {
 .content {
-    padding: 16px;
+    padding: 16px 16px calc(64px + env(safe-area-inset-bottom));
   }
 
 .routeError {

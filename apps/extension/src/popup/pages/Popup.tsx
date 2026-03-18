@@ -133,7 +133,7 @@ export function Popup() {
   };
 
   return (
-    <div className={styles.shell}>
+    <div className={styles.shell} data-testid="popup-root">
       <header className={styles.hero}>
         <div className={styles.heroBrand}>
           <img alt="" className={styles.heroMark} src="/polaris-mark.svg" />
@@ -143,6 +143,7 @@ export function Popup() {
           </div>
         </div>
         <span
+          data-testid="popup-online-badge"
           className={`${styles.statusBadge} ${online ? styles.statusOnline : styles.statusOffline}`}
         >
           <span className={styles.statusDot} />
@@ -169,7 +170,7 @@ export function Popup() {
             <strong>{rules.length}</strong>
           </article>
         </div>
-        {message ? <p className={styles.message}>{message}</p> : null}
+        {message ? <p className={styles.message} data-testid="popup-message">{message}</p> : null}
       </section>
 
       <section className={styles.card}>
@@ -181,6 +182,7 @@ export function Popup() {
             <button
               key={item.mode}
               type="button"
+              data-testid={`mode-${item.mode}`}
               disabled={!online}
               className={`${styles.modeButton} ${status?.proxyMode === item.mode ? styles.modeButtonActive : ""}`}
               onClick={() =>
@@ -207,6 +209,7 @@ export function Popup() {
         </div>
         <button
           type="button"
+          data-testid="toggle-site-rule"
           className={styles.primaryButton}
           disabled={!online || !host}
           onClick={() =>
@@ -231,6 +234,7 @@ export function Popup() {
         <div className={styles.actionGrid}>
           <button
             type="button"
+            data-testid="open-console"
             className={styles.secondaryButton}
             onClick={() => void openConsole("")}
           >
@@ -238,6 +242,7 @@ export function Popup() {
           </button>
           <button
             type="button"
+            data-testid="open-settings"
             className={styles.secondaryButton}
             onClick={() => void openConsole("/settings")}
           >
@@ -245,6 +250,7 @@ export function Popup() {
           </button>
           <button
             type="button"
+            data-testid="open-cert-settings"
             className={styles.secondaryButton}
             onClick={() =>
               openBrowserCertificateSettings().catch((error) =>

@@ -133,66 +133,68 @@ export function TrafficRequestPane({
       </div>
 
       <div className={localStyles.requestTable}>
-        <div className={localStyles.requestHeader}>
-          <span>#</span>
-          <span>{t("traffic.column.status")}</span>
-          <span>{t("traffic.column.method")}</span>
-          <span>{t("traffic.column.protocol")}</span>
-          <span>{t("traffic.column.route")}</span>
-          <span>{t("traffic.column.host")}</span>
-          <span>{t("traffic.column.path")}</span>
-          <span>{t("traffic.column.type")}</span>
-          <span>{t("traffic.column.time")}</span>
-        </div>
-        <div className={localStyles.requestList} ref={recordBodyRef}>
-          {visibleRequests.map((item, index) => (
-            <button
-              key={item.id}
-              className={cx(
-                localStyles.requestRow,
-                selected?.id === item.id && localStyles.requestRowActive,
-                item.statusCode >= 400 && localStyles.requestRowWarning,
-                requestRowResolutionClassMap[getRequestResolutionMode(item)],
-              )}
-              onClick={() => onSelectRequest(item.id)}
-              type="button"
-            >
-              <span>{index + 1}</span>
-              <span className={statusCellToneClassMap[getStatusTone(item.statusCode)]}>
-                {item.statusCode}
-              </span>
-              <span>{item.method}</span>
-              <span>{getProtocolLabel(item)}</span>
-              <span
+        <div className={localStyles.requestScroll} ref={recordBodyRef}>
+          <div className={localStyles.requestHeader}>
+            <span>#</span>
+            <span>{t("traffic.column.status")}</span>
+            <span>{t("traffic.column.method")}</span>
+            <span>{t("traffic.column.protocol")}</span>
+            <span>{t("traffic.column.route")}</span>
+            <span>{t("traffic.column.host")}</span>
+            <span>{t("traffic.column.path")}</span>
+            <span>{t("traffic.column.type")}</span>
+            <span>{t("traffic.column.time")}</span>
+          </div>
+          <div className={localStyles.requestList}>
+            {visibleRequests.map((item, index) => (
+              <button
+                key={item.id}
                 className={cx(
-                  localStyles.resolutionBadge,
-                  resolutionBadgeToneClassMap[getRequestResolutionMode(item)],
+                  localStyles.requestRow,
+                  selected?.id === item.id && localStyles.requestRowActive,
+                  item.statusCode >= 400 && localStyles.requestRowWarning,
+                  requestRowResolutionClassMap[getRequestResolutionMode(item)],
                 )}
-                title={getRequestResolutionTooltip(item, t)}
+                onClick={() => onSelectRequest(item.id)}
+                type="button"
               >
-                <span className={localStyles.resolutionGlyph} aria-hidden="true" />
-                {getRequestResolutionLabel(item, t)}
-              </span>
-              <span title={item.host}>{item.host}</span>
-              <strong title={item.path}>{item.path}</strong>
-              <span title={getContentType(item)}>{getContentType(item)}</span>
-              <span>{item.duration} ms</span>
-            </button>
-          ))}
+                <span>{index + 1}</span>
+                <span className={statusCellToneClassMap[getStatusTone(item.statusCode)]}>
+                  {item.statusCode}
+                </span>
+                <span>{item.method}</span>
+                <span>{getProtocolLabel(item)}</span>
+                <span
+                  className={cx(
+                    localStyles.resolutionBadge,
+                    resolutionBadgeToneClassMap[getRequestResolutionMode(item)],
+                  )}
+                  title={getRequestResolutionTooltip(item, t)}
+                >
+                  <span className={localStyles.resolutionGlyph} aria-hidden="true" />
+                  {getRequestResolutionLabel(item, t)}
+                </span>
+                <span title={item.host}>{item.host}</span>
+                <strong title={item.path}>{item.path}</strong>
+                <span title={getContentType(item)}>{getContentType(item)}</span>
+                <span>{item.duration} ms</span>
+              </button>
+            ))}
 
-          {visibleRequests.length === 0 && requests.length > 0 ? (
-            <div className={cx(localStyles.emptyCard, localStyles.compactEmpty)}>
-              <h3>{t("traffic.emptyFilteredTitle")}</h3>
-              <p>{t("traffic.emptyFilteredBody")}</p>
-            </div>
-          ) : null}
+            {visibleRequests.length === 0 && requests.length > 0 ? (
+              <div className={cx(localStyles.emptyCard, localStyles.compactEmpty)}>
+                <h3>{t("traffic.emptyFilteredTitle")}</h3>
+                <p>{t("traffic.emptyFilteredBody")}</p>
+              </div>
+            ) : null}
 
-          {requests.length === 0 ? (
-            <div className={localStyles.emptyCard}>
-              <h3>{t("traffic.noTrafficTitle")}</h3>
-              <p>{t("traffic.noTrafficBody")}</p>
-            </div>
-          ) : null}
+            {requests.length === 0 ? (
+              <div className={localStyles.emptyCard}>
+                <h3>{t("traffic.noTrafficTitle")}</h3>
+                <p>{t("traffic.noTrafficBody")}</p>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     </section>

@@ -1,4 +1,5 @@
-﻿import { classNames, getQueryCount } from "../../utils/mockHelpers";
+import { useEffect } from "react";
+import { classNames, getQueryCount } from "../../utils/mockHelpers";
 import type { MockFormState } from "../../types";
 import localStyles from "./index.module.less";
 
@@ -18,6 +19,21 @@ type MockRuleModalProps = {
 export function MockRuleModal({
   editingId, form, groups, isOpen, setForm, setIsOpen, t, onSave, showToast,
 }: MockRuleModalProps) {
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [isOpen]);
   if (!isOpen) return null;
 
   return (
@@ -68,5 +84,7 @@ export function MockRuleModal({
     </div>
   );
 }
+
+
 
 
