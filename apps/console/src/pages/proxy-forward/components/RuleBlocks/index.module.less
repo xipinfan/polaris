@@ -141,3 +141,16 @@
     justify-content: flex-start;
   }
 }
+
+@media (max-width: 1602px) {
+  .ruleRow {
+    grid-template-columns: 64px minmax(120px, 1fr) minmax(160px, 1fr) minmax(160px, 1fr);
+    align-items: start;
+  }
+
+  .ruleActions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}

@@ -43,7 +43,7 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  min-width: 452px;
+  min-width: 0;
 }
 
 .metricCard {
@@ -73,6 +73,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
+  flex-wrap: wrap;
 
   :global(.ant-btn:not(.ant-btn-primary)) {
     background: rgba(255, 255, 255, 0.88);
@@ -114,13 +115,17 @@
   border-radius: 12px !important;
 }
 
-@media (max-width: 1380px) {
+@media (max-width: 1602px) {
 .overview {
     grid-template-columns: 1fr;
   }
 
 .metricStrip {
     min-width: 0;
+  }
+
+.overviewActions {
+    justify-content: flex-start;
   }
 }
 

@@ -55,6 +55,11 @@ function getInstallGuideForPlatform(certificatePath?: string) {
   };
 }
 
+function getRuleGroupName(name: string): string | null {
+  const match = name.match(/^\[(.+?)\]\s*(.+)$/);
+  return match?.[1]?.trim() || null;
+}
+
 export class MpcServer {
   constructor(
     private readonly requestService: RequestService,
@@ -188,10 +193,11 @@ export class MpcServer {
               const offset = typeof req.body.offset === "number" ? req.body.offset : 0;
               const filtered = this.mockService.list().filter((rule) => {
                 const nameMatch = !req.body.name || rule.name.includes(req.body.name);
+                const groupMatch = !req.body.group || getRuleGroupName(rule.name) === req.body.group;
                 const methodMatch = !req.body.method || rule.method === String(req.body.method).toUpperCase();
                 const urlMatch = !req.body.url || rule.url.includes(req.body.url);
                 const enabledMatch = typeof req.body.enabled !== "boolean" || rule.enabled === req.body.enabled;
-                return nameMatch && methodMatch && urlMatch && enabledMatch;
+                return nameMatch && groupMatch && methodMatch && urlMatch && enabledMatch;
               });
               const sliced = filtered.slice(offset);
               res.json({ data: typeof limit === "number" ? sliced.slice(0, limit) : sliced });

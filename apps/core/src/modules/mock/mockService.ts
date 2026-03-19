@@ -6,10 +6,23 @@ import { StorageAdapter } from "../storage/storageAdapter";
 import { normalizeBody } from "../../shared/normalizeBody";
 
 const groupNamePattern = /^\[(.+?)\]\s*(.+)$/;
+type GroupAwareInput = { group?: string | null };
 
 function getRuleGroup(rule: MockRule): string | null {
   const match = rule.name.match(groupNamePattern);
   return match?.[1]?.trim() || null;
+}
+
+function normalizeRuleNameForGroup(name: string, group?: string | null): string {
+  const trimmedName = name.trim();
+  const match = trimmedName.match(groupNamePattern);
+  const variantName = (match?.[2] ?? trimmedName).trim();
+  const normalizedGroup = typeof group === "string" ? group.trim() : "";
+
+  if (!normalizedGroup) {
+    return trimmedName;
+  }
+  return `[${normalizedGroup}] ${variantName}`;
 }
 
 export class MockService {
@@ -36,9 +49,11 @@ export class MockService {
 
   async create(input: CreateMockRuleInput): Promise<MockRule> {
     const now = new Date().toISOString();
+    const groupFromInput = (input as CreateMockRuleInput & GroupAwareInput).group;
+    const nextName = normalizeRuleNameForGroup(input.name, groupFromInput ?? this.getActiveGroup());
     const rule: MockRule = {
       id: randomUUID(),
-      name: input.name,
+      name: nextName,
       method: input.method.toUpperCase(),
       url: input.url,
       responseStatus: input.responseStatus,
@@ -62,9 +77,14 @@ export class MockService {
       throw new Error("Mock rule not found");
     }
 
+    const groupFromInput = (input as UpdateMockRuleInput & GroupAwareInput).group;
     const nextRule: MockRule = {
       ...target,
       ...input,
+      name: normalizeRuleNameForGroup(
+        input.name,
+        groupFromInput ?? getRuleGroup(target),
+      ),
       method: input.method.toUpperCase(),
       responseBody: normalizeBody(input.responseBody),
       updatedAt: new Date().toISOString()

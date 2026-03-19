@@ -87,6 +87,7 @@ const runRequestInputSchema = z.object({
 
 const createMockRuleInputSchema = z.object({
   name: z.string().min(1),
+  group: z.string().min(1).optional(),
   method: z.string().min(1),
   url: z.string().url(),
   responseStatus: z.number().int(),
@@ -101,6 +102,7 @@ const updateSavedRequestInputSchema = saveRequestInputSchema.extend({
 
 const listMockRulesInputSchema = z.object({
   name: z.string().optional(),
+  group: z.string().optional(),
   method: z.string().optional(),
   url: z.string().optional(),
   enabled: z.boolean().optional(),
@@ -186,6 +188,11 @@ function jsonResourceResult(uri: string, data: unknown) {
       "polaris/resultCount": Array.isArray(data) ? data.length : 1
     }
   };
+}
+
+function getRuleGroupName(name: string): string | null {
+  const match = name.match(/^\[(.+?)\]\s*(.+)$/);
+  return match?.[1]?.trim() || null;
 }
 
 function getInstallGuideForPlatform(certificatePath?: string) {
@@ -418,10 +425,11 @@ export function createPolarisMcpSdkServer(
       return safe(() => {
         const rules = mockService.list().filter((rule) => {
           const nameMatch = !args.name || rule.name.includes(args.name);
+          const groupMatch = !args.group || getRuleGroupName(rule.name) === args.group;
           const methodMatch = !args.method || rule.method === args.method.toUpperCase();
           const urlMatch = !args.url || rule.url.includes(args.url);
           const enabledMatch = typeof args.enabled !== "boolean" || rule.enabled === args.enabled;
-          return nameMatch && methodMatch && urlMatch && enabledMatch;
+          return nameMatch && groupMatch && methodMatch && urlMatch && enabledMatch;
         });
         const start = args.offset ?? 0;
         const sliced = rules.slice(start);

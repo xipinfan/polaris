@@ -306,13 +306,22 @@ export function syncActiveGroupRulesFromBackend(
       return group;
     }
 
-    const rules = group.rules.map((rule) => {
-      const backendRule = backendByPattern.get(sanitizeText(rule.pattern, "").toLowerCase());
-      if (!backendRule) {
-        return { ...rule, enabled: false };
-      }
-      return buildStoredRuleFromBackend(backendRule, rule);
-    });
+    const existingByPattern = new Map(
+      group.rules.map((rule) => [sanitizeText(rule.pattern, "").toLowerCase(), rule] as const),
+    );
+
+    const syncedFromBackend = backendRules.map((backendRule) =>
+      buildStoredRuleFromBackend(
+        backendRule,
+        existingByPattern.get(sanitizeText(backendRule.pattern, "").toLowerCase()),
+      ),
+    );
+
+    const localOnlyRules = group.rules
+      .filter((rule) => !backendByPattern.has(sanitizeText(rule.pattern, "").toLowerCase()))
+      .map((rule) => ({ ...rule, enabled: false }));
+
+    const rules = [...syncedFromBackend, ...localOnlyRules];
 
     return { ...group, rules };
   });

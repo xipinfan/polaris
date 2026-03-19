@@ -514,7 +514,7 @@
   }
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1602px) {
 .overview {
     grid-template-columns: 1fr;
   }
@@ -522,6 +522,36 @@
 .ruleTableHead,
 .ruleRow {
     grid-template-columns: 72px minmax(220px, 1.9fr) minmax(180px, 1fr) minmax(150px, 0.9fr) 92px;
+  }
+
+.overviewActions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 1402px) {
+.ruleBlockHeader {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+.ruleBlockMeta {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+.ruleTableHead,
+.ruleRow {
+    grid-template-columns: 64px minmax(160px, 1.6fr) minmax(130px, 1fr) minmax(120px, 0.9fr);
+    gap: 12px;
+  }
+
+.ruleActions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 }
 
