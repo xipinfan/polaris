@@ -23,7 +23,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           borderRadius: 16,
           borderRadiusLG: 22,
           boxShadowSecondary: "0 24px 54px rgba(16, 24, 40, 0.08)",
-          fontFamily: "\"SF Pro Display\", \"Segoe UI Variable\", \"PingFang SC\", sans-serif",
+          fontFamily:
+            "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans\", sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
         },
         components: {
           Button: {

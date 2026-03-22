@@ -169,10 +169,11 @@ export class ProxyEngine {
     const requestBuffer = await collectBody(req);
     const requestHeaders = sanitizeProxyHeaders(req.headers);
     requestHeaders.host = targetUrl.host;
+    const normalizedRequestBody = normalizeCapturedBody(requestBuffer, requestHeaders);
     const startedAt = Date.now();
     const forwardDecision = this.proxyService.getForwardDecision(targetUrl.host);
 
-    const mockRule = await this.mockService.match(req.method ?? "GET", targetUrl.toString());
+    const mockRule = await this.mockService.match(req.method ?? "GET", targetUrl.toString(), normalizedRequestBody);
     if (mockRule) {
       await this.mockService.registerHit(mockRule.id);
       const mockResponseHeaders = {
@@ -192,7 +193,7 @@ export class ProxyEngine {
         duration: Date.now() - startedAt,
         requestHeaders,
         requestQuery: parseSearchParamsRecord(targetUrl.searchParams),
-        requestBody: normalizeCapturedBody(requestBuffer, requestHeaders),
+        requestBody: normalizedRequestBody,
         responseHeaders: mockResponseHeaders,
         responseBody: normalizeBody(mockRule.responseBody),
         createdAt: new Date().toISOString(),
@@ -247,7 +248,7 @@ export class ProxyEngine {
           duration: Date.now() - startedAt,
           requestHeaders,
           requestQuery: parseSearchParamsRecord(targetUrl.searchParams),
-          requestBody: normalizeCapturedBody(requestBuffer, requestHeaders),
+          requestBody: normalizedRequestBody,
           responseHeaders,
           responseBody,
           createdAt: new Date().toISOString(),

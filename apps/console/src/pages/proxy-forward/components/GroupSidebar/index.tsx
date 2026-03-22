@@ -15,6 +15,7 @@ type GroupSidebarProps = {
   setIsGroupModalOpen: (value: boolean) => void;
   onSelectGroup: (groupId: string) => void;
   buildGroupMenu: (group: StoredGroup) => MenuProps["items"];
+  onImportGroups: () => void;
 };
 
 export function GroupSidebar({
@@ -25,6 +26,7 @@ export function GroupSidebar({
   setIsGroupModalOpen,
   onSelectGroup,
   buildGroupMenu,
+  onImportGroups,
 }: GroupSidebarProps) {
   const activeGroupId = useWorkspaceStore(workspaceSelectors.proxyActiveGroupId);
   const menuGroupId = useWorkspaceStore(workspaceSelectors.proxyMenuGroupId);
@@ -39,15 +41,18 @@ export function GroupSidebar({
           <span className={localStyles.sectionLabel}>分组</span>
           <strong>分组</strong>
         </div>
-        <Button
-          onClick={() => {
-            setEditingGroup(null);
-            setGroupName("");
-            setIsGroupModalOpen(true);
-          }}
-        >
-          新建分组
-        </Button>
+        <div className={localStyles.headerActions}>
+          <Button onClick={onImportGroups}>导入</Button>
+          <Button
+            onClick={() => {
+              setEditingGroup(null);
+              setGroupName("");
+              setIsGroupModalOpen(true);
+            }}
+          >
+            新建分组
+          </Button>
+        </div>
       </div>
 
       <Input

@@ -3,6 +3,7 @@ import type { RequestRecord } from "@polaris/shared-types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { MenuProps } from "antd";
 import { Modal } from "antd";
+import { asRecord, buildExportEnvelope, downloadJson, pickJsonFile } from "../../features/common/importExport";
 import {
   useRemoveProxyForwardSiteRuleMutation,
   useSetActiveProxyForwardGroupMutation,
@@ -40,6 +41,22 @@ import {
 import styles from "./ProxyForwardPage.module.less";
 
 const fallbackGroup = buildGroupFromRules(defaultGroupLabel, []);
+
+type ImportProxyRule = {
+  name?: string;
+  pattern?: string;
+  method?: string;
+  url?: string;
+  path?: string;
+  action?: "proxy" | "direct";
+  enabled?: boolean;
+  targetUrl?: string;
+};
+
+type ImportProxyGroup = {
+  name?: string;
+  rules?: ImportProxyRule[];
+};
 
 export function ProxyForwardPage() {
   const { showToast } = useToast();
@@ -101,6 +118,173 @@ export function ProxyForwardPage() {
       groups: nextGroups,
       activeGroupId: nextActiveGroupId,
     });
+  };
+
+  const buildRuleCollisionKey = (rule: { pattern: string; method: string; path: string }) =>
+    `${sanitizeText(rule.method, "GET").toUpperCase()}__${sanitizeText(rule.pattern, "").toLowerCase()}__${derivePath(rule.path)}`;
+
+  const toExportableGroup = (group: StoredGroup) => ({
+    name: group.name,
+    rules: group.rules.map((rule) => ({
+      name: rule.name,
+      pattern: rule.pattern,
+      method: rule.method,
+      url: rule.url,
+      path: rule.path,
+      action: rule.action,
+      enabled: rule.enabled,
+      targetUrl: rule.targetUrl,
+    })),
+  });
+
+  const exportGroup = (group: StoredGroup) => {
+    const envelope = buildExportEnvelope("proxy-groups", {
+      groups: [toExportableGroup(group)],
+    });
+    downloadJson(`proxy-group-${group.name}-${Date.now()}.json`, envelope);
+    showToast(`分组「${group.name}」已导出`, "success");
+  };
+
+  const importGroups = async () => {
+    const raw = await pickJsonFile();
+    const record = asRecord(raw);
+    if (!record || record.kind !== "proxy-groups") {
+      throw new Error("文件类型不匹配，需要导入 proxy-groups");
+    }
+
+    const payload = asRecord(record.payload);
+    const importedGroups = Array.isArray(payload?.groups) ? (payload.groups as ImportProxyGroup[]) : [];
+    if (!importedGroups.length) {
+      throw new Error("导入内容为空");
+    }
+
+    let groupCreated = 0;
+    let groupUpdated = 0;
+    let ruleCreated = 0;
+    let ruleUpdated = 0;
+    let skipped = 0;
+
+    const nextGroups = [...groups];
+    const activeGroupName = groups.find((group) => group.id === activeGroupId)?.name ?? "";
+    const importedGroupNames = new Set<string>();
+
+    for (const importedGroup of importedGroups) {
+      const groupName = sanitizeText(importedGroup?.name, "");
+      if (!groupName) {
+        skipped += 1;
+        continue;
+      }
+      importedGroupNames.add(groupName);
+
+      const existingGroupIndex = nextGroups.findIndex(
+        (group) => sanitizeText(group.name, "").toLowerCase() === groupName.toLowerCase(),
+      );
+      const fallbackRule = buildEmptyRule(groupName);
+      const importedRules = Array.isArray(importedGroup.rules) ? importedGroup.rules : [];
+
+      if (existingGroupIndex < 0) {
+        const newRules: StoredForwardRule[] = [];
+        for (const importedRule of importedRules) {
+          const pattern = sanitizeText(importedRule.pattern, "").toLowerCase();
+          const method = sanitizeText(importedRule.method, "GET").toUpperCase();
+          const path = derivePath(importedRule.path ?? parseSourceUrl(importedRule.url)?.path ?? "/");
+          if (!pattern) {
+            skipped += 1;
+            continue;
+          }
+          newRules.push({
+            ...fallbackRule,
+            id: createId("proxy-rule"),
+            name: sanitizeText(importedRule.name, sanitizeText(importedRule.url, pattern)),
+            pattern,
+            method,
+            path,
+            url: sanitizeText(importedRule.url, `https://${pattern}${path}`),
+            targetUrl: sanitizeText(importedRule.targetUrl, fallbackRule.targetUrl),
+            action: importedRule.action === "direct" ? "direct" : "proxy",
+            enabled: Boolean(importedRule.enabled),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+          ruleCreated += 1;
+        }
+        nextGroups.push({ id: createId("proxy-group"), name: groupName, rules: newRules });
+        groupCreated += 1;
+        continue;
+      }
+
+      const existingGroup = nextGroups[existingGroupIndex];
+      const indexByKey = new Map(existingGroup.rules.map((rule) => [buildRuleCollisionKey(rule), rule] as const));
+      const mergedRules = [...existingGroup.rules];
+
+      for (const importedRule of importedRules) {
+        const pattern = sanitizeText(importedRule.pattern, "").toLowerCase();
+        const method = sanitizeText(importedRule.method, "GET").toUpperCase();
+        const path = derivePath(importedRule.path ?? parseSourceUrl(importedRule.url)?.path ?? "/");
+        if (!pattern) {
+          skipped += 1;
+          continue;
+        }
+        const key = `${method}__${pattern}__${path}`;
+        const existing = indexByKey.get(key);
+        if (existing) {
+          const updatedRule: StoredForwardRule = {
+            ...existing,
+            name: sanitizeText(importedRule.name, existing.name),
+            pattern,
+            method,
+            path,
+            url: sanitizeText(importedRule.url, `https://${pattern}${path}`),
+            targetUrl: sanitizeText(importedRule.targetUrl, existing.targetUrl),
+            action: importedRule.action === "direct" ? "direct" : "proxy",
+            enabled: Boolean(importedRule.enabled),
+            updatedAt: new Date().toISOString(),
+          };
+          const idx = mergedRules.findIndex((rule) => rule.id === existing.id);
+          if (idx >= 0) {
+            mergedRules[idx] = updatedRule;
+            ruleUpdated += 1;
+          }
+          continue;
+        }
+
+        mergedRules.unshift({
+          ...fallbackRule,
+          id: createId("proxy-rule"),
+          name: sanitizeText(importedRule.name, sanitizeText(importedRule.url, pattern)),
+          pattern,
+          method,
+          path,
+          url: sanitizeText(importedRule.url, `https://${pattern}${path}`),
+          targetUrl: sanitizeText(importedRule.targetUrl, fallbackRule.targetUrl),
+          action: importedRule.action === "direct" ? "direct" : "proxy",
+          enabled: Boolean(importedRule.enabled),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+        ruleCreated += 1;
+      }
+      nextGroups[existingGroupIndex] = { ...existingGroup, rules: mergedRules };
+      groupUpdated += 1;
+    }
+
+    const nextActiveGroupId = nextGroups.some((group) => group.id === activeGroupId)
+      ? activeGroupId
+      : nextGroups[0]?.id ?? activeGroupId;
+    commitGroups(nextGroups, nextActiveGroupId);
+
+    const importedCurrentActiveGroup = importedGroupNames.has(activeGroupName);
+    if (importedCurrentActiveGroup) {
+      const currentActiveGroup = nextGroups.find((group) => group.id === nextActiveGroupId);
+      if (currentActiveGroup) {
+        await setActiveGroupMutation.mutateAsync({ group: currentActiveGroup });
+      }
+    }
+
+    showToast(
+      `导入完成：新增分组 ${groupCreated}，更新分组 ${groupUpdated}，新增规则 ${ruleCreated}，更新规则 ${ruleUpdated}，跳过 ${skipped}`,
+      "success",
+    );
   };
 
   const refetchProxyData = async () => {
@@ -479,11 +663,17 @@ export function ProxyForwardPage() {
           title: `删除分组「${group.name}」？`,
           content: "分组内规则会一并删除，且不可恢复。",
           okText: "删除",
+          maskClosable: false,
           okButtonProps: { danger: true },
           cancelText: "取消",
           onOk: () => handleDeleteGroup(group),
         });
       },
+    },
+    {
+      key: "export",
+      label: "导出分组",
+      onClick: () => exportGroup(group),
     },
   ];
 
@@ -499,6 +689,11 @@ export function ProxyForwardPage() {
       <div className={styles.workspace}>
         <GroupSidebar
           buildGroupMenu={buildGroupMenu}
+          onImportGroups={() => {
+            void importGroups().catch((error) =>
+              showToast(error instanceof Error ? error.message : "导入失败", "error"),
+            );
+          }}
           onSelectGroup={(id) => void handleSelectGroup(id)}
           setEditingGroup={setEditingGroup}
           setGroupName={setGroupName}

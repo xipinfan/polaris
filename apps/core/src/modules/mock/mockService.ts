@@ -25,6 +25,52 @@ function normalizeRuleNameForGroup(name: string, group?: string | null): string 
   return `[${normalizedGroup}] ${variantName}`;
 }
 
+function normalizeBodyKeyMatch(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const next = value.trim();
+  return next ? next : null;
+}
+
+function hasBodyKeyPath(value: unknown, keyPath: string): boolean {
+  if (value === null || value === undefined || typeof value !== "object") {
+    return false;
+  }
+
+  const segments = keyPath
+    .split(".")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (segments.length === 0) {
+    return false;
+  }
+
+  let current: unknown = value;
+  for (const segment of segments) {
+    if (Array.isArray(current)) {
+      const index = Number(segment);
+      if (!Number.isInteger(index) || index < 0 || index >= current.length) {
+        return false;
+      }
+      current = current[index];
+      continue;
+    }
+
+    if (current === null || typeof current !== "object") {
+      return false;
+    }
+
+    if (!(segment in (current as Record<string, unknown>))) {
+      return false;
+    }
+
+    current = (current as Record<string, unknown>)[segment];
+  }
+
+  return true;
+}
+
 export class MockService {
   constructor(
     private readonly storage: StorageAdapter,
@@ -56,6 +102,7 @@ export class MockService {
       name: nextName,
       method: input.method.toUpperCase(),
       url: input.url,
+      requestBodyKeyMatch: normalizeBodyKeyMatch(input.requestBodyKeyMatch),
       responseStatus: input.responseStatus,
       responseHeaders: input.responseHeaders ?? {},
       responseBody: normalizeBody(input.responseBody),
@@ -86,6 +133,7 @@ export class MockService {
         groupFromInput ?? getRuleGroup(target),
       ),
       method: input.method.toUpperCase(),
+      requestBodyKeyMatch: normalizeBodyKeyMatch(input.requestBodyKeyMatch),
       responseBody: normalizeBody(input.responseBody),
       updatedAt: new Date().toISOString()
     };
@@ -135,11 +183,15 @@ export class MockService {
     return nextRules.find((rule) => rule.id === id)!;
   }
 
-  async match(method: string, url: string): Promise<MockRule | undefined> {
-    await this.extensionHost.emit("beforeMockMatch", { method, url });
+  async match(method: string, url: string, requestBody?: unknown): Promise<MockRule | undefined> {
+    await this.extensionHost.emit("beforeMockMatch", { method, url, requestBody });
     const activeGroup = this.getActiveGroup();
     return this.list().find((rule) => {
       if (!rule.enabled || rule.method !== method.toUpperCase() || !url.includes(rule.url)) {
+        return false;
+      }
+
+      if (rule.requestBodyKeyMatch && !hasBodyKeyPath(requestBody, rule.requestBodyKeyMatch)) {
         return false;
       }
 

@@ -134,7 +134,7 @@ export class RequestService {
       requestUrl.searchParams.set(key, value);
     }
 
-    const mockRule = await this.mockService.match(input.method, requestUrl.toString());
+    const mockRule = await this.mockService.match(input.method, requestUrl.toString(), normalizeBody(input.body));
     const startedAt = Date.now();
 
     if (mockRule) {

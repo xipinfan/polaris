@@ -24,14 +24,10 @@
   width: 100%;
   border-radius: 14px;
   border: 1px solid rgba(213, 221, 231, 0.98);
-  background: rgba(255, 255, 255, 0.96);
+  background: #ffffff;
   color: #101828;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    0 1px 2px rgba(16, 24, 40, 0.02);
   transition:
     border-color 160ms ease,
-    box-shadow 160ms ease,
     background 160ms ease;
 
   &::placeholder {
@@ -40,15 +36,116 @@
 
   &:focus {
     border-color: rgba(83, 111, 194, 0.72);
-    box-shadow:
-      0 0 0 4px rgba(53, 86, 168, 0.1),
-      inset 0 1px 0 rgba(255, 255, 255, 0.86);
+    box-shadow: 0 0 0 2px rgba(83, 111, 194, 0.12);
   }
 }
 
 .control {
   min-height: 42px;
   padding: 10px 12px;
+}
+
+.antSelect {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 14px;
+}
+
+.antSelect:global(.ant-select) {
+  display: flex;
+  align-items: center;
+  height: 42px;
+  min-height: 42px;
+  padding: 0 11px;
+  border: 1px solid rgba(213, 221, 231, 0.98) !important;
+  border-color: rgba(213, 221, 231, 0.98) !important;
+  background: #ffffff !important;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.antSelect :global(.ant-select-selector) {
+  min-height: 42px !important;
+  border-radius: 14px !important;
+  border: 1px solid rgba(213, 221, 231, 0.98) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  box-shadow: none !important;
+}
+
+.antSelect :global(.ant-select-content) {
+  min-height: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  line-height: 40px;
+  background: transparent !important;
+}
+
+.antSelect :global(.ant-select-selection-item) {
+  line-height: 40px !important;
+  color: #101828;
+  font-weight: 500;
+}
+
+.antSelect :global(.ant-select-arrow) {
+  color: #98a2b3;
+  transition: transform 160ms ease;
+}
+
+.antSelect:global(.ant-select:hover) {
+  border-color: rgba(191, 203, 219, 0.98) !important;
+}
+
+.antSelect:global(.ant-select-focused),
+.antSelect:global(.ant-select-open) {
+  border-color: rgba(83, 111, 194, 0.72) !important;
+  box-shadow: 0 0 0 2px rgba(83, 111, 194, 0.12) !important;
+}
+
+.antSelect:global(.ant-select-open) :global(.ant-select-arrow) {
+  transform: rotate(180deg);
+}
+
+.antSelectDropdown:global(.ant-select-dropdown) {
+  margin-top: 6px;
+  padding: 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(213, 221, 231, 0.98);
+  background: #ffffff !important;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.08);
+  z-index: 1200;
+  --ant-color-bg-elevated: #ffffff;
+  --ant-color-bg-container: #ffffff;
+}
+
+.antSelectDropdown:global(.ant-select-dropdown) :global(.ant-select-item),
+.antSelectDropdown:global(.ant-select-dropdown) :global(.ant-select-item-option) {
+  border-radius: 10px;
+  min-height: 36px !important;
+  height: auto !important;
+  padding: 7px 12px !important;
+  line-height: 22px !important;
+  background-color: #ffffff !important;
+  color: #344054;
+}
+
+.antSelectDropdown:global(.ant-select-dropdown) :global(.ant-select-item-option-content) {
+  background: transparent !important;
+}
+
+.antSelectDropdown:global(.ant-select-dropdown) :global(.ant-select-item-option-active:not(.ant-select-item-option-disabled)),
+.antSelectDropdown:global(.ant-select-dropdown) :global(.ant-select-item-option-selected:not(.ant-select-item-option-disabled)) {
+  background: rgba(245, 248, 255, 0.9) !important;
+  box-shadow:
+    inset 2px 0 0 #4a67b8,
+    inset 0 0 0 1px rgba(207, 218, 240, 0.98);
+  color: #101828 !important;
+}
+
+.antSelectDropdown:global(.ant-select-dropdown) :global(.ant-select-item-option-selected .ant-select-item-option-content) {
+  font-weight: 600;
 }
 
 .modalActions,
@@ -77,11 +174,6 @@
 .primaryButton {
   background: linear-gradient(180deg, #3659b2 0%, #2f4f9d 100%);
   color: #f8fbff;
-  box-shadow: 0 14px 28px rgba(47, 79, 157, 0.22);
-
-  &:hover {
-    box-shadow: 0 16px 30px rgba(47, 79, 157, 0.26);
-  }
 }
 
 .secondaryButton {
@@ -121,9 +213,6 @@
   height: 32px;
   border-radius: 999px;
   background: #d6dce7;
-  box-shadow:
-    inset 0 0 0 1px rgba(15, 23, 42, 0.06),
-    0 2px 6px rgba(15, 23, 42, 0.05);
   transition: background 160ms ease;
 
   &::after {
@@ -135,7 +224,6 @@
     height: 24px;
     border-radius: 50%;
     background: #ffffff;
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
     transition: transform 160ms ease;
   }
 }
@@ -161,7 +249,7 @@
 }
 
 .modalCard {
-  width: min(980px, calc(100vw - 56px));
+  width: min(1240px, calc(100vw - 40px));
   max-height: min(860px, calc(100vh - 36px));
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
@@ -170,8 +258,12 @@
   border-radius: 30px;
   border: 1px solid rgba(223, 229, 238, 0.96);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.985) 0%, rgba(248, 250, 252, 0.985) 100%);
-  box-shadow: 0 34px 90px rgba(15, 23, 42, 0.2);
   overflow: hidden;
+}
+
+.modalCardExpanded {
+  width: min(1380px, calc(100vw - 24px));
+  max-height: calc(100vh - 20px);
 }
 
 .modalHeader {
@@ -266,6 +358,89 @@
   border-radius: 24px;
   border: 1px solid rgba(226, 232, 240, 0.94);
   background: rgba(255, 255, 255, 0.88);
+}
+
+.editorSection {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(213, 221, 231, 0.96);
+  background: rgba(252, 253, 255, 0.95);
+}
+
+.editorShell {
+  position: relative;
+  height: 100%;
+  min-height: 180px;
+}
+
+.editorToolbar {
+  display: flex;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  pointer-events: auto;
+}
+
+.editorTabs,
+.editorActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editorTab {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(213, 221, 231, 0.98);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #344054;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.editorTabActive {
+  border-color: rgba(143, 164, 208, 0.96);
+  background: rgba(237, 243, 255, 0.96);
+  color: #264796;
+}
+
+.editorFrame {
+  position: absolute;
+  top: 44px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border: 1px solid rgba(213, 221, 231, 0.98);
+  border-radius: 14px;
+  overflow: visible;
+}
+
+.editorFrame :global(.monaco-editor button:hover),
+.editorFrame :global(.monaco-editor .button:hover) {
+  transform: none !important;
+}
+
+.editorFrame :global(.monaco-editor) {
+  overflow: hidden !important;
+}
+
+.editorFrame :global(.monaco-editor .find-widget) {
+  z-index: 40;
+}
+
+.editorError {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #b42318;
 }
 
 .modalSectionHeader {

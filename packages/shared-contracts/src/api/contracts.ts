@@ -36,8 +36,10 @@ export interface RunRequestInput {
 
 export interface UpdateMockRuleInput {
   name: string;
+  group?: string | null;
   method: string;
   url: string;
+  requestBodyKeyMatch?: string | null;
   responseStatus: number;
   responseHeaders?: Record<string, string>;
   responseBody?: unknown;

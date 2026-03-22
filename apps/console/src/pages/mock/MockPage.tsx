@@ -1,4 +1,6 @@
-﻿import { useLocation } from "react-router-dom";
+﻿import type { MockRule } from "@polaris/shared-types";
+import { useLocation } from "react-router-dom";
+import { asRecord, buildExportEnvelope, downloadJson, pickJsonFile } from "../../features/common/importExport";
 import { useToast } from "../../features/feedback/ToastProvider";
 import { useConsoleI18n } from "../../i18n/I18nProvider";
 import { MockRuleModal } from "./components/MockRuleModal";
@@ -38,11 +40,65 @@ export function MockPage() {
     t,
   });
 
+  const exportGroup = (groupName: string) => {
+    const groupPayload = workspace.exportMockGroup(groupName);
+    if (!groupPayload) {
+      showToast("分组不存在，无法导出", "error");
+      return;
+    }
+    const envelope = buildExportEnvelope("mock-group", {
+      groups: [groupPayload],
+    });
+    downloadJson(`mock-group-${groupName}-${Date.now()}.json`, envelope);
+    showToast(`分组「${groupName}」已导出`, "success");
+  };
+
+  const importGroups = async () => {
+    const raw = await pickJsonFile();
+    const record = asRecord(raw);
+    if (!record || record.kind !== "mock-group") {
+      throw new Error("文件类型不匹配，需要导入 mock-group");
+    }
+    const payload = asRecord(record.payload);
+    const groups = (payload?.groups as unknown[]) ?? [];
+    await workspace.importMockGroups(groups as any);
+  };
+
+  const exportSingleRule = (rule: MockRule) => {
+    const envelope = buildExportEnvelope("mock-rules", {
+      rules: workspace.exportSelectedMockRules([rule], false),
+    });
+    downloadJson(`mock-rule-${rule.id}.json`, envelope);
+    showToast("规则已导出", "success");
+  };
+
+  const exportMultipleRules = (rules: MockRule[]) => {
+    if (!rules.length) {
+      showToast("请先选择规则", "info");
+      return;
+    }
+    const envelope = buildExportEnvelope("mock-rules", {
+      rules: workspace.exportSelectedMockRules(rules, true),
+    });
+    downloadJson(`mock-rules-${Date.now()}.json`, envelope);
+    showToast("已导出选中规则", "success");
+  };
+
+  const importRulesToCurrentGroup = async () => {
+    const raw = await pickJsonFile();
+    const record = asRecord(raw);
+    if (!record || record.kind !== "mock-rules") {
+      throw new Error("文件类型不匹配，需要导入 mock-rules");
+    }
+    const payload = asRecord(record.payload);
+    const rules = (payload?.rules as unknown[]) ?? [];
+    await workspace.importRulesToCurrentGroup(rules as any);
+  };
+
   return (
     <div className={styles.page}>
       <section className={styles.header}>
         <div className={styles.headerCopy}>
-          <span className={styles.pageEyebrow}>{t("mock.title")}</span>
           <h2>{t("mock.title")}</h2>
           <p>{t("mock.currentGroupBody")}</p>
         </div>
@@ -60,19 +116,34 @@ export function MockPage() {
           onActivateGroup={workspace.activateGroup}
           onCopyGroup={workspace.copyGroup}
           onDeleteGroup={workspace.deleteGroup}
+          onExportGroup={exportGroup}
+          onImportGroups={() => {
+            void importGroups().catch((error) =>
+              showToast(error instanceof Error ? error.message : "导入失败", "error"),
+            );
+          }}
           onRenameGroup={workspace.renameGroup}
         />
         <MockRulesWorkspace
           currentGroup={workspace.currentGroup}
-          currentGroupEnabledRules={workspace.currentGroupEnabledRules}
+          currentGroupDescription={workspace.currentGroupDescription}
           currentGroupRules={workspace.currentGroupRules}
           defaultGroup={defaultGroup}
+          groups={workspace.groups}
           getMethodClass={getMethodClass}
           isCurrentGroupEnabled={workspace.isCurrentGroupEnabled}
           onCopyGroup={workspace.copyGroup}
           onDeleteGroup={workspace.deleteGroup}
           onDuplicateRule={workspace.duplicateRule}
           onEditGroupDescription={workspace.editGroupDescription}
+          onExportRule={exportSingleRule}
+          onExportSelectedRules={exportMultipleRules}
+          onImportRules={() => {
+            void importRulesToCurrentGroup().catch((error) =>
+              showToast(error instanceof Error ? error.message : "导入失败", "error"),
+            );
+          }}
+          onMoveRule={workspace.moveRuleToGroup}
           onOpenCreateModal={workspace.openCreateModal}
           onOpenEditModal={workspace.openEditModal}
           onRemoveRule={workspace.removeRule}
@@ -88,11 +159,11 @@ export function MockPage() {
         form={workspace.form}
         groups={workspace.groups}
         isOpen={workspace.isModalOpen}
+        onSave={workspace.saveRule}
         setForm={workspace.setForm}
         setIsOpen={workspace.setIsModalOpen}
         showToast={showToast}
         t={t}
-        onSave={workspace.saveRule}
       />
     </div>
   );

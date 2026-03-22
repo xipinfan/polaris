@@ -12,12 +12,14 @@
     "lint": "eslint src --ext .ts,.tsx"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.80.7",
-    "@tanstack/react-query-devtools": "^5.80.7",
+    "@monaco-editor/react": "^4.7.0",
     "@polaris/shared-contracts": "workspace:*",
     "@polaris/shared-types": "workspace:*",
     "@polaris/shared-utils": "workspace:*",
+    "@tanstack/react-query": "^5.80.7",
+    "@tanstack/react-query-devtools": "^5.80.7",
     "antd": "^6.3.2",
+    "monaco-editor": "^0.55.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.3.0",
@@ -26,13 +28,13 @@
   "devDependencies": {
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
-    "@vitejs/plugin-react": "^4.3.4",
     "@typescript-eslint/parser": "^8.46.1",
+    "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.39.1",
+    "jsdom": "^26.1.0",
     "less": "^4.6.2",
     "typescript": "^5.8.2",
     "vite": "^6.2.1",
-    "vitest": "^3.2.4",
-    "jsdom": "^26.1.0"
+    "vitest": "^3.2.4"
   }
 }

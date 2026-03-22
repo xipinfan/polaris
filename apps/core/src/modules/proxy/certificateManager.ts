@@ -84,7 +84,7 @@ export class CertificateManager {
     try {
       if (process.platform === "win32") {
         const command =
-          "[System.String]::Join(\"`n\", ((Get-ChildItem Cert:\\CurrentUser\\Root), (Get-ChildItem Cert:\\LocalMachine\\Root) | Select-Object -ExpandProperty Thumbprint))";
+          '[System.String]::Join("`n", ((Get-ChildItem Cert:\\CurrentUser\\Root), (Get-ChildItem Cert:\\LocalMachine\\Root) | ForEach-Object { $_.Thumbprint }))';
         const { stdout } = await execFileAsync("powershell.exe", ["-NoProfile", "-Command", command], {
           windowsHide: true,
           encoding: "utf8"

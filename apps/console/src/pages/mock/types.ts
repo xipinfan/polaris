@@ -18,6 +18,7 @@ export type MockFormState = {
   variant: string;
   method: string;
   url: string;
+  requestBodyKeyMatch: string;
   responseStatus: number;
   responseHeaders: string;
   responseBody: string;
@@ -26,4 +27,3 @@ export type MockFormState = {
   delayMs: number;
   priority: number;
 };
-

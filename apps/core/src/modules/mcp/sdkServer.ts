@@ -90,6 +90,7 @@ const createMockRuleInputSchema = z.object({
   group: z.string().min(1).optional(),
   method: z.string().min(1),
   url: z.string().url(),
+  requestBodyKeyMatch: z.string().min(1).nullable().optional(),
   responseStatus: z.number().int(),
   responseHeaders: stringMapSchema.optional(),
   responseBody: z.unknown().nullable().optional(),

@@ -28,6 +28,24 @@ import {
   groupsStorageKey,
 } from "../utils/mockHelpers";
 
+type ExportableMockRule = {
+  group?: string;
+  variant: string;
+  method: string;
+  url: string;
+  requestBodyKeyMatch?: string | null;
+  responseStatus: number;
+  responseHeaders: Record<string, string>;
+  responseBody: unknown;
+  enabled: boolean;
+};
+
+type ExportableMockGroup = {
+  name: string;
+  description?: string;
+  rules: ExportableMockRule[];
+};
+
 type UseMockWorkspaceArgs = {
   defaultGroup: string;
   locationState: MockPageLocationState | null;
@@ -79,6 +97,24 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
   };
 
   const rules = rulesQuery.data ?? [];
+
+  const toExportableRule = (rule: MockRule, includeGroup: boolean): ExportableMockRule => {
+    const scene = getRuleScene(rule, defaultGroup);
+    return {
+      ...(includeGroup ? { group: scene.group } : {}),
+      variant: scene.variant,
+      method: rule.method,
+      url: rule.url,
+      requestBodyKeyMatch: rule.requestBodyKeyMatch ?? null,
+      responseStatus: rule.responseStatus,
+      responseHeaders: rule.responseHeaders ?? {},
+      responseBody: rule.responseBody ?? {},
+      enabled: rule.enabled,
+    };
+  };
+
+  const buildRuleCollisionKey = (group: string, method: string, url: string, variant: string) =>
+    `${group}__${method.toUpperCase()}__${url}__${variant}`;
 
   useEffect(() => {
     if (isInitializedRef.current) {
@@ -189,6 +225,7 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
       variant: `${seedRequest.method} ${seedRequest.path}`,
       method: seedRequest.method,
       url: seedRequest.url,
+      requestBodyKeyMatch: "",
       responseStatus: seedRequest.statusCode,
       responseHeaders: JSON.stringify(seedRequest.responseHeaders, null, 2),
       responseBody: JSON.stringify(seedRequest.responseBody ?? {}, null, 2),
@@ -236,8 +273,10 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
   const saveRule = async () => {
     const payload = {
       name: buildRuleName(form.group, form.variant),
+      group: form.group,
       method: form.method,
       url: form.url,
+      requestBodyKeyMatch: form.requestBodyKeyMatch.trim() || null,
       responseStatus: Number(form.responseStatus),
       responseHeaders: JSON.parse(form.responseHeaders || "{}"),
       responseBody: JSON.parse(form.responseBody || "{}"),
@@ -279,8 +318,8 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
     setIsModalOpen(true);
   };
 
-  const renameGroup = async (groupName: string) => {
-    const nextName = window.prompt(t("mock.groupRenamePrompt"), groupName)?.trim();
+  const renameGroup = async (groupName: string, rawNextName: string) => {
+    const nextName = rawNextName.trim();
     if (!nextName || nextName === groupName || groups.includes(nextName)) return;
 
     const groupRules = groupedRules[groupName] ?? [];
@@ -291,8 +330,10 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
           id: rule.id,
           payload: {
             name: buildRuleName(nextName, scene.variant),
+            group: nextName,
             method: rule.method,
             url: rule.url,
+            requestBodyKeyMatch: rule.requestBodyKeyMatch ?? null,
             responseStatus: rule.responseStatus,
             responseHeaders: rule.responseHeaders,
             responseBody: rule.responseBody,
@@ -326,8 +367,10 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
         const scene = getRuleScene(rule, defaultGroup);
         return createRuleMutation.mutateAsync({
           name: buildRuleName(nextName, scene.variant),
+          group: nextName,
           method: rule.method,
           url: rule.url,
+          requestBodyKeyMatch: rule.requestBodyKeyMatch ?? null,
           responseStatus: rule.responseStatus,
           responseHeaders: rule.responseHeaders,
           responseBody: rule.responseBody,
@@ -346,9 +389,6 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
   };
 
   const deleteGroup = async (groupName: string) => {
-    const confirmed = window.confirm(t("mock.groupDeleteConfirm", { name: groupName }));
-    if (!confirmed) return;
-
     const groupRules = groupedRules[groupName] ?? [];
     await Promise.all(groupRules.map((rule) => deleteRuleMutation.mutateAsync(rule.id)));
 
@@ -366,17 +406,12 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
     showToast(t("mock.groupDeleted", { name: groupName }));
   };
 
-  const editGroupDescription = () => {
-    const nextDescription = window.prompt(
-      t("mock.groupDescriptionPrompt"),
-      groupMeta[currentGroup]?.description ?? "",
-    );
-    if (nextDescription === null) return;
-
+  const editGroupDescription = (rawDescription: string) => {
+    const nextDescription = rawDescription.trim();
     setGroupMeta((current) => ({
       ...current,
       [currentGroup]: {
-        description: nextDescription.trim(),
+        description: nextDescription,
       },
     }));
     showToast(t("mock.groupDescriptionSaved"));
@@ -401,8 +436,10 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
     const scene = getRuleScene(rule, defaultGroup);
     await createRuleMutation.mutateAsync({
       name: buildRuleName(currentGroup, `${scene.variant} 副本`),
+      group: currentGroup,
       method: rule.method,
       url: rule.url,
+      requestBodyKeyMatch: rule.requestBodyKeyMatch ?? null,
       responseStatus: rule.responseStatus,
       responseHeaders: rule.responseHeaders,
       responseBody: rule.responseBody,
@@ -411,6 +448,37 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
     await load();
     setRuleMenuId(null);
     showToast(t("common.mockDuplicated", { name: scene.variant }));
+  };
+
+  const moveRuleToGroup = async (rule: MockRule, nextGroup: string) => {
+    const scene = getRuleScene(rule, defaultGroup);
+    if (scene.group === nextGroup) {
+      setRuleMenuId(null);
+      return;
+    }
+
+    await updateRuleMutation.mutateAsync({
+      id: rule.id,
+      payload: {
+        name: buildRuleName(nextGroup, scene.variant),
+        group: nextGroup,
+        method: rule.method,
+        url: rule.url,
+        requestBodyKeyMatch: rule.requestBodyKeyMatch ?? null,
+        responseStatus: rule.responseStatus,
+        responseHeaders: rule.responseHeaders,
+        responseBody: rule.responseBody,
+        enabled: rule.enabled,
+      },
+    });
+
+    if (!customGroups.includes(nextGroup) && nextGroup !== defaultGroup) {
+      setCustomGroups((current) => [...current, nextGroup]);
+    }
+
+    await load();
+    setRuleMenuId(null);
+    showToast(`已移动到分组「${nextGroup}」`);
   };
 
   const toggleRule = async (rule: MockRule) => {
@@ -433,6 +501,154 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
     showToast(t("common.mockDeleted", { name: scene.variant }));
   };
 
+  const exportMockGroups = () => {
+    const payload: ExportableMockGroup[] = groups.map((groupName) => ({
+      name: groupName,
+      description: groupMeta[groupName]?.description?.trim() || undefined,
+      rules: (groupedRules[groupName] ?? []).map((rule) => toExportableRule(rule, false)),
+    }));
+    return payload;
+  };
+
+  const exportMockGroup = (groupName: string): ExportableMockGroup | null => {
+    if (!groups.includes(groupName)) {
+      return null;
+    }
+    return {
+      name: groupName,
+      description: groupMeta[groupName]?.description?.trim() || undefined,
+      rules: (groupedRules[groupName] ?? []).map((rule) => toExportableRule(rule, false)),
+    };
+  };
+
+  const importMockGroups = async (importedGroups: ExportableMockGroup[]) => {
+    if (!Array.isArray(importedGroups) || importedGroups.length === 0) {
+      throw new Error("导入内容为空");
+    }
+
+    const collisionMap = new Map<string, MockRule>();
+    for (const rule of rules) {
+      const scene = getRuleScene(rule, defaultGroup);
+      collisionMap.set(buildRuleCollisionKey(scene.group, rule.method, rule.url, scene.variant), rule);
+    }
+
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+
+    for (const groupEntry of importedGroups) {
+      const groupName = String(groupEntry?.name ?? "").trim();
+      if (!groupName) {
+        skipped += 1;
+        continue;
+      }
+
+      if (!customGroups.includes(groupName) && groupName !== defaultGroup) {
+        setCustomGroups((current) => (current.includes(groupName) ? current : [...current, groupName]));
+      }
+
+      if (groupEntry.description !== undefined) {
+        setGroupMeta((current) => ({
+          ...current,
+          [groupName]: {
+            description: String(groupEntry.description ?? "").trim(),
+          },
+        }));
+      }
+
+      for (const ruleEntry of groupEntry.rules ?? []) {
+        const variant = String(ruleEntry?.variant ?? "").trim();
+        const method = String(ruleEntry?.method ?? "").toUpperCase();
+        const url = String(ruleEntry?.url ?? "").trim();
+        if (!variant || !method || !url) {
+          skipped += 1;
+          continue;
+        }
+
+        const key = buildRuleCollisionKey(groupName, method, url, variant);
+        const existing = collisionMap.get(key);
+        const payload = {
+          name: buildRuleName(groupName, variant),
+          group: groupName,
+          method,
+          url,
+          requestBodyKeyMatch: String(ruleEntry.requestBodyKeyMatch ?? "").trim() || null,
+          responseStatus: Number(ruleEntry.responseStatus) || 200,
+          responseHeaders: (ruleEntry.responseHeaders ?? {}) as Record<string, string>,
+          responseBody: ruleEntry.responseBody ?? {},
+          enabled: Boolean(ruleEntry.enabled),
+        };
+
+        if (existing) {
+          await updateRuleMutation.mutateAsync({ id: existing.id, payload });
+          updated += 1;
+        } else {
+          const createdRule = await createRuleMutation.mutateAsync(payload);
+          collisionMap.set(key, createdRule);
+          created += 1;
+        }
+      }
+    }
+
+    await load();
+    showToast(`导入完成：新增 ${created}，更新 ${updated}，跳过 ${skipped}`);
+  };
+
+  const exportSelectedMockRules = (selectedRules: MockRule[], includeGroup: boolean) =>
+    selectedRules.map((rule) => toExportableRule(rule, includeGroup));
+
+  const importRulesToCurrentGroup = async (importedRules: ExportableMockRule[]) => {
+    if (!Array.isArray(importedRules) || importedRules.length === 0) {
+      throw new Error("导入内容为空");
+    }
+
+    const collisionMap = new Map<string, MockRule>();
+    for (const rule of currentGroupRules) {
+      const scene = getRuleScene(rule, defaultGroup);
+      collisionMap.set(buildRuleCollisionKey(currentGroup, rule.method, rule.url, scene.variant), rule);
+    }
+
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+
+    for (const ruleEntry of importedRules) {
+      const variant = String(ruleEntry?.variant ?? "").trim();
+      const method = String(ruleEntry?.method ?? "").toUpperCase();
+      const url = String(ruleEntry?.url ?? "").trim();
+      if (!variant || !method || !url) {
+        skipped += 1;
+        continue;
+      }
+
+      const key = buildRuleCollisionKey(currentGroup, method, url, variant);
+      const existing = collisionMap.get(key);
+      const payload = {
+        name: buildRuleName(currentGroup, variant),
+        group: currentGroup,
+        method,
+        url,
+        requestBodyKeyMatch: String(ruleEntry.requestBodyKeyMatch ?? "").trim() || null,
+        responseStatus: Number(ruleEntry.responseStatus) || 200,
+        responseHeaders: (ruleEntry.responseHeaders ?? {}) as Record<string, string>,
+        responseBody: ruleEntry.responseBody ?? {},
+        enabled: Boolean(ruleEntry.enabled),
+      };
+
+      if (existing) {
+        await updateRuleMutation.mutateAsync({ id: existing.id, payload });
+        updated += 1;
+      } else {
+        const createdRule = await createRuleMutation.mutateAsync(payload);
+        collisionMap.set(key, createdRule);
+        created += 1;
+      }
+    }
+
+    await load();
+    showToast(`导入完成：新增 ${created}，更新 ${updated}，跳过 ${skipped}`);
+  };
+
   return {
     activateGroup,
     collapsedBlocks,
@@ -448,6 +664,9 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
     duplicateRule,
     editGroupDescription,
     editingId,
+    exportMockGroup,
+    exportMockGroups,
+    exportSelectedMockRules,
     filteredGroups,
     form,
     getQueryCount,
@@ -458,7 +677,10 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
     groups,
     isCurrentGroupEnabled,
     isModalOpen,
+    importMockGroups,
+    importRulesToCurrentGroup,
     load,
+    moveRuleToGroup,
     openCreateModal,
     openEditModal,
     removeRule,

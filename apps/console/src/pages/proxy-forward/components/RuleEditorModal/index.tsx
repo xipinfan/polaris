@@ -33,6 +33,7 @@ const RuleEditorModal = ({
       cancelText="取消"
       className={classNames(localStyles.ruleModal, localStyles.root)}
       confirmLoading={submitting}
+      maskClosable={false}
       okText={editingRule ? "保存修改" : "创建规则"}
       onCancel={onCancel}
       onOk={onSave}

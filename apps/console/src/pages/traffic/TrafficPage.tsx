@@ -1,10 +1,13 @@
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { buildCurl } from "../../features/common/curl";
 import { useToast } from "../../features/feedback/ToastProvider";
 import { useConsoleI18n } from "../../i18n/I18nProvider";
 import { toastQueryError } from "../../lib/query/queryOptions";
 import { copyTextToClipboard } from "../../utils/clipboard";
+import { MockRuleModal } from "../mock/components/MockRuleModal";
+import { useMockWorkspace } from "../mock/hooks/useMockWorkspace";
+import { buildEmptyForm } from "../mock/utils/mockHelpers";
 import { TrafficCertificateModal } from "./components/TrafficCertificateModal";
 import { TrafficDetailPane } from "./components/TrafficDetailPane";
 import { TrafficRequestPane } from "./components/TrafficRequestPane";
@@ -15,9 +18,18 @@ import { getCertificatePlatform } from "./utils/trafficFormatters";
 
 export function TrafficPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useConsoleI18n();
   const { showToast } = useToast();
   const workspace = useTrafficWorkspace();
+  const defaultGroup = t("mock.defaultGroup");
+  const mockWorkspace = useMockWorkspace({
+    defaultGroup,
+    locationState: null,
+    pathname: location.pathname,
+    showToast,
+    t,
+  });
 
   const certificatePlatform = useMemo(() => getCertificatePlatform(), []);
   const rootCertificateUrl = workspace.settings
@@ -49,7 +61,21 @@ export function TrafficPage() {
     if (!workspace.selected) {
       return;
     }
-    navigate("/mock", { state: { seedRequest: workspace.selected } });
+    const activeGroup = mockWorkspace.currentGroup || defaultGroup;
+    mockWorkspace.setEditingId(null);
+    mockWorkspace.setForm(() => ({
+      ...buildEmptyForm(activeGroup),
+      group: activeGroup,
+      variant: `${workspace.selected.method} ${workspace.selected.path}`,
+      method: workspace.selected.method,
+      url: workspace.selected.url,
+      requestBodyKeyMatch: "",
+      responseStatus: workspace.selected.statusCode,
+      responseHeaders: JSON.stringify(workspace.selected.responseHeaders ?? {}, null, 2),
+      responseBody: JSON.stringify(workspace.selected.responseBody ?? {}, null, 2),
+      enabled: true,
+    }));
+    mockWorkspace.setIsModalOpen(true);
   };
 
   const clearRequests = async () => {
@@ -148,6 +174,19 @@ export function TrafficPage() {
           t={t}
         />
       </section>
+
+      <MockRuleModal
+        defaultGroup={defaultGroup}
+        editingId={mockWorkspace.editingId}
+        form={mockWorkspace.form}
+        groups={mockWorkspace.groups}
+        isOpen={mockWorkspace.isModalOpen}
+        setForm={mockWorkspace.setForm}
+        setIsOpen={mockWorkspace.setIsModalOpen}
+        showToast={showToast}
+        t={t}
+        onSave={mockWorkspace.saveRule}
+      />
     </div>
   );
 }

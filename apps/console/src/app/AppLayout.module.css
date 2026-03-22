@@ -1,10 +1,17 @@
-﻿.shell {
+.shell {
+  --sidebar-collapsed-width: 76px;
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   min-height: 100vh;
+  transition: grid-template-columns 180ms ease;
+}
+
+.shellCollapsed {
+  grid-template-columns: var(--sidebar-collapsed-width) minmax(0, 1fr);
 }
 
 .sidebar {
+  position: relative;
   display: grid;
   grid-template-rows: auto 1fr;
   gap: 14px;
@@ -16,6 +23,10 @@
   border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.sidebarCollapsed .brand {
+  padding: 10px 0 8px;
+}
+
 .brand {
   padding: 10px 12px;
 }
@@ -24,6 +35,17 @@
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.brandText {
+  min-width: 0;
+  max-width: 160px;
+  opacity: 1;
+  padding-right: 34px;
+  transition:
+    opacity 150ms ease,
+    max-width 180ms ease,
+    transform 180ms ease;
 }
 
 .brandMark {
@@ -46,6 +68,31 @@
   color: rgba(238, 243, 251, 0.52);
 }
 
+.sidebarToggle {
+  position: absolute;
+  top: 16px;
+  right: -13px;
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: #20324e;
+  color: rgba(238, 243, 251, 0.9);
+  font-size: 12px;
+  line-height: 1;
+  z-index: 5;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    transform 180ms ease;
+}
+
+.sidebarToggle:hover {
+  background: #294064;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
 .nav {
   display: grid;
   align-content: start;
@@ -56,6 +103,8 @@
   position: relative;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
   min-height: 42px;
   padding: 9px 14px 9px 16px;
   border: 1px solid transparent;
@@ -64,6 +113,11 @@
   color: rgba(238, 243, 251, 0.7);
   font-size: 14px;
   font-weight: 600;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    padding 180ms ease,
+    min-height 180ms ease;
 }
 
 .navLink::after {
@@ -87,6 +141,92 @@
   background: #8dacef;
 }
 
+.navLabel {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 1;
+  max-width: 160px;
+  transform: translateX(0);
+  transition:
+    opacity 120ms ease,
+    max-width 180ms ease,
+    transform 180ms ease;
+}
+
+.navIcon {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: rgba(238, 243, 251, 0.7);
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    transform 180ms ease;
+}
+
+.navIcon svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.navLinkActive .navIcon {
+  color: #c9dbff;
+  background: rgba(141, 172, 239, 0.18);
+}
+
+.sidebarCollapsed .brandRow {
+  justify-content: center;
+  gap: 0;
+}
+
+.sidebarCollapsed .brandMark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+
+.sidebarCollapsed .brandText {
+  display: none;
+}
+
+.sidebarCollapsed .sidebarToggle {
+  transform: rotate(180deg);
+}
+
+.sidebarCollapsed .nav {
+  justify-items: center;
+  margin-top: 8px;
+  gap: 4px;
+}
+
+.sidebarCollapsed .navLink {
+  width: 42px;
+  min-height: 42px;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  border-radius: 10px;
+}
+
+.sidebarCollapsed .navLink::after {
+  left: 3px;
+}
+
+.sidebarCollapsed .navLabel {
+  opacity: 0;
+  max-width: 0;
+  transform: translateX(-6px);
+}
+
 .content {
   width: 100%;
   padding: 24px 26px calc(52px + env(safe-area-inset-bottom));
@@ -103,11 +243,15 @@
 }
 
 @media (max-width: 1180px) {
-.shell {
+  .shell {
     grid-template-columns: 1fr;
   }
 
-.sidebar {
+  .shellCollapsed {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
     grid-template-rows: auto auto;
     min-height: auto;
     padding: 14px 14px 16px;
@@ -128,23 +272,41 @@
     font-size: 18px;
   }
 
-.nav {
+  .sidebarToggle {
+    display: none;
+  }
+
+  .brandText {
+    width: auto;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .nav {
     grid-auto-flow: column;
     grid-auto-columns: minmax(112px, 1fr);
     overflow: visible;
     padding-bottom: 2px;
   }
 
-.navLink {
+  .navLink {
     justify-content: center;
     min-height: 44px;
     padding: 10px 16px;
     white-space: nowrap;
   }
+
+  .navLabel {
+    display: inline;
+  }
+
+  .navIcon {
+    color: rgba(238, 243, 251, 0.66);
+  }
 }
 
 @media (max-width: 980px) {
-.nav {
+  .nav {
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scroll-snap-type: x proximity;
@@ -152,23 +314,22 @@
     -ms-overflow-style: none;
   }
 
-.nav::-webkit-scrollbar {
+  .nav::-webkit-scrollbar {
     width: 0;
     height: 0;
   }
 
-.navLink {
+  .navLink {
     scroll-snap-align: start;
   }
 }
 
 @media (max-width: 700px) {
-.content {
+  .content {
     padding: 16px 16px calc(64px + env(safe-area-inset-bottom));
   }
 
-.routeError {
+  .routeError {
     padding: 16px;
   }
 }
-
