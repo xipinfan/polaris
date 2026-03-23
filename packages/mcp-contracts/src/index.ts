@@ -13,6 +13,7 @@ export * from "./tools/getActiveMockGroup";
 export * from "./tools/getCertificateInstallGuide";
 export * from "./tools/getCertificateStatus";
 export * from "./tools/getProxyDecision";
+export * from "./tools/getProxyRuleDetail";
 export * from "./tools/getProxyMode";
 export * from "./tools/getRuntimeSettings";
 export * from "./tools/getServiceHealth";

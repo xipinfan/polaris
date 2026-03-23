@@ -18,6 +18,7 @@ export type MockFormState = {
   variant: string;
   method: string;
   url: string;
+  requestBodyExactMatch: string;
   requestBodyKeyMatch: string;
   responseStatus: number;
   responseHeaders: string;

@@ -24,7 +24,7 @@ describe("syncActiveGroupRulesFromBackend", () => {
             headerMatch: "",
             bodyMatch: "",
             forwardMode: "rewriteTarget",
-            targetUrl: "http://127.0.0.1:9000/path",
+            targetUrl: "http://127.0.0.1:3000/path",
             rewriteHost: "a.com",
             rewritePath: "/path",
             rewriteQuery: "",

@@ -23,7 +23,7 @@ export function RuleBlocks({
 
   return (
     <>
-      <Card bordered={false} className={classNames(localStyles.rulePanel, localStyles.root)}>
+      <Card variant="borderless" className={classNames(localStyles.rulePanel, localStyles.root)}>
         <div className={localStyles.ruleList}>
           {rules.map((rule) => (
             <div className={localStyles.ruleRow} key={rule.id}>

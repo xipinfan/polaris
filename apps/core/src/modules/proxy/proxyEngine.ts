@@ -6,6 +6,7 @@ import { randomUUID } from "node:crypto";
 import type { IncomingMessage, RequestOptions, ServerResponse } from "node:http";
 import type { RequestRecord, RequestResolution } from "@polaris/shared-types";
 import { normalizeBody } from "../../shared/normalizeBody";
+import { getLanIpv4Address } from "../../shared/network";
 import {
   normalizeCapturedBody,
   parseSearchParamsRecord,
@@ -59,11 +60,224 @@ function createCorsHeaders(req: IncomingMessage): Record<string, string> {
 }
 
 function isLoopbackHost(hostname: string): boolean {
-  return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "::1";
+  const normalizedHostname = hostname.toLowerCase();
+  return normalizedHostname === "127.0.0.1" || normalizedHostname === "localhost" || normalizedHostname === "::1";
+}
+
+function isSelfProxyHost(hostname: string, lanIp?: string): boolean {
+  const normalizedHostname = hostname.toLowerCase();
+  return (
+    isLoopbackHost(normalizedHostname) ||
+    normalizedHostname === "0.0.0.0" ||
+    normalizedHostname === "polaris.local" ||
+    (Boolean(lanIp) && normalizedHostname === lanIp)
+  );
 }
 
 function isPolarisControlPlaneRequest(targetUrl: URL): boolean {
   return isLoopbackHost(targetUrl.hostname) && targetUrl.pathname.startsWith("/api/");
+}
+
+function isProxyLoopRequest(targetUrl: URL, proxyPort: number, lanIp?: string): boolean {
+  const targetPort = Number(targetUrl.port || (targetUrl.protocol === "https:" ? 443 : 80));
+  return targetPort === proxyPort && isSelfProxyHost(targetUrl.hostname, lanIp);
+}
+
+function buildPortalHtml(lanIp: string | undefined, apiPort: number, proxyPort: number): string {
+  const apiHost = lanIp ?? "127.0.0.1";
+  const certificateUrl = `http://${apiHost}:${apiPort}/api/certificates/root-ca`;
+  const lanAddress = lanIp ?? "未检测到局域网 IP，请确认当前电脑已经接入 Wi-Fi 或有线网络。";
+
+  return `<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Polaris 手机代理安装</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f7fb;
+        --card: rgba(255, 255, 255, 0.96);
+        --text: #101828;
+        --muted: #667085;
+        --line: rgba(208, 216, 227, 0.9);
+        --accent: #3159c9;
+        --accent-soft: rgba(49, 89, 201, 0.08);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top, rgba(49, 89, 201, 0.14), transparent 36%),
+          linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+        color: var(--text);
+      }
+      main {
+        width: min(100%, 720px);
+        margin: 0 auto;
+        padding: 24px 16px 48px;
+      }
+      .card {
+        display: grid;
+        gap: 16px;
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: var(--card);
+        box-shadow: 0 20px 48px rgba(15, 23, 42, 0.08);
+      }
+      .eyebrow {
+        display: inline-flex;
+        width: fit-content;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      h1, h2, h3, p { margin: 0; }
+      h1 { font-size: 28px; line-height: 1.1; }
+      h2 { font-size: 18px; line-height: 1.2; }
+      h3 { font-size: 15px; line-height: 1.4; }
+      p, li { color: var(--muted); line-height: 1.65; font-size: 15px; }
+      .metrics {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .metric {
+        padding: 14px 16px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+      .metric span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        margin-bottom: 8px;
+      }
+      .metric strong {
+        display: block;
+        font-size: 18px;
+        line-height: 1.3;
+        word-break: break-word;
+      }
+      ol {
+        margin: 0;
+        padding-left: 20px;
+        display: grid;
+        gap: 10px;
+      }
+      .tips, .platform-grid {
+        display: grid;
+        gap: 12px;
+      }
+      .platform-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .platform-card, .tips {
+        padding: 14px 16px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.88);
+      }
+      a.button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        width: 100%;
+        border-radius: 16px;
+        text-decoration: none;
+        background: var(--accent);
+        color: #fff;
+        font-weight: 700;
+      }
+      code {
+        padding: 2px 6px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.06);
+        color: #0f172a;
+      }
+      @media (max-width: 560px) {
+        .metrics { grid-template-columns: 1fr; }
+        .platform-grid { grid-template-columns: 1fr; }
+        h1 { font-size: 24px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="card">
+        <span class="eyebrow">Polaris Proxy</span>
+        <h1>手机 / 局域网代理安装向导</h1>
+        <p>当前页面由 Polaris 本地代理直接返回。请确保手机和电脑处于同一局域网，再按下面步骤完成代理配置和证书安装。</p>
+        <div class="metrics">
+          <div class="metric">
+            <span>局域网地址</span>
+            <strong>${lanAddress}</strong>
+          </div>
+          <div class="metric">
+            <span>代理端口</span>
+            <strong>${proxyPort}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" style="margin-top: 16px;">
+        <h2>第 1 步：先连接 Polaris 代理</h2>
+        <ol>
+          <li>确保手机与电脑在同一个 Wi-Fi 网络下。</li>
+          <li>Android：进入当前 Wi-Fi 的详情页，在“代理”里选择“手动”，服务器填写 <code>${lanAddress}</code>，端口填写 <code>${proxyPort}</code>。</li>
+          <li>iPhone / iPad：进入“设置 → Wi-Fi → 当前网络 → 配置代理”，选择“手动”，服务器填写 <code>${lanAddress}</code>，端口填写 <code>${proxyPort}</code>。</li>
+          <li>代理保存成功后，再继续下载 Polaris 根证书。</li>
+        </ol>
+      </section>
+
+      <section class="card" style="margin-top: 16px;">
+        <h2>第 2 步：下载并安装 Polaris 根证书</h2>
+        <p>代理生效后，点击下面的按钮下载根证书。如果按钮无法打开，也可以手动访问文末的证书直链。</p>
+        <a class="button" href="${certificateUrl}">下载 Polaris Root CA</a>
+        <p>证书直链：<br /><code>${certificateUrl}</code></p>
+        <div class="platform-grid">
+          <section class="platform-card">
+            <h3>Android 安装说明</h3>
+            <ol>
+              <li>下载证书后，如果系统自动弹出安装页面，按提示继续安装。</li>
+              <li>若未自动弹出，可进入“设置 → 安全 / 隐私 → 安装证书 / 从存储设备安装证书”，手动选择下载的证书文件。</li>
+              <li>证书用途请选择“VPN 和应用”或系统允许的等效选项。</li>
+              <li>安装完成后，重新打开需要抓包的浏览器或 App 再测试 HTTPS 请求。</li>
+            </ol>
+          </section>
+          <section class="platform-card">
+            <h3>iPhone / iPad 安装说明</h3>
+            <ol>
+              <li>在 Safari 中下载证书后，系统会提示“已下载描述文件”。</li>
+              <li>进入“设置 → 已下载描述文件”，或“设置 → 通用 → VPN 与设备管理”，安装 Polaris 描述文件。</li>
+              <li>安装完成后，再进入“设置 → 通用 → 关于本机 → 证书信任设置”。</li>
+              <li>找到 Polaris 根证书并手动开启“完全信任”，否则 HTTPS 无法正常解密。</li>
+            </ol>
+          </section>
+        </div>
+        <div class="tips">
+          <h3>连接失败时优先检查</h3>
+          <ol>
+            <li>手机是否和电脑在同一个局域网。</li>
+            <li>代理 IP 和端口是否填写正确。</li>
+            <li>电脑防火墙是否拦截了 Polaris 端口。</li>
+            <li>安装证书后是否真的完成了信任步骤，尤其是 iPhone 的“完全信任”。</li>
+          </ol>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>`;
 }
 
 export class ProxyEngine {
@@ -96,9 +310,16 @@ export class ProxyEngine {
   private async handleConnectRequest(req: IncomingMessage, clientSocket: Duplex, head: Buffer): Promise<void> {
     const [host, portValue] = (req.url ?? "").split(":");
     const targetPort = Number(portValue || 443);
+    const settings = this.proxyService.getSettings();
+    const lanIp = settings.lanIp ?? getLanIpv4Address();
 
     if (!host || Number.isNaN(targetPort)) {
       clientSocket.end("HTTP/1.1 400 Bad Request\r\n\r\n");
+      return;
+    }
+
+    if (targetPort === settings.localProxyPort && isSelfProxyHost(host, lanIp)) {
+      clientSocket.end("HTTP/1.1 508 Loop Detected\r\n\r\n");
       return;
     }
 
@@ -165,6 +386,24 @@ export class ProxyEngine {
 
     const absoluteUrl = req.url.startsWith("http") ? req.url : `${protocol}//${req.headers.host}${req.url}`;
     const targetUrl = new URL(absoluteUrl);
+    const settings = this.proxyService.getSettings();
+    const lanIp = settings.lanIp ?? getLanIpv4Address();
+
+    if (isProxyLoopRequest(targetUrl, settings.localProxyPort, lanIp)) {
+      res.writeHead(508, corsHeaders).end("Proxy loop detected");
+      return;
+    }
+
+    if (targetUrl.hostname.toLowerCase() === "polaris.local") {
+      res.writeHead(200, {
+        ...corsHeaders,
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store"
+      });
+      res.end(buildPortalHtml(lanIp, settings.localApiPort, settings.localProxyPort));
+      return;
+    }
+
     const shouldCapture = !isPolarisControlPlaneRequest(targetUrl);
     const requestBuffer = await collectBody(req);
     const requestHeaders = sanitizeProxyHeaders(req.headers);

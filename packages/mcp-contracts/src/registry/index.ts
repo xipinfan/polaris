@@ -8,6 +8,7 @@ import { getCertificateInstallGuideTool } from "../tools/getCertificateInstallGu
 import { getCertificateStatusTool } from "../tools/getCertificateStatus";
 import { getProxyDecisionTool } from "../tools/getProxyDecision";
 import { getMockRuleDetailTool } from "../tools/getMockRuleDetail";
+import { getProxyRuleDetailTool } from "../tools/getProxyRuleDetail";
 import { getProxyModeTool } from "../tools/getProxyMode";
 import { getRequestDetailTool } from "../tools/getRequestDetail";
 import { getRuntimeSettingsTool } from "../tools/getRuntimeSettings";
@@ -53,6 +54,7 @@ export const mcpToolRegistry = [
   setActiveMockGroupTool,
   runRequestTool,
   listProxyRulesTool,
+  getProxyRuleDetailTool,
   getProxyModeTool,
   getProxyDecisionTool,
   setProxyModeTool,
@@ -94,6 +96,7 @@ const mockPackToolNames = [
 
 const proxyPackToolNames = [
   listProxyRulesTool.name,
+  getProxyRuleDetailTool.name,
   getProxyModeTool.name,
   getProxyDecisionTool.name,
   setProxyModeTool.name,

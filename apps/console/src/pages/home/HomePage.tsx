@@ -125,7 +125,7 @@ export function HomePage() {
       </header>
 
       {overviewQuery.isLoading ? (
-        <Card bordered={false} className={styles.loadingCard}>
+        <Card variant="borderless" className={styles.loadingCard}>
           <Skeleton active paragraph={{ rows: 4 }} title={{ width: "36%" }} />
         </Card>
       ) : overviewQuery.isError ? (

@@ -9,6 +9,8 @@ import { bindServerWithFallback } from "./ports";
 import { createRuntime } from "./runtime";
 import { defaultSettings } from "./config";
 
+const LAN_LISTEN_HOST = "0.0.0.0";
+
 export async function startServers() {
   const runtime = await createRuntime();
   const currentSettings = runtime.proxyService.getSettings();
@@ -45,7 +47,8 @@ export async function startServers() {
   const { server: proxyServer, port: proxyPort } = await bindServerWithFallback(
     () => runtime.proxyEngine.createServer(),
     preferredProxyPort,
-    usedPorts
+    usedPorts,
+    LAN_LISTEN_HOST
   );
   const { server: apiServer, port: apiPort } = await bindServerWithFallback(
     () => http.createServer(apiApp),

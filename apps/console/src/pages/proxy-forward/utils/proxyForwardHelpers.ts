@@ -159,7 +159,7 @@ export function buildStoredRuleFromBackend(
   const parsedSource = parseSourceUrl(current?.url ?? "");
   const pattern = derivePattern(current?.pattern ?? rule.pattern, parsedSource?.normalizedUrl, current?.targetUrl);
   const path = derivePath(current?.path ?? parsedSource?.path ?? "/");
-  const targetUrl = sanitizeText(current?.targetUrl, `http://127.0.0.1:9000${path}`);
+  const targetUrl = sanitizeText(current?.targetUrl, `http://127.0.0.1:3000${path}`);
   return {
     id: rule.id,
     name: sanitizeText(current?.name, pattern),
@@ -216,7 +216,7 @@ export function buildEmptyRule(activeGroupName: string): StoredForwardRule {
     headerMatch: defaultMatchValue,
     bodyMatch: defaultMatchValue,
     forwardMode: "rewriteTarget",
-    targetUrl: "http://127.0.0.1:9000/v1/resource",
+    targetUrl: "http://127.0.0.1:3000/v1/resource",
     rewriteHost: pattern,
     rewritePath: "/v1/resource",
     rewriteQuery: "",

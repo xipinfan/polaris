@@ -16,6 +16,7 @@ type TrafficToolbarProps = {
   onOpenDebug: () => void;
   onOpenMockPage: () => void;
   onOpenCertificate: () => void;
+  onOpenProxyGuide: () => void;
   onToggleAutoRefresh: () => void;
   t: TranslateFn;
 };
@@ -33,14 +34,19 @@ export function TrafficToolbar({
   onOpenDebug,
   onOpenMockPage,
   onOpenCertificate,
+  onOpenProxyGuide,
   onToggleAutoRefresh,
   t,
 }: TrafficToolbarProps) {
   return (
-    <section className={cx(localStyles.toolbar, localStyles.surface, localStyles.root)}>
+    <section
+      className={cx(localStyles.toolbar, localStyles.surface, localStyles.root)}
+    >
       <div className={localStyles.toolbarGroups}>
         <div className={localStyles.toolbarSection}>
-          <span className={localStyles.toolbarCaption}>{t("traffic.toolbar.capture")}</span>
+          <span className={localStyles.toolbarCaption}>
+            {t("traffic.toolbar.capture")}
+          </span>
           <button
             className={cx(
               localStyles.button,
@@ -56,15 +62,26 @@ export function TrafficToolbar({
               : t("traffic.toolbar.certificate")}
           </button>
           <button
+            className={cx(localStyles.button, localStyles.toolbarButton)}
+            onClick={onOpenProxyGuide}
+            type="button"
+          >
+            手机代理指南
+          </button>
+          <button
             className={cx(
               localStyles.button,
               localStyles.toolbarMode,
-              autoRefresh ? localStyles.buttonPrimary : localStyles.buttonSecondary,
+              autoRefresh
+                ? localStyles.buttonPrimary
+                : localStyles.buttonSecondary,
             )}
             onClick={onToggleAutoRefresh}
             type="button"
           >
-            {autoRefresh ? t("traffic.toolbar.recording") : t("traffic.toolbar.paused")}
+            {autoRefresh
+              ? t("traffic.toolbar.recording")
+              : t("traffic.toolbar.paused")}
           </button>
           <button
             className={cx(localStyles.button, localStyles.toolbarButton)}
@@ -89,7 +106,9 @@ export function TrafficToolbar({
         </div>
 
         <div className={localStyles.toolbarSection}>
-          <span className={localStyles.toolbarCaption}>{t("traffic.toolbar.actions")}</span>
+          <span className={localStyles.toolbarCaption}>
+            {t("traffic.toolbar.actions")}
+          </span>
           <button
             className={cx(localStyles.button, localStyles.toolbarButton)}
             disabled={!selected}
@@ -117,16 +136,21 @@ export function TrafficToolbar({
       </div>
 
       <div className={localStyles.toolbarMeta}>
-        <span className={cx(localStyles.statusDot, !isLoading && localStyles.statusDotOnline)} />
+        <span
+          className={cx(
+            localStyles.statusDot,
+            !isLoading && localStyles.statusDotOnline,
+          )}
+        />
         <strong>{t("traffic.liveState")}</strong>
         <small>
           {lastUpdatedAt
-            ? t("traffic.lastUpdated", { time: formatRequestTime(lastUpdatedAt) })
+            ? t("traffic.lastUpdated", {
+                time: formatRequestTime(lastUpdatedAt),
+              })
             : t("traffic.feedBody")}
         </small>
       </div>
     </section>
   );
 }
-
-

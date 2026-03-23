@@ -409,6 +409,11 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
                             </span>
                             <strong>{scene.variant}</strong>
                           </div>
+                          {rule.requestBodyExactMatch ? (
+                            <span className={localStyles.ruleMatchHint}>
+                              Body 精确: {rule.requestBodyExactMatch}
+                            </span>
+                          ) : null}
                           {rule.requestBodyKeyMatch ? (
                             <span className={localStyles.ruleMatchHint}>
                               {t("mock.form.requestBodyKeyMatchShort", { key: rule.requestBodyKeyMatch })}

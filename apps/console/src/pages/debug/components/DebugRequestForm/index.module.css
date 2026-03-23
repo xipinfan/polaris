@@ -1,7 +1,10 @@
-﻿.form {
+.form {
   display: grid;
+  align-content: start;
   gap: 12px;
   padding: 16px;
+  max-height: min(760px, calc(100vh - 220px));
+  overflow: auto;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--panel);
@@ -88,8 +91,12 @@
 }
 
 @media (max-width: 700px) {
-.buttonGrid {
+  .form {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .buttonGrid {
     grid-template-columns: 1fr;
   }
 }
-

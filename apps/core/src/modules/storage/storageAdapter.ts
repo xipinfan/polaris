@@ -1,4 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import type {
   AppSetting,
   MockRule,
@@ -40,18 +41,30 @@ export class StorageAdapter {
     try {
       const raw = await readFile(storageFile, "utf8");
       const parsed = JSON.parse(raw) as Partial<StorageSnapshot>;
+      const rawProxyRules = parsed.proxyRules ?? [];
+      let proxyRulesChanged = false;
+      const nextProxyRules = rawProxyRules.map((rule) => {
+        if (rule && typeof rule.id === "string" && rule.id.trim()) {
+          return rule;
+        }
+        proxyRulesChanged = true;
+        return { ...rule, id: randomUUID() } as ProxyRule;
+      });
       this.snapshot = {
         ...emptySnapshot,
         ...parsed,
         requests: parsed.requests ?? [],
         savedRequests: parsed.savedRequests ?? [],
         mockRules: parsed.mockRules ?? [],
-        proxyRules: parsed.proxyRules ?? [],
+        proxyRules: nextProxyRules,
         settings: {
           ...defaultSettings,
           ...(parsed.settings ?? {})
         }
       };
+      if (proxyRulesChanged) {
+        await this.persist();
+      }
     } catch {
       await this.persist();
     }

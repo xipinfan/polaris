@@ -11,6 +11,7 @@ import { MockService } from "../../modules/mock/mockService";
 import { CertificateManager } from "../../modules/proxy/certificateManager";
 import { ProxyService } from "../../modules/proxy/proxyService";
 import { RequestService } from "../../modules/requests/requestService";
+import { getLanIpv4Address } from "../../shared/network";
 
 export function createApiRouter(
   requestService: RequestService,
@@ -19,8 +20,10 @@ export function createApiRouter(
   certificateManager: CertificateManager
 ): Router {
   const router = express.Router();
-  const readSettings = async () =>
-    proxyService.setCertificateInstalled(await certificateManager.isRootCertificateTrusted());
+  const readSettings = async () => ({
+    ...(await proxyService.setCertificateInstalled(await certificateManager.isRootCertificateTrusted())),
+    lanIp: getLanIpv4Address()
+  });
   const withAsync =
     (handler: (req: Request, res: Response, next: NextFunction) => Promise<void> | void) =>
     (req: Request, res: Response, next: NextFunction) =>

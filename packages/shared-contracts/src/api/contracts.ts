@@ -39,6 +39,7 @@ export interface UpdateMockRuleInput {
   group?: string | null;
   method: string;
   url: string;
+  requestBodyExactMatch?: string | null;
   requestBodyKeyMatch?: string | null;
   responseStatus: number;
   responseHeaders?: Record<string, string>;

@@ -28,7 +28,7 @@ export function HomeContent({
     <>
       <section className={localStyles.contentGrid}>
         <Card
-          bordered={false}
+          variant="borderless"
           className={localStyles.workbenchCard}
           extra={
             <Button onClick={onGoTraffic} type="link">
@@ -44,7 +44,7 @@ export function HomeContent({
           <div className={localStyles.workbenchGrid}>
             {quickEntries.map((item) => (
               <Card
-                bordered={false}
+                variant="borderless"
                 className={
                   item.primary
                     ? localStyles.actionCardPrimary
@@ -75,7 +75,7 @@ export function HomeContent({
 
         <div className={localStyles.sideStack}>
           <Card
-            bordered={false}
+            variant="borderless"
             className={localStyles.summaryCard}
             extra={
               <Button onClick={onGoMock} type="link">
@@ -89,20 +89,20 @@ export function HomeContent({
             }
           >
             <div className={localStyles.summaryStats}>
-              <Card bordered={false} className={localStyles.summaryStatCard}>
+              <Card variant="borderless" className={localStyles.summaryStatCard}>
                 <Statistic
                   title={t("home.metric.mockVariants")}
                   value={mockRuleCount}
                 />
               </Card>
-              <Card bordered={false} className={localStyles.summaryStatCard}>
+              <Card variant="borderless" className={localStyles.summaryStatCard}>
                 <Statistic title="启用规则" value={enabledMockCount} />
               </Card>
             </div>
           </Card>
 
           <Card
-            bordered={false}
+            variant="borderless"
             className={localStyles.resumeCard}
             title={
               <div className={localStyles.cardTitleBlock}>

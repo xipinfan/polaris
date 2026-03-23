@@ -17,6 +17,7 @@ import {
   getCertificateInstallGuideTool,
   getCertificateStatusTool,
   getMockRuleDetailTool,
+  getProxyRuleDetailTool,
   getProxyDecisionTool,
   getProxyModeTool,
   getRequestDetailTool,
@@ -90,6 +91,7 @@ const createMockRuleInputSchema = z.object({
   group: z.string().min(1).optional(),
   method: z.string().min(1),
   url: z.string().url(),
+  requestBodyExactMatch: z.string().min(1).nullable().optional(),
   requestBodyKeyMatch: z.string().min(1).nullable().optional(),
   responseStatus: z.number().int(),
   responseHeaders: stringMapSchema.optional(),
@@ -118,6 +120,10 @@ const listSavedRequestsInputSchema = z.object({
 
 const mockRuleIdInputSchema = z.object({
   id: z.string().min(1)
+});
+
+const proxyRuleIdInputSchema = z.object({
+  ruleId: z.string().min(1)
 });
 
 const updateMockRuleToolInputSchema = createMockRuleInputSchema.extend({
@@ -194,6 +200,80 @@ function jsonResourceResult(uri: string, data: unknown) {
 function getRuleGroupName(name: string): string | null {
   const match = name.match(/^\[(.+?)\]\s*(.+)$/);
   return match?.[1]?.trim() || null;
+}
+
+function buildMockRuleSummary(rule: ReturnType<MockService["list"]>[number]) {
+  return {
+    id: rule.id,
+    title: rule.name,
+    name: rule.name,
+    group: getRuleGroupName(rule.name),
+    method: rule.method,
+    url: rule.url,
+    enabled: rule.enabled,
+    updatedAt: rule.updatedAt,
+    detail: {
+      tool: getMockRuleDetailTool.name,
+      id: rule.id,
+      omittedFields: ["requestBodyExactMatch", "requestBodyKeyMatch", "responseHeaders", "responseBody"]
+    }
+  };
+}
+
+function buildProxyRuleSummary(rule: ReturnType<ProxyService["listRules"]>[number]) {
+  return {
+    ruleId: rule.id,
+    title: `${rule.action.toUpperCase()} ${rule.pattern}`,
+    pattern: rule.pattern,
+    action: rule.action,
+    enabled: rule.enabled,
+    updatedAt: rule.updatedAt,
+    detail: {
+      tool: getProxyRuleDetailTool.name,
+      ruleId: rule.id,
+      omittedFields: ["matchType", "createdAt"]
+    }
+  };
+}
+
+function buildRequestSummary(record: ReturnType<RequestService["list"]>[number]) {
+  return {
+    id: record.id,
+    title: `${record.method} ${record.path}`,
+    method: record.method,
+    host: record.host,
+    path: record.path,
+    url: record.url,
+    statusCode: record.statusCode,
+    duration: record.duration,
+    createdAt: record.createdAt,
+    source: record.source,
+    secure: record.secure,
+    resolutionMode: record.resolution?.mode ?? null,
+    detail: {
+      tool: getRequestDetailTool.name,
+      id: record.id,
+      omittedFields: ["requestHeaders", "requestQuery", "requestBody", "responseHeaders", "responseBody", "resolution"]
+    }
+  };
+}
+
+function buildSavedRequestSummary(savedRequest: ReturnType<RequestService["listSaved"]>[number]) {
+  return {
+    id: savedRequest.id,
+    title: savedRequest.name,
+    name: savedRequest.name,
+    method: savedRequest.method,
+    url: savedRequest.url,
+    sourceType: savedRequest.sourceType,
+    tags: savedRequest.tags,
+    updatedAt: savedRequest.updatedAt,
+    detail: {
+      tool: getSavedRequestDetailTool.name,
+      id: savedRequest.id,
+      omittedFields: ["headers", "query", "body"]
+    }
+  };
 }
 
 function getInstallGuideForPlatform(certificatePath?: string) {
@@ -287,7 +367,8 @@ export function createPolarisMcpSdkServer(
         const records = requestService.list(rawFilters as RequestFilters);
         const start = offset ?? 0;
         const sliced = records.slice(start);
-        return jsonToolResult(typeof limit === "number" ? sliced.slice(0, limit) : sliced);
+        const paged = typeof limit === "number" ? sliced.slice(0, limit) : sliced;
+        return jsonToolResult(paged.map(buildRequestSummary));
       });
     }
   );
@@ -328,7 +409,8 @@ export function createPolarisMcpSdkServer(
         const saved = requestService.listSaved();
         const start = args.offset ?? 0;
         const sliced = saved.slice(start);
-        return jsonToolResult(typeof args.limit === "number" ? sliced.slice(0, args.limit) : sliced);
+        const paged = typeof args.limit === "number" ? sliced.slice(0, args.limit) : sliced;
+        return jsonToolResult(paged.map(buildSavedRequestSummary));
       })
   );
 
@@ -434,7 +516,8 @@ export function createPolarisMcpSdkServer(
         });
         const start = args.offset ?? 0;
         const sliced = rules.slice(start);
-        return jsonToolResult(typeof args.limit === "number" ? sliced.slice(0, args.limit) : sliced);
+        const paged = typeof args.limit === "number" ? sliced.slice(0, args.limit) : sliced;
+        return jsonToolResult(paged.map(buildMockRuleSummary));
       });
     }
   );
@@ -576,7 +659,27 @@ export function createPolarisMcpSdkServer(
         });
         const start = args.offset ?? 0;
         const sliced = filtered.slice(start);
-        return jsonToolResult(typeof args.limit === "number" ? sliced.slice(0, args.limit) : sliced);
+        const paged = typeof args.limit === "number" ? sliced.slice(0, args.limit) : sliced;
+        return jsonToolResult(paged.map(buildProxyRuleSummary));
+      })
+  );
+
+  server.registerTool(
+    getProxyRuleDetailTool.name,
+    {
+      description: getProxyRuleDetailTool.description,
+      inputSchema: proxyRuleIdInputSchema,
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ ruleId }) =>
+      safe(() => {
+        const rule = proxyService.listRules().find((item) => item.id === ruleId);
+        if (!rule) {
+          throw new Error("Proxy rule not found");
+        }
+        return jsonToolResult(rule);
       })
   );
 

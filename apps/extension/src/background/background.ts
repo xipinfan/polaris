@@ -66,7 +66,7 @@ function applyProxyMode(message: ApplyProxyMessage): Promise<void> {
 }
 
 async function checkCoreHealth(): Promise<boolean> {
-  const apiPort = lastKnownApiPort || 9001;
+  const apiPort = lastKnownApiPort || 19601;
   try {
     const response = await fetch(`http://127.0.0.1:${apiPort}/api/health`, {
       method: "GET",

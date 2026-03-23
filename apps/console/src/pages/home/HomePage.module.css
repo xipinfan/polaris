@@ -1,4 +1,4 @@
-﻿.page {
+.page {
   display: grid;
   gap: 20px;
   width: 100%;
@@ -64,7 +64,6 @@
   color: #667085;
 }
 
-
 .loadingCard {
   border-radius: 24px;
   background: #fcfcfd;
@@ -75,12 +74,11 @@
 }
 
 @media (max-width: 700px) {
-.page {
+  .page {
     gap: 16px;
   }
 
-.loadingCard :global(.ant-card-body) {
+  .loadingCard :global(.ant-card-body) {
     padding: 18px;
   }
 }
-

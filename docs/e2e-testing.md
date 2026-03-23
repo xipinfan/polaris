@@ -81,5 +81,7 @@ Supported page keys:
 ## Stability Notes
 
 - Tests start Core + Console via `scripts/dev/start.mjs`.
-- API port is detected dynamically in `e2e/support/polaris.ts` (range `9001-9100`).
+- API port is detected dynamically in `e2e/support/polaris.ts` (range `19601-19700`).
 - Extension tests load unpacked build output from `apps/extension/dist`.
+
+

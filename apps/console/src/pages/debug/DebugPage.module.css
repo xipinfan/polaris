@@ -1,9 +1,14 @@
-﻿.page {
+.page {
   display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  align-content: start;
   gap: var(--space-5);
   width: 100%;
   max-width: 1440px;
   margin: 0 auto;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
   animation: page-enter 220ms ease;
 }
 
@@ -29,18 +34,19 @@
 .layout {
   display: grid;
   grid-template-columns: minmax(340px, 420px) 1fr;
+  align-items: start;
   gap: var(--space-5);
+  min-height: 0;
 }
 
 @media (max-width: 1180px) {
-.layout {
+  .layout {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 700px) {
-.header h2 {
+  .header h2 {
     font-size: 24px;
   }
 }
-

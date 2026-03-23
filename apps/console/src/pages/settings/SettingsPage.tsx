@@ -5,6 +5,7 @@ import { useSettingsOverviewQuery } from "../../domains/settings/queries";
 import { StatusState } from "../../features/common/StatusState";
 import { SettingsExtensionCard } from "./components/SettingsExtensionCard";
 import { SettingsHttpsCard } from "./components/SettingsHttpsCard";
+import { SettingsLanProxyCard } from "./components/SettingsLanProxyCard";
 import { SettingsLanguageCard } from "./components/SettingsLanguageCard";
 import { SettingsMcpCard } from "./components/SettingsMcpCard";
 import { SettingsOverview } from "./components/SettingsOverview";
@@ -34,6 +35,7 @@ const mcpTools = [
   "enable_mock_rule",
   "run_request",
   "list_proxy_rules",
+  "get_proxy_rule_detail",
 ];
 
 export function SettingsPage() {
@@ -46,7 +48,8 @@ export function SettingsPage() {
   const rules = overviewQuery.data?.proxyRules ?? [];
 
   const activeRules = useMemo(() => rules.filter((rule) => rule.enabled), [rules]);
-  const rootCertificateUrl = settings ? `http://127.0.0.1:${settings.localApiPort}/api/certificates/root-ca` : "#";
+  const browserHostname = window.location.hostname || "127.0.0.1";
+  const rootCertificateUrl = settings ? `http://${browserHostname}:${settings.localApiPort}/api/certificates/root-ca` : "#";
   const currentModeLabel = proxyModeLabels[settings?.currentProxyMode ?? "system"] ?? "-";
 
   if (overviewQuery.isError) {
@@ -91,6 +94,7 @@ export function SettingsPage() {
           proxyPort={settings.localProxyPort}
           t={t}
         />
+        <SettingsLanProxyCard settings={settings} />
 
         <section className={styles.contentGrid}>
           <div className={styles.mainColumn}>

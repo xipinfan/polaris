@@ -176,6 +176,11 @@
   color: #f8fbff;
 }
 
+.primaryButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .secondaryButton {
   border-color: rgba(213, 221, 231, 0.98);
   background: rgba(255, 255, 255, 0.92);
@@ -360,6 +365,33 @@
   background: rgba(255, 255, 255, 0.88);
 }
 
+.modalTabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  border-radius: 14px;
+  border: 1px solid rgba(223, 229, 238, 0.94);
+  background: rgba(247, 250, 255, 0.82);
+}
+
+.modalTabButton {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #667085;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.modalTabButtonActive {
+  border-color: rgba(143, 164, 208, 0.96);
+  background: #ffffff;
+  color: #264796;
+}
+
 .editorSection {
   display: grid;
   gap: 10px;
@@ -480,6 +512,12 @@
     font-size: 12px;
     font-weight: 700;
   }
+}
+
+.fieldHint {
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .fieldFull {

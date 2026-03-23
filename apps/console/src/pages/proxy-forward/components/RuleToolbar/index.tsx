@@ -18,7 +18,7 @@ export function RuleToolbar({ filteredCount }: RuleToolbarProps) {
   const setSortMode = useUiStore((state) => state.setProxySortMode);
 
   return (
-    <Card bordered={false} className={classNames(localStyles.toolbarCard, localStyles.root)}>
+    <Card variant="borderless" className={classNames(localStyles.toolbarCard, localStyles.root)}>
       <div className={localStyles.toolbarHeader}>
         <div>
           <span className={localStyles.sectionLabel}>规则工具栏</span>

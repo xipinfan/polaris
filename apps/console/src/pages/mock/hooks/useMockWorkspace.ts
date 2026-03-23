@@ -33,6 +33,7 @@ type ExportableMockRule = {
   variant: string;
   method: string;
   url: string;
+  requestBodyExactMatch?: string | null;
   requestBodyKeyMatch?: string | null;
   responseStatus: number;
   responseHeaders: Record<string, string>;
@@ -53,6 +54,40 @@ type UseMockWorkspaceArgs = {
   showToast: (message: string, type?: "success" | "error" | "info") => void;
   t: TranslateFn;
 };
+
+function validateExactBodyMatchExpression(expression: string): string | null {
+  const text = expression.trim();
+  if (!text) {
+    return null;
+  }
+
+  const entries = text
+    .split(/[\n;]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  for (const entry of entries) {
+    const separatorIndex = entry.indexOf(":");
+    if (separatorIndex <= 0) {
+      return "Body 精确匹配格式错误，请使用 path:\"value\"";
+    }
+    const path = entry.slice(0, separatorIndex).trim();
+    const valueLiteral = entry.slice(separatorIndex + 1).trim();
+    if (!path || !(valueLiteral.startsWith("\"") && valueLiteral.endsWith("\""))) {
+      return "Body 精确匹配格式错误，请使用 path:\"value\"";
+    }
+    try {
+      const parsed = JSON.parse(valueLiteral);
+      if (typeof parsed !== "string") {
+        return "Body 精确匹配的值必须为字符串";
+      }
+    } catch {
+      return "Body 精确匹配字符串格式非法";
+    }
+  }
+
+  return null;
+}
 
 export function useMockWorkspace({ defaultGroup, locationState, pathname, showToast, t }: UseMockWorkspaceArgs) {
   const isInitializedRef = React.useRef(false);
@@ -105,6 +140,7 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
       variant: scene.variant,
       method: rule.method,
       url: rule.url,
+      requestBodyExactMatch: rule.requestBodyExactMatch ?? null,
       requestBodyKeyMatch: rule.requestBodyKeyMatch ?? null,
       responseStatus: rule.responseStatus,
       responseHeaders: rule.responseHeaders ?? {},
@@ -225,6 +261,7 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
       variant: `${seedRequest.method} ${seedRequest.path}`,
       method: seedRequest.method,
       url: seedRequest.url,
+      requestBodyExactMatch: "",
       requestBodyKeyMatch: "",
       responseStatus: seedRequest.statusCode,
       responseHeaders: JSON.stringify(seedRequest.responseHeaders, null, 2),
@@ -271,11 +308,17 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
   };
 
   const saveRule = async () => {
+    const exactMatchError = validateExactBodyMatchExpression(form.requestBodyExactMatch);
+    if (exactMatchError) {
+      throw new Error(exactMatchError);
+    }
+
     const payload = {
       name: buildRuleName(form.group, form.variant),
       group: form.group,
       method: form.method,
       url: form.url,
+      requestBodyExactMatch: form.requestBodyExactMatch.trim() || null,
       requestBodyKeyMatch: form.requestBodyKeyMatch.trim() || null,
       responseStatus: Number(form.responseStatus),
       responseHeaders: JSON.parse(form.responseHeaders || "{}"),
@@ -333,6 +376,7 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
             group: nextName,
             method: rule.method,
             url: rule.url,
+            requestBodyExactMatch: rule.requestBodyExactMatch ?? null,
             requestBodyKeyMatch: rule.requestBodyKeyMatch ?? null,
             responseStatus: rule.responseStatus,
             responseHeaders: rule.responseHeaders,
@@ -370,6 +414,7 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
           group: nextName,
           method: rule.method,
           url: rule.url,
+          requestBodyExactMatch: rule.requestBodyExactMatch ?? null,
           requestBodyKeyMatch: rule.requestBodyKeyMatch ?? null,
           responseStatus: rule.responseStatus,
           responseHeaders: rule.responseHeaders,
@@ -439,6 +484,7 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
       group: currentGroup,
       method: rule.method,
       url: rule.url,
+      requestBodyExactMatch: rule.requestBodyExactMatch ?? null,
       requestBodyKeyMatch: rule.requestBodyKeyMatch ?? null,
       responseStatus: rule.responseStatus,
       responseHeaders: rule.responseHeaders,
@@ -464,6 +510,7 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
         group: nextGroup,
         method: rule.method,
         url: rule.url,
+        requestBodyExactMatch: rule.requestBodyExactMatch ?? null,
         requestBodyKeyMatch: rule.requestBodyKeyMatch ?? null,
         responseStatus: rule.responseStatus,
         responseHeaders: rule.responseHeaders,
@@ -572,6 +619,7 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
           group: groupName,
           method,
           url,
+          requestBodyExactMatch: String(ruleEntry.requestBodyExactMatch ?? "").trim() || null,
           requestBodyKeyMatch: String(ruleEntry.requestBodyKeyMatch ?? "").trim() || null,
           responseStatus: Number(ruleEntry.responseStatus) || 200,
           responseHeaders: (ruleEntry.responseHeaders ?? {}) as Record<string, string>,
@@ -628,6 +676,7 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
         group: currentGroup,
         method,
         url,
+        requestBodyExactMatch: String(ruleEntry.requestBodyExactMatch ?? "").trim() || null,
         requestBodyKeyMatch: String(ruleEntry.requestBodyKeyMatch ?? "").trim() || null,
         responseStatus: Number(ruleEntry.responseStatus) || 200,
         responseHeaders: (ruleEntry.responseHeaders ?? {}) as Record<string, string>,

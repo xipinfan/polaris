@@ -5,6 +5,7 @@ export interface MockRule {
   name: string;
   method: string;
   url: string;
+  requestBodyExactMatch?: string | null;
   requestBodyKeyMatch?: string | null;
   responseStatus: number;
   responseHeaders: KeyValueMap;

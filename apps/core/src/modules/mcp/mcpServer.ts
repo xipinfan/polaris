@@ -60,6 +60,80 @@ function getRuleGroupName(name: string): string | null {
   return match?.[1]?.trim() || null;
 }
 
+function buildMockRuleSummary(rule: ReturnType<MockService["list"]>[number]) {
+  return {
+    id: rule.id,
+    title: rule.name,
+    name: rule.name,
+    group: getRuleGroupName(rule.name),
+    method: rule.method,
+    url: rule.url,
+    enabled: rule.enabled,
+    updatedAt: rule.updatedAt,
+    detail: {
+      tool: "get_mock_rule_detail",
+      id: rule.id,
+      omittedFields: ["requestBodyExactMatch", "requestBodyKeyMatch", "responseHeaders", "responseBody"]
+    }
+  };
+}
+
+function buildProxyRuleSummary(rule: ReturnType<ProxyService["listRules"]>[number]) {
+  return {
+    ruleId: rule.id,
+    title: `${rule.action.toUpperCase()} ${rule.pattern}`,
+    pattern: rule.pattern,
+    action: rule.action,
+    enabled: rule.enabled,
+    updatedAt: rule.updatedAt,
+    detail: {
+      tool: "get_proxy_rule_detail",
+      ruleId: rule.id,
+      omittedFields: ["matchType", "createdAt"]
+    }
+  };
+}
+
+function buildRequestSummary(record: ReturnType<RequestService["list"]>[number]) {
+  return {
+    id: record.id,
+    title: `${record.method} ${record.path}`,
+    method: record.method,
+    host: record.host,
+    path: record.path,
+    url: record.url,
+    statusCode: record.statusCode,
+    duration: record.duration,
+    createdAt: record.createdAt,
+    source: record.source,
+    secure: record.secure,
+    resolutionMode: record.resolution?.mode ?? null,
+    detail: {
+      tool: "get_request_detail",
+      id: record.id,
+      omittedFields: ["requestHeaders", "requestQuery", "requestBody", "responseHeaders", "responseBody", "resolution"]
+    }
+  };
+}
+
+function buildSavedRequestSummary(savedRequest: ReturnType<RequestService["listSaved"]>[number]) {
+  return {
+    id: savedRequest.id,
+    title: savedRequest.name,
+    name: savedRequest.name,
+    method: savedRequest.method,
+    url: savedRequest.url,
+    sourceType: savedRequest.sourceType,
+    tags: savedRequest.tags,
+    updatedAt: savedRequest.updatedAt,
+    detail: {
+      tool: "get_saved_request_detail",
+      id: savedRequest.id,
+      omittedFields: ["headers", "query", "body"]
+    }
+  };
+}
+
 export class MpcServer {
   constructor(
     private readonly requestService: RequestService,
@@ -141,7 +215,8 @@ export class MpcServer {
               const records = this.requestService.list(rawFilters);
               const start = offset ?? 0;
               const sliced = records.slice(start);
-              res.json({ data: typeof limit === "number" ? sliced.slice(0, limit) : sliced });
+              const paged = typeof limit === "number" ? sliced.slice(0, limit) : sliced;
+              res.json({ data: paged.map(buildRequestSummary) });
             }
             return;
           case "get_request_detail":
@@ -158,7 +233,8 @@ export class MpcServer {
               const limit = typeof req.body.limit === "number" ? req.body.limit : undefined;
               const offset = typeof req.body.offset === "number" ? req.body.offset : 0;
               const saved = this.requestService.listSaved().slice(offset);
-              res.json({ data: typeof limit === "number" ? saved.slice(0, limit) : saved });
+              const paged = typeof limit === "number" ? saved.slice(0, limit) : saved;
+              res.json({ data: paged.map(buildSavedRequestSummary) });
             }
             return;
           case "get_saved_request_detail":
@@ -200,7 +276,8 @@ export class MpcServer {
                 return nameMatch && groupMatch && methodMatch && urlMatch && enabledMatch;
               });
               const sliced = filtered.slice(offset);
-              res.json({ data: typeof limit === "number" ? sliced.slice(0, limit) : sliced });
+              const paged = typeof limit === "number" ? sliced.slice(0, limit) : sliced;
+              res.json({ data: paged.map(buildMockRuleSummary) });
             }
             return;
           case "get_mock_rule_detail":
@@ -258,7 +335,17 @@ export class MpcServer {
                 return hostMatch && enabledMatch && actionMatch;
               });
               const sliced = filtered.slice(offset);
-              res.json({ data: typeof limit === "number" ? sliced.slice(0, limit) : sliced });
+              const paged = typeof limit === "number" ? sliced.slice(0, limit) : sliced;
+              res.json({ data: paged.map(buildProxyRuleSummary) });
+            }
+            return;
+          case "get_proxy_rule_detail":
+            {
+              const rule = this.proxyService.listRules().find((item) => item.id === String(req.body.ruleId ?? ""));
+              if (!rule) {
+                throw new Error("Proxy rule not found");
+              }
+              res.json({ data: rule });
             }
             return;
           case "get_proxy_mode":

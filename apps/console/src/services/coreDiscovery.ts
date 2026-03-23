@@ -1,8 +1,12 @@
 import { persistenceKeys, readPersistence, writePersistence } from "../lib/persistence";
 
 const API_PORT_QUERY_KEY = "apiPort";
-const apiPortCandidates = Array.from({ length: 100 }, (_, index) => 9001 + index);
+const apiPortCandidates = Array.from({ length: 100 }, (_, index) => 19601 + index);
 let cachedApiBaseUrl: string | null = null;
+
+function getCurrentHostname(): string {
+  return window.location.hostname || "127.0.0.1";
+}
 
 function readStoredPort(): number | null {
   const queryPort = new URLSearchParams(window.location.search).get(API_PORT_QUERY_KEY);
@@ -16,7 +20,7 @@ function readStoredPort(): number | null {
 
 async function isApiPortAvailable(port: number): Promise<boolean> {
   try {
-    const response = await fetch(`http://127.0.0.1:${port}/api/health`);
+    const response = await fetch(`http://${getCurrentHostname()}:${port}/api/health`);
     if (!response.ok) {
       return false;
     }
@@ -44,10 +48,10 @@ export async function getApiBaseUrl(): Promise<string> {
   for (const port of candidates) {
     if (await isApiPortAvailable(port)) {
       writePersistence(persistenceKeys.apiPort, String(port));
-      cachedApiBaseUrl = `http://127.0.0.1:${port}/api`;
+      cachedApiBaseUrl = `http://${getCurrentHostname()}:${port}/api`;
       return cachedApiBaseUrl;
     }
   }
 
-  throw new Error("Polaris Core API not found on localhost");
+  throw new Error("Polaris Core API not found on current host");
 }

@@ -1,325 +1,325 @@
-﻿# Polaris
+# Polaris
 
-Polaris 是一个面向本地开发联调的 API 工作台。
+Polaris ��һ�����򱾵ؿ��������� API ����̨��
 
-它把几件原本分散的事情整合成了一个本地服务：
+���Ѽ���ԭ����ɢ���������ϳ���һ�����ط���
 
-- 代理并捕获请求
-- 保存、重放和调试请求
-- 管理 Mock 规则
-- 通过 MCP 把这些能力提供给 AI 工具
+- ��������������
+- ���桢�طź͵�������
+- ���� Mock ����
+- ͨ�� MCP ����Щ�����ṩ�� AI ����
 
-Polaris 的目标很简单：
+Polaris ��Ŀ��ܼ򵥣�
 
-安装一次，启动一个本地服务，然后让 Web Console、浏览器扩展和 AI 工具都连接到它。
+��װһ�Σ�����һ�����ط���Ȼ���� Web Console���������չ�� AI ���߶����ӵ�����
 
-进一步阅读：
+��һ���Ķ���
 
-- [MCP 接入说明](/E:/code/polaris/docs/mcp.md)
-- [Web Console 使用说明](/E:/code/polaris/docs/console.md)
-- [浏览器扩展使用说明](/E:/code/polaris/docs/extension.md)
-- [开发说明](/E:/code/polaris/docs/development.md)
-- [E2E 与视觉测试](/E:/code/polaris/docs/e2e-testing.md)
+- [MCP ����˵��](/E:/code/polaris/docs/mcp.md)
+- [Web Console ʹ��˵��](/E:/code/polaris/docs/console.md)
+- [�������չʹ��˵��](/E:/code/polaris/docs/extension.md)
+- [����˵��](/E:/code/polaris/docs/development.md)
+- [E2E ���Ӿ�����](/E:/code/polaris/docs/e2e-testing.md)
 
-## 适合谁
+## �ʺ�˭
 
-如果你正在做下面这些事情，Polaris 会比较适合：
+�����������������Щ���飬Polaris ��Ƚ��ʺϣ�
 
-- 本地联调前后端接口
-- 需要快速抓取和重放请求
-- 需要维护自己的 Mock 数据
-- 想把请求调试能力接给 Gemini CLI、Cursor、Cline 或其他 MCP 客户端
+- ��������ǰ��˽ӿ�
+- ��Ҫ����ץȡ���ط�����
+- ��Ҫά���Լ��� Mock ����
+- ���������������Ӹ� Gemini CLI��Cursor��Cline ������ MCP �ͻ���
 
-## 核心能力
+## ��������
 
-- 本地代理服务
+- ���ش�������
 - Web Console
-- 浏览器扩展
-- 标准 MCP Streamable HTTP
-- MCP stdio 兼容入口
-- 端口占用时自动切换到可用端口
-- 本地用户级数据目录，不把个人调试数据写进 Git
+- �������չ
+- ��׼ MCP Streamable HTTP
+- MCP stdio �������
+- �˿�ռ��ʱ�Զ��л������ö˿�
+- �����û�������Ŀ¼�����Ѹ��˵�������д�� Git
 
-## 快速开始
+## ���ٿ�ʼ
 
-### 1. 安装依赖
+### 1. ��װ����
 
 ```bash
 pnpm install
 ```
 
-### 2. 构建项目
+### 2. ������Ŀ
 
 ```bash
 pnpm build
 ```
 
-### 3. 启动 Polaris
+### 3. ���� Polaris
 
 ```bash
 pnpm polaris:start
 ```
 
-查看运行状态：
+�鿴����״̬��
 
 ```bash
 pnpm polaris:status
 ```
 
-停止服务：
+ֹͣ����
 
 ```bash
 pnpm polaris:stop
 ```
 
-## 使用 Web Console
+## ʹ�� Web Console
 
-开发模式下启动 Console：
+����ģʽ������ Console��
 
 ```bash
 pnpm dev
 ```
 
-然后访问：
+Ȼ����ʣ�
 
 - [http://127.0.0.1:5173](http://127.0.0.1:5173)
 
-主要页面：
+��Ҫҳ�棺
 
-- `/` 首页总览
-- `/traffic` 实时请求
-- `/requests` 已保存请求
-- `/mock` Mock 管理
-- `/debug` 手动调试
-- `/settings` 服务状态与配置
+- `/` ��ҳ����
+- `/traffic` ʵʱ����
+- `/requests` �ѱ�������
+- `/mock` Mock ����
+- `/debug` �ֶ�����
+- `/settings` ����״̬������
 
-详细说明见：
+��ϸ˵������
 
-- [Web Console 使用说明](/E:/code/polaris/docs/console.md)
+- [Web Console ʹ��˵��](/E:/code/polaris/docs/console.md)
 
-## 接入 MCP
+## ���� MCP
 
-Polaris 目前支持两种 MCP 接入方式。
+Polaris Ŀǰ֧������ MCP ���뷽ʽ��
 
-### 方式一：连接本地 HTTP MCP
+### ��ʽһ�����ӱ��� HTTP MCP
 
-这是更推荐的方式，适合“先启动 Polaris，再让 AI 工具连接到它”的场景。
+���Ǹ��Ƽ��ķ�ʽ���ʺϡ������� Polaris������ AI �������ӵ������ĳ�����
 
-默认地址：
+Ĭ�ϵ�ַ��
 
 ```text
-http://127.0.0.1:9002/mcp
+http://127.0.0.1:19602/mcp
 ```
 
-如果你不确定当前实际地址，可以执行：
+����㲻ȷ����ǰʵ�ʵ�ַ������ִ�У�
 
 ```bash
 pnpm polaris:status
 ```
 
-或者：
+���ߣ�
 
 ```bash
 node packages/cli/dist/bin.js mcp-url
 ```
 
-然后把输出地址填到你的 MCP 客户端里。
+Ȼ��������ַ���� MCP �ͻ����
 
-详细说明见：
+��ϸ˵������
 
-- [MCP 接入说明](/E:/code/polaris/docs/mcp.md)
+- [MCP ����˵��](/E:/code/polaris/docs/mcp.md)
 
-### 方式二：使用 stdio
+### ��ʽ����ʹ�� stdio
 
-如果你的工具只支持 stdio，可以使用：
+�����Ĺ���ֻ֧�� stdio������ʹ�ã�
 
 ```bash
 pnpm mcp
 ```
 
-开发调试模式：
+��������ģʽ��
 
 ```bash
 pnpm dev:mcp
 ```
 
-## 默认端口
+## Ĭ�϶˿�
 
-Polaris 默认优先使用：
+Polaris Ĭ������ʹ�ã�
 
-- 代理端口：`9000`
-- API 端口：`9001`
-- MCP 端口：`9002`
-- Console 开发端口：`5173`
+- �����˿ڣ�`19600`
+- API �˿ڣ�`19601`
+- MCP �˿ڣ�`19602`
+- Console �����˿ڣ�`5173`
 
-如果端口被占用，Polaris 会自动切换到下一个可用端口。
+����˿ڱ�ռ�ã�Polaris ���Զ��л�����һ�����ö˿ڡ�
 
-例如：
+���磺
 
-- API 可能从 `9001` 切到 `9004`
-- MCP 可能从 `9002` 切到 `9005`
+- API ���ܴ� `19601` �е� `19604`
+- MCP ���ܴ� `19602` �е� `19605`
 
-当前 Console 和浏览器扩展都已经支持自动发现 Core API 端口。
+��ǰ Console ���������չ���Ѿ�֧���Զ����� Core API �˿ڡ�
 
-## 浏览器扩展
+## �������չ
 
-构建扩展：
+������չ��
 
 ```bash
 pnpm --filter @polaris/extension build
 ```
 
-在 Chrome 或 Edge 中加载：
+�� Chrome �� Edge �м��أ�
 
 - [apps/extension/dist](/E:/code/polaris/apps/extension/dist)
 
-扩展弹窗当前支持：
+��չ������ǰ֧�֣�
 
-- 查看 Core 是否在线
-- 切换代理模式
-- 将当前站点加入或移出规则
-- 打开 Console 和设置页
+- �鿴 Core �Ƿ�����
+- �л�����ģʽ
+- ����ǰվ�������Ƴ�����
+- �� Console ������ҳ
 
-详细说明见：
+��ϸ˵������
 
-- [浏览器扩展使用说明](/E:/code/polaris/docs/extension.md)
+- [�������չʹ��˵��](/E:/code/polaris/docs/extension.md)
 
-## 本地数据目录
+## ��������Ŀ¼
 
-Polaris 默认把运行数据写到当前用户自己的本地目录，而不是仓库内。
+Polaris Ĭ�ϰ���������д����ǰ�û��Լ��ı���Ŀ¼�������ǲֿ��ڡ�
 
-默认位置：
+Ĭ��λ�ã�
 
-- Windows：`%LOCALAPPDATA%\\Polaris`
-- macOS：`~/Library/Application Support/Polaris`
-- Linux：`~/.local/state/polaris` 或 `$XDG_STATE_HOME/polaris`
+- Windows��`%LOCALAPPDATA%\\Polaris`
+- macOS��`~/Library/Application Support/Polaris`
+- Linux��`~/.local/state/polaris` �� `$XDG_STATE_HOME/polaris`
 
-这意味着：
+����ζ�ţ�
 
-- 每个人可以有自己的 Mock 数据
-- 本地证书和私钥不会进入 Git
-- 请求记录和运行状态不会污染仓库
+- ÿ���˿������Լ��� Mock ����
+- ����֤���˽Կ������� Git
+- �����¼������״̬������Ⱦ�ֿ�
 
-## 常用命令
+## ��������
 
-启动本地服务：
+�������ط���
 
 ```bash
 pnpm polaris:start
 ```
 
-停止本地服务：
+ֹͣ���ط���
 
 ```bash
 pnpm polaris:stop
 ```
 
-查看状态：
+�鿴״̬��
 
 ```bash
 pnpm polaris:status
 ```
 
-同时启动 Core 和 Console：
+ͬʱ���� Core �� Console��
 
 ```bash
 pnpm dev
 ```
 
-只启动 Core：
+ֻ���� Core��
 
 ```bash
 pnpm dev:core
 ```
 
-只启动 Console：
+ֻ���� Console��
 
 ```bash
 pnpm dev:console
 ```
 
-启动 stdio MCP：
+���� stdio MCP��
 
 ```bash
 pnpm mcp
 ```
 
-执行类型检查：
+ִ�����ͼ�飺
 
 ```bash
 pnpm typecheck
 ```
 
-执行构建：
+ִ�й�����
 
 ```bash
 pnpm build
 ```
 
-执行 smoke 检查：
+ִ�� smoke ��飺
 
 ```bash
 pnpm test:smoke
 ```
 
-更详细的本地开发说明见：
+����ϸ�ı��ؿ���˵������
 
-- [开发说明](/E:/code/polaris/docs/development.md)
+- [����˵��](/E:/code/polaris/docs/development.md)
 
-## 常见问题
+## ��������
 
-### 为什么 Polaris 没有使用默认端口
+### Ϊʲô Polaris û��ʹ��Ĭ�϶˿�
 
-这是正常行为。
+����������Ϊ��
 
-如果默认端口被占用，Polaris 会自动切换到新的可用端口。你可以用下面的命令查看当前实际端口：
+���Ĭ�϶˿ڱ�ռ�ã�Polaris ���Զ��л����µĿ��ö˿ڡ�����������������鿴��ǰʵ�ʶ˿ڣ�
 
 ```bash
 pnpm polaris:status
 ```
 
-### 为什么 Console 连不上 Core
+### Ϊʲô Console ������ Core
 
-优先检查：
+���ȼ�飺
 
-- Polaris 服务是否已启动
-- `pnpm polaris:status` 输出的健康检查地址是否可访问
-- Console 是否正常打开
+- Polaris �����Ƿ�������
+- `pnpm polaris:status` ����Ľ�������ַ�Ƿ�ɷ���
+- Console �Ƿ�������
 
-### 为什么扩展显示 Core 离线
+### Ϊʲô��չ��ʾ Core ����
 
-优先检查：
+���ȼ�飺
 
-- Polaris 是否正在运行
-- 扩展是否使用了最新构建产物
-- 当前 Core API 地址是否可访问
+- Polaris �Ƿ���������
+- ��չ�Ƿ�ʹ�������¹�������
+- ��ǰ Core API ��ַ�Ƿ�ɷ���
 
-### 为什么 MCP 客户端连接失败
+### Ϊʲô MCP �ͻ�������ʧ��
 
-优先检查：
+���ȼ�飺
 
-- 你接的是 HTTP MCP 还是 stdio
-- Polaris 是否已经启动
-- MCP 地址是否来自 `pnpm polaris:status`
+- ��ӵ��� HTTP MCP ���� stdio
+- Polaris �Ƿ��Ѿ�����
+- MCP ��ַ�Ƿ����� `pnpm polaris:status`
 
-## 说明
+## ˵��
 
-这份 README 主要面向使用者和接入者，重点说明：
+��� README ��Ҫ����ʹ���ߺͽ����ߣ��ص�˵����
 
-- Polaris 是什么
-- 如何启动
-- 如何接入 MCP
-- 如何开始使用
+- Polaris ��ʲô
+- �������
+- ��ν��� MCP
+- ��ο�ʼʹ��
 
-更细的实现细节和开发背景，适合继续拆到单独文档中维护。
+��ϸ��ʵ��ϸ�ںͿ����������ʺϼ����𵽵����ĵ���ά����
 
 ---
 
-## MCP 接入（2026 更新）
+## MCP ���루2026 ���£�
 
-Polaris 现在同时支持两种 MCP 暴露方式：全量能力接入与按 pack（能力包）接入。
+Polaris ����ͬʱ֧������ MCP ��¶��ʽ��ȫ�����������밴 pack�������������롣
 
-### 1）启动 Polaris 并获取 MCP 地址
+### 1������ Polaris ����ȡ MCP ��ַ
 
 ```bash
 pnpm polaris:start
@@ -327,37 +327,37 @@ pnpm polaris:status
 node packages/cli/dist/bin.js mcp-url
 ```
 
-默认 MCP 地址（若未发生端口回退）：
+Ĭ�� MCP ��ַ����δ�����˿ڻ��ˣ���
 
 ```text
-http://127.0.0.1:9002/mcp
+http://127.0.0.1:19602/mcp
 ```
 
-### 2）Streamable HTTP MCP
+### 2��Streamable HTTP MCP
 
-- 全量工具/资源：
+- ȫ������/��Դ��
   - `http://127.0.0.1:<mcpPort>/mcp`
-- 按 pack 过滤的工具/资源：
+- �� pack ���˵Ĺ���/��Դ��
   - `http://127.0.0.1:<mcpPort>/mcp/mock`
   - `http://127.0.0.1:<mcpPort>/mcp/proxy`
   - `http://127.0.0.1:<mcpPort>/mcp/request`
   - `http://127.0.0.1:<mcpPort>/mcp/ops`
 
-支持的 pack 别名：`mock`、`proxy`、`request`、`ops`。
+֧�ֵ� pack ������`mock`��`proxy`��`request`��`ops`��
 
-### 3）Legacy MCP HTTP（兼容模式）
+### 3��Legacy MCP HTTP������ģʽ��
 
-- 查看所有 pack：
+- �鿴���� pack��
   - `GET /packs`
-- 查看某个 pack 的工具：
+- �鿴ĳ�� pack �Ĺ��ߣ�
   - `GET /packs/:pack/tools`
-- 通过 pack 过滤工具/资源：
+- ͨ�� pack ���˹���/��Դ��
   - `GET /tools?pack=mock`
   - `GET /resources?pack=request`
-- 按 pack 约束执行工具：
+- �� pack Լ��ִ�й��ߣ�
   - `POST /invoke/:tool?pack=proxy`
 
-未知 pack 会返回结构化错误：
+δ֪ pack �᷵�ؽṹ������
 
 ```json
 {
@@ -369,86 +369,86 @@ http://127.0.0.1:9002/mcp
 }
 ```
 
-### 4）stdio MCP
+### 4��stdio MCP
 
-使用工作区脚本：
+ʹ�ù������ű���
 
 ```bash
 pnpm mcp
 pnpm dev:mcp
 ```
 
-或直接使用 CLI：
+��ֱ��ʹ�� CLI��
 
 ```bash
 node packages/cli/dist/bin.js mcp-stdio
 node packages/cli/dist/bin.js mcp-stdio --pack mock
 ```
 
-`--pack` 支持：`mock | proxy | request | ops`。
+`--pack` ֧�֣�`mock | proxy | request | ops`��
 
-### 5）Pack 定义
+### 5��Pack ����
 
 - `mock_pack.v1`
-  - Mock 规则生命周期管理 + 活动分组管理
+  - Mock �����������ڹ��� + ��������
 - `proxy_pack.v1`
-  - 代理模式管理 + Host 规则管理 + 代理决策预览
+  - ����ģʽ���� + Host ������� + ��������Ԥ��
 - `request_pack.v1`
-  - 抓包/保存请求查询 + 运行/回放 + 清理请求
+  - ץ��/���������ѯ + ����/�ط� + ��������
 - `ops_pack.v1`
-  - 健康状态/运行配置/证书就绪性查询
+  - ����״̬/��������/֤������Բ�ѯ
 
-### 6）推荐接入策略
+### 6���Ƽ��������
 
-- 对 AI Agent 默认使用 pack 接入，降低工具选择负担与上下文开销。
-- 保留全量 `/mcp` 入口用于管理与调试。
-- 保留 legacy 入口用于旧客户端兼容。
+- �� AI Agent Ĭ��ʹ�� pack ���룬���͹���ѡ�񸺵��������Ŀ�����
+- ����ȫ�� `/mcp` ������ڹ�������ԡ�
+- ���� legacy ������ھɿͻ��˼��ݡ�
 
-### 7）CLI/AI 工具配置示例
+### 7��CLI/AI ��������ʾ��
 
-下面给出通用 MCP 客户端常见的两种配置方式。不同工具字段名可能不同，但核心是 `url`（HTTP）或 `command + args`（stdio）。
+�������ͨ�� MCP �ͻ��˳������������÷�ʽ����ͬ�����ֶ������ܲ�ͬ���������� `url`��HTTP���� `command + args`��stdio����
 
-#### A. 连接 Streamable HTTP MCP（推荐）
+#### A. ���� Streamable HTTP MCP���Ƽ���
 
-先确认当前 MCP 地址：
+��ȷ�ϵ�ǰ MCP ��ַ��
 
 ```bash
 pnpm polaris:status
 ```
 
-通用示例（按 pack 连接，推荐）：
+ͨ��ʾ������ pack ���ӣ��Ƽ�����
 
 ```json
 {
   "mcpServers": {
     "polaris-request": {
       "transport": "http",
-      "url": "http://127.0.0.1:9002/mcp/request"
+      "url": "http://127.0.0.1:19602/mcp/request"
     },
     "polaris-mock": {
       "transport": "http",
-      "url": "http://127.0.0.1:9002/mcp/mock"
+      "url": "http://127.0.0.1:19602/mcp/mock"
     }
   }
 }
 ```
 
-如果你希望一个连接暴露全部能力：
+�����ϣ��һ�����ӱ�¶ȫ��������
 
 ```json
 {
   "mcpServers": {
     "polaris-all": {
       "transport": "http",
-      "url": "http://127.0.0.1:9002/mcp"
+      "url": "http://127.0.0.1:19602/mcp"
     }
   }
 }
 ```
 
-#### B. 连接 stdio MCP（仅当工具不支持 HTTP MCP）
+#### B. ���� stdio MCP���������߲�֧�� HTTP MCP��
 
-如果你是通过 `npm i -g polaris` 安装，优先使用全局命令：
+�������ͨ�� `npm i -g polaris` ��װ������ʹ��ȫ�����
 
 ```json
 {
@@ -468,7 +468,7 @@ pnpm polaris:status
 }
 ```
 
-如果不想全局安装，也可以使用 `npx`：
+�������ȫ�ְ�װ��Ҳ����ʹ�� `npx`��
 
 ```json
 {
@@ -490,31 +490,33 @@ pnpm polaris:status
 }
 ```
 
-说明：
+˵����
 
-- `--pack` 可选值：`mock | proxy | request | ops`。
-- `POLARIS_MCP_START_PROXY` 默认建议为 `false`，避免 stdio 进程额外占用本地代理端口。
-- 如果你确实希望 stdio 进程同时拉起本地代理，可显式改为 `true`。
-- 只有在“本地仓库开发模式”下，才建议使用 `node packages/cli/dist/bin.js ...` 这种路径方式。
+- `--pack` ��ѡֵ��`mock | proxy | request | ops`��
+- `POLARIS_MCP_START_PROXY` Ĭ�Ͻ���Ϊ `false`������ stdio ���̶���ռ�ñ��ش����˿ڡ�
+- �����ȷʵϣ�� stdio ����ͬʱ���𱾵ش���������ʽ��Ϊ `true`��
+- ֻ���ڡ����زֿ⿪��ģʽ���£��Ž���ʹ�� `node packages/cli/dist/bin.js ...` ����·����ʽ��
 
-#### C. 多工具拆分建议
+#### C. �๤�߲�ֽ���
 
-对支持多个 MCP server 的 AI 工具，建议按职责拆分：
+��֧�ֶ�� MCP server �� AI ���ߣ����鰴ְ���֣�
 
-- 代码/调试助手：接 `request + mock`
-- 网络问题排查助手：接 `proxy + ops`
-- 管理员助手：接 `all` 或 `ops`
+- ����/�������֣��� `request + mock`
+- ���������Ų����֣��� `proxy + ops`
+- ����Ա���֣��� `all` �� `ops`
 
-这样可以减少模型可见工具数量，降低工具选择错误和上下文负担。
+�������Լ���ģ�Ϳɼ��������������͹���ѡ�����������ĸ�����
 
-#### D. 其他可用接入方案
+#### D. �������ý��뷽��
 
-- Streamable HTTP（推荐）
-  - 适合长期稳定接入与多工具共享
-  - 地址示例：`http://127.0.0.1:9002/mcp/request`
-- stdio（兼容）
-  - 适合仅支持命令启动 MCP 的工具
-  - 推荐用全局 `polaris mcp-stdio --pack <pack>`
-- Legacy HTTP（兼容旧客户端）
-  - 使用 `/tools`、`/resources`、`/invoke/:tool` 接口
-  - 适合尚未完整支持 Streamable MCP 的集成
+- Streamable HTTP���Ƽ���
+  - �ʺϳ����ȶ�������๤�߹���
+  - ��ַʾ����`http://127.0.0.1:19602/mcp/request`
+- stdio�����ݣ�
+  - �ʺϽ�֧���������� MCP �Ĺ���
+  - �Ƽ���ȫ�� `polaris mcp-stdio --pack <pack>`
+- Legacy HTTP�����ݾɿͻ��ˣ�
+  - ʹ�� `/tools`��`/resources`��`/invoke/:tool` �ӿ�
+  - �ʺ���δ����֧�� Streamable MCP �ļ���
+
+

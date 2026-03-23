@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { buildCurl } from "../../features/common/curl";
 import { useToast } from "../../features/feedback/ToastProvider";
@@ -10,6 +10,7 @@ import { useMockWorkspace } from "../mock/hooks/useMockWorkspace";
 import { buildEmptyForm } from "../mock/utils/mockHelpers";
 import { TrafficCertificateModal } from "./components/TrafficCertificateModal";
 import { TrafficDetailPane } from "./components/TrafficDetailPane";
+import { TrafficProxyGuideModal } from "./components/TrafficProxyGuideModal";
 import { TrafficRequestPane } from "./components/TrafficRequestPane";
 import { TrafficToolbar } from "./components/TrafficToolbar";
 import { useTrafficWorkspace } from "./hooks/useTrafficWorkspace";
@@ -30,10 +31,12 @@ export function TrafficPage() {
     showToast,
     t,
   });
+  const [isProxyGuideOpen, setIsProxyGuideOpen] = useState(false);
 
   const certificatePlatform = useMemo(() => getCertificatePlatform(), []);
+  const browserHostname = window.location.hostname || "127.0.0.1";
   const rootCertificateUrl = workspace.settings
-    ? `http://127.0.0.1:${workspace.settings.localApiPort}/api/certificates/root-ca`
+    ? `http://${browserHostname}:${workspace.settings.localApiPort}/api/certificates/root-ca`
     : "#";
 
   const copyText = async (value: string) => {
@@ -69,6 +72,7 @@ export function TrafficPage() {
       variant: `${workspace.selected.method} ${workspace.selected.path}`,
       method: workspace.selected.method,
       url: workspace.selected.url,
+      requestBodyExactMatch: "",
       requestBodyKeyMatch: "",
       responseStatus: workspace.selected.statusCode,
       responseHeaders: JSON.stringify(workspace.selected.responseHeaders ?? {}, null, 2),
@@ -124,6 +128,7 @@ export function TrafficPage() {
         onClear={() => void clearRequests()}
         onCreateMock={createMockFromSelected}
         onOpenCertificate={() => workspace.setIsCertificateModalOpen(true)}
+        onOpenProxyGuide={() => setIsProxyGuideOpen(true)}
         onOpenDebug={openInDebug}
         onOpenMockPage={() => navigate("/mock")}
         onReplay={() => void replaySelected()}
@@ -150,6 +155,12 @@ export function TrafficPage() {
         rootCertificateUrl={rootCertificateUrl}
         settings={workspace.settings}
         t={t}
+      />
+
+      <TrafficProxyGuideModal
+        isOpen={isProxyGuideOpen}
+        onClose={() => setIsProxyGuideOpen(false)}
+        settings={workspace.settings}
       />
 
       <section className={styles.workspace}>

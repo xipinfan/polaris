@@ -3,7 +3,7 @@ import net from "node:net";
 const PORT_SEARCH_WINDOW = 100;
 const LOOPBACK_HOST = "127.0.0.1";
 
-async function listenOnPort<TServer extends net.Server>(server: TServer, port: number): Promise<number> {
+async function listenOnPort<TServer extends net.Server>(server: TServer, port: number, host: string): Promise<number> {
   return new Promise((resolve, reject) => {
     const handleError = (error: NodeJS.ErrnoException) => {
       cleanup();
@@ -26,7 +26,7 @@ async function listenOnPort<TServer extends net.Server>(server: TServer, port: n
 
     server.once("error", handleError);
     server.once("listening", handleListening);
-    server.listen(port, LOOPBACK_HOST);
+    server.listen(port, host);
   });
 }
 
@@ -42,7 +42,8 @@ function isRecoverablePortError(error: unknown): boolean {
 export async function bindServerWithFallback<TServer extends net.Server>(
   createServer: () => TServer,
   preferredPort: number,
-  usedPorts: Set<number>
+  usedPorts: Set<number>,
+  host = LOOPBACK_HOST
 ): Promise<{ server: TServer; port: number }> {
   for (let port = preferredPort; port < preferredPort + PORT_SEARCH_WINDOW; port += 1) {
     if (usedPorts.has(port)) {
@@ -51,7 +52,7 @@ export async function bindServerWithFallback<TServer extends net.Server>(
 
     const server = createServer();
     try {
-      const boundPort = await listenOnPort(server, port);
+      const boundPort = await listenOnPort(server, port, host);
       usedPorts.add(boundPort);
       return { server, port: boundPort };
     } catch (error) {
@@ -62,7 +63,7 @@ export async function bindServerWithFallback<TServer extends net.Server>(
   }
 
   const server = createServer();
-  const boundPort = await listenOnPort(server, 0);
+  const boundPort = await listenOnPort(server, 0, host);
   usedPorts.add(boundPort);
   return { server, port: boundPort };
 }

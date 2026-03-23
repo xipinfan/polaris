@@ -36,7 +36,7 @@ export function TrafficDetailDrawer({ rule, onClose }: TrafficDetailDrawerProps)
             </div>
           </div>
 
-          <Card bordered={false} className={localStyles.drawerSection}>
+          <Card variant="borderless" className={localStyles.drawerSection}>
             <div className={localStyles.drawerSectionHeader}>
               <span>请求信息</span>
               <Badge
@@ -56,7 +56,7 @@ export function TrafficDetailDrawer({ rule, onClose }: TrafficDetailDrawerProps)
             </div>
           </Card>
 
-          <Card bordered={false} className={localStyles.drawerSection}>
+          <Card variant="borderless" className={localStyles.drawerSection}>
             <div className={localStyles.drawerSectionHeader}><span>转发结果</span></div>
             <div className={localStyles.drawerGrid}>
               <div><span>命中规则</span><strong>{rule.name}</strong></div>

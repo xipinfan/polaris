@@ -31,7 +31,7 @@ export function HomeHero({
 }: HomeHeroProps) {
   return (
     <section className={`${localStyles.hero} ${localStyles.root}`}>
-      <Card bordered={false} className={localStyles.heroMain}>
+      <Card variant="borderless" className={localStyles.heroMain}>
         <div aria-hidden="true" className={localStyles.heroHalo} />
         <div className={localStyles.heroBody}>
           <div className={localStyles.heroIntro}>
@@ -77,14 +77,14 @@ export function HomeHero({
           </div>
 
           <div className={localStyles.metricGrid}>
-            <Card bordered={false} className={localStyles.metricCard}>
+            <Card variant="borderless" className={localStyles.metricCard}>
               <Statistic
                 title={t("home.metric.proxyPort")}
                 value={snapshot.status.proxyPort}
               />
               <Text type="secondary">{t("home.workspaceLabel")}</Text>
             </Card>
-            <Card bordered={false} className={localStyles.metricCard}>
+            <Card variant="borderless" className={localStyles.metricCard}>
               <Statistic
                 title={t("home.metric.recentRequests")}
                 value={snapshot.recentRequests.length}
@@ -95,7 +95,7 @@ export function HomeHero({
                 })}
               </Text>
             </Card>
-            <Card bordered={false} className={localStyles.metricCard}>
+            <Card variant="borderless" className={localStyles.metricCard}>
               <Statistic
                 title={t("home.metric.mockVariants")}
                 value={snapshot.mockRules.length}
@@ -108,7 +108,7 @@ export function HomeHero({
         </div>
       </Card>
 
-      <Card bordered={false} className={localStyles.sideCard}>
+      <Card variant="borderless" className={localStyles.sideCard}>
         <div className={localStyles.sideSection}>
           <Title level={4}>{t("home.nextActionTitle")}</Title>
           <Paragraph>{t("home.nextActionBody")}</Paragraph>

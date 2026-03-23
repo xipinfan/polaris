@@ -33,6 +33,14 @@ function normalizeBodyKeyMatch(value: unknown): string | null {
   return next ? next : null;
 }
 
+function normalizeBodyExactMatch(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const next = value.trim();
+  return next ? next : null;
+}
+
 function hasBodyKeyPath(value: unknown, keyPath: string): boolean {
   if (value === null || value === undefined || typeof value !== "object") {
     return false;
@@ -71,6 +79,106 @@ function hasBodyKeyPath(value: unknown, keyPath: string): boolean {
   return true;
 }
 
+function getBodyPathValue(value: unknown, keyPath: string): { found: boolean; value?: unknown } {
+  if (value === null || value === undefined || typeof value !== "object") {
+    return { found: false };
+  }
+
+  const segments = keyPath
+    .split(".")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (segments.length === 0) {
+    return { found: false };
+  }
+
+  let current: unknown = value;
+  for (const segment of segments) {
+    if (Array.isArray(current)) {
+      const index = Number(segment);
+      if (!Number.isInteger(index) || index < 0 || index >= current.length) {
+        return { found: false };
+      }
+      current = current[index];
+      continue;
+    }
+    if (current === null || typeof current !== "object") {
+      return { found: false };
+    }
+    if (!(segment in (current as Record<string, unknown>))) {
+      return { found: false };
+    }
+    current = (current as Record<string, unknown>)[segment];
+  }
+
+  return { found: true, value: current };
+}
+
+type ExactBodyCondition = { path: string; expected: string };
+
+function parseExactBodyMatch(expression?: string | null): ExactBodyCondition[] | null {
+  if (!expression) {
+    return [];
+  }
+
+  const conditions: ExactBodyCondition[] = [];
+  const entries = expression
+    .split(/[\n;]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  for (const entry of entries) {
+    const separatorIndex = entry.indexOf(":");
+    if (separatorIndex <= 0) {
+      return null;
+    }
+
+    const path = entry.slice(0, separatorIndex).trim();
+    const expectedLiteral = entry.slice(separatorIndex + 1).trim();
+    if (!path || !expectedLiteral) {
+      return null;
+    }
+
+    if (!(expectedLiteral.startsWith("\"") && expectedLiteral.endsWith("\""))) {
+      return null;
+    }
+
+    try {
+      const expected = JSON.parse(expectedLiteral);
+      if (typeof expected !== "string") {
+        return null;
+      }
+      conditions.push({ path, expected });
+    } catch {
+      return null;
+    }
+  }
+
+  return conditions;
+}
+
+function matchesExactBodyExpression(requestBody: unknown, expression?: string | null): boolean {
+  const conditions = parseExactBodyMatch(expression);
+  if (conditions === null) {
+    return false;
+  }
+  if (!conditions.length) {
+    return true;
+  }
+
+  for (const condition of conditions) {
+    const resolved = getBodyPathValue(requestBody, condition.path);
+    if (!resolved.found) {
+      return false;
+    }
+    if (typeof resolved.value !== "string" || resolved.value !== condition.expected) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export class MockService {
   constructor(
     private readonly storage: StorageAdapter,
@@ -102,6 +210,7 @@ export class MockService {
       name: nextName,
       method: input.method.toUpperCase(),
       url: input.url,
+      requestBodyExactMatch: normalizeBodyExactMatch(input.requestBodyExactMatch),
       requestBodyKeyMatch: normalizeBodyKeyMatch(input.requestBodyKeyMatch),
       responseStatus: input.responseStatus,
       responseHeaders: input.responseHeaders ?? {},
@@ -133,6 +242,7 @@ export class MockService {
         groupFromInput ?? getRuleGroup(target),
       ),
       method: input.method.toUpperCase(),
+      requestBodyExactMatch: normalizeBodyExactMatch(input.requestBodyExactMatch),
       requestBodyKeyMatch: normalizeBodyKeyMatch(input.requestBodyKeyMatch),
       responseBody: normalizeBody(input.responseBody),
       updatedAt: new Date().toISOString()
@@ -188,6 +298,10 @@ export class MockService {
     const activeGroup = this.getActiveGroup();
     return this.list().find((rule) => {
       if (!rule.enabled || rule.method !== method.toUpperCase() || !url.includes(rule.url)) {
+        return false;
+      }
+
+      if (!matchesExactBodyExpression(requestBody, rule.requestBodyExactMatch)) {
         return false;
       }
 

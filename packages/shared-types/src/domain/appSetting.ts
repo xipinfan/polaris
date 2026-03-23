@@ -4,6 +4,7 @@ export interface AppSetting {
   localProxyPort: number;
   localApiPort: number;
   mcpPort: number;
+  lanIp?: string;
   currentProxyMode: ProxyMode;
   certificateInstalled: boolean;
   mcpEnabled: boolean;

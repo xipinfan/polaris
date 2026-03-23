@@ -89,7 +89,7 @@ const RuleEditorModal = ({
                 onChange={(event) =>
                   setRuleForm((current) => ({ ...current, targetUrl: event.target.value }))
                 }
-                placeholder="http://127.0.0.1:9001/v1/resource"
+                placeholder="http://127.0.0.1:3000/v1/resource"
                 value={ruleForm.targetUrl}
               />
             </label>

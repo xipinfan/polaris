@@ -3,7 +3,12 @@ import type { RequestRecord } from "@polaris/shared-types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { MenuProps } from "antd";
 import { Modal } from "antd";
-import { asRecord, buildExportEnvelope, downloadJson, pickJsonFile } from "../../features/common/importExport";
+import {
+  asRecord,
+  buildExportEnvelope,
+  downloadJson,
+  pickJsonFile,
+} from "../../features/common/importExport";
 import {
   useRemoveProxyForwardSiteRuleMutation,
   useSetActiveProxyForwardGroupMutation,
@@ -66,7 +71,9 @@ export function ProxyForwardPage() {
   const setActiveGroupMutation = useSetActiveProxyForwardGroupMutation();
   const upsertRuleMutation = useUpsertProxyForwardSiteRuleMutation();
   const removeRuleMutation = useRemoveProxyForwardSiteRuleMutation();
-  const [pendingRuleIds, setPendingRuleIds] = useState<Record<string, boolean>>({});
+  const [pendingRuleIds, setPendingRuleIds] = useState<Record<string, boolean>>(
+    {},
+  );
 
   const requests = trafficQuery.data ?? ([] as RequestRecord[]);
 
@@ -76,41 +83,68 @@ export function ProxyForwardPage() {
   const sortMode = useUiStore(uiSelectors.proxySortMode);
   const setProxyRuleSearch = useUiStore((state) => state.setProxyRuleSearch);
   const setProxyFilterMode = useUiStore((state) => state.setProxyFilterMode);
-  const storeActiveGroupId = useWorkspaceStore(workspaceSelectors.proxyActiveGroupId);
-  const headerMenuOpen = useWorkspaceStore(workspaceSelectors.proxyHeaderMenuOpen);
+  const storeActiveGroupId = useWorkspaceStore(
+    workspaceSelectors.proxyActiveGroupId,
+  );
+  const headerMenuOpen = useWorkspaceStore(
+    workspaceSelectors.proxyHeaderMenuOpen,
+  );
   const editingRule = useWorkspaceStore(workspaceSelectors.proxyEditingRule);
   const editingGroup = useWorkspaceStore(workspaceSelectors.proxyEditingGroup);
   const proxyRuleForm = useWorkspaceStore(workspaceSelectors.proxyRuleForm);
-  const isRuleModalOpen = useWorkspaceStore(workspaceSelectors.proxyRuleModalOpen);
-  const isGroupModalOpen = useWorkspaceStore(workspaceSelectors.proxyGroupModalOpen);
+  const isRuleModalOpen = useWorkspaceStore(
+    workspaceSelectors.proxyRuleModalOpen,
+  );
+  const isGroupModalOpen = useWorkspaceStore(
+    workspaceSelectors.proxyGroupModalOpen,
+  );
   const submitting = useWorkspaceStore(workspaceSelectors.proxySubmitting);
   const groupName = useWorkspaceStore(workspaceSelectors.proxyGroupName);
 
-  const setActiveGroupId = useWorkspaceStore((state) => state.setProxyActiveGroupId);
-  const setHeaderMenuOpen = useWorkspaceStore((state) => state.setProxyHeaderMenuOpen);
-  const setEditingRule = useWorkspaceStore((state) => state.setProxyEditingRule);
-  const setEditingGroup = useWorkspaceStore((state) => state.setProxyEditingGroup);
+  const setActiveGroupId = useWorkspaceStore(
+    (state) => state.setProxyActiveGroupId,
+  );
+  const setHeaderMenuOpen = useWorkspaceStore(
+    (state) => state.setProxyHeaderMenuOpen,
+  );
+  const setEditingRule = useWorkspaceStore(
+    (state) => state.setProxyEditingRule,
+  );
+  const setEditingGroup = useWorkspaceStore(
+    (state) => state.setProxyEditingGroup,
+  );
   const setProxyRuleForm = useWorkspaceStore((state) => state.setProxyRuleForm);
-  const setIsRuleModalOpen = useWorkspaceStore((state) => state.setProxyRuleModalOpen);
-  const setIsGroupModalOpen = useWorkspaceStore((state) => state.setProxyGroupModalOpen);
+  const setIsRuleModalOpen = useWorkspaceStore(
+    (state) => state.setProxyRuleModalOpen,
+  );
+  const setIsGroupModalOpen = useWorkspaceStore(
+    (state) => state.setProxyGroupModalOpen,
+  );
   const setSubmitting = useWorkspaceStore((state) => state.setProxySubmitting);
   const setGroupName = useWorkspaceStore((state) => state.setProxyGroupName);
 
   const groups = groupsQuery.data?.groups ?? [fallbackGroup];
-  const queryActiveGroupId = groupsQuery.data?.activeGroupId ?? groups[0]?.id ?? fallbackGroup.id;
+  const queryActiveGroupId =
+    groupsQuery.data?.activeGroupId ?? groups[0]?.id ?? fallbackGroup.id;
   const activeGroupId =
-    storeActiveGroupId && groups.some((group) => group.id === storeActiveGroupId)
+    storeActiveGroupId &&
+    groups.some((group) => group.id === storeActiveGroupId)
       ? storeActiveGroupId
       : queryActiveGroupId;
 
   const ruleForm = proxyRuleForm ?? buildEmptyRule(defaultGroupLabel);
 
-  const setRuleForm = (updater: (current: StoredForwardRule) => StoredForwardRule) => {
+  const setRuleForm = (
+    updater: (current: StoredForwardRule) => StoredForwardRule,
+  ) => {
     const next = updater(ruleForm);
     setProxyRuleForm(next);
   };
 
-  const commitGroups = (nextGroups: StoredGroup[], nextActiveGroupId: string) => {
+  const commitGroups = (
+    nextGroups: StoredGroup[],
+    nextActiveGroupId: string,
+  ) => {
     writePersistence(groupsStorageKey, nextGroups);
     writePersistence(activeGroupStorageKey, nextActiveGroupId);
     setActiveGroupId(nextActiveGroupId);
@@ -120,7 +154,11 @@ export function ProxyForwardPage() {
     });
   };
 
-  const buildRuleCollisionKey = (rule: { pattern: string; method: string; path: string }) =>
+  const buildRuleCollisionKey = (rule: {
+    pattern: string;
+    method: string;
+    path: string;
+  }) =>
     `${sanitizeText(rule.method, "GET").toUpperCase()}__${sanitizeText(rule.pattern, "").toLowerCase()}__${derivePath(rule.path)}`;
 
   const toExportableGroup = (group: StoredGroup) => ({
@@ -153,7 +191,9 @@ export function ProxyForwardPage() {
     }
 
     const payload = asRecord(record.payload);
-    const importedGroups = Array.isArray(payload?.groups) ? (payload.groups as ImportProxyGroup[]) : [];
+    const importedGroups = Array.isArray(payload?.groups)
+      ? (payload.groups as ImportProxyGroup[])
+      : [];
     if (!importedGroups.length) {
       throw new Error("导入内容为空");
     }
@@ -165,7 +205,8 @@ export function ProxyForwardPage() {
     let skipped = 0;
 
     const nextGroups = [...groups];
-    const activeGroupName = groups.find((group) => group.id === activeGroupId)?.name ?? "";
+    const activeGroupName =
+      groups.find((group) => group.id === activeGroupId)?.name ?? "";
     const importedGroupNames = new Set<string>();
 
     for (const importedGroup of importedGroups) {
@@ -177,17 +218,23 @@ export function ProxyForwardPage() {
       importedGroupNames.add(groupName);
 
       const existingGroupIndex = nextGroups.findIndex(
-        (group) => sanitizeText(group.name, "").toLowerCase() === groupName.toLowerCase(),
+        (group) =>
+          sanitizeText(group.name, "").toLowerCase() ===
+          groupName.toLowerCase(),
       );
       const fallbackRule = buildEmptyRule(groupName);
-      const importedRules = Array.isArray(importedGroup.rules) ? importedGroup.rules : [];
+      const importedRules = Array.isArray(importedGroup.rules)
+        ? importedGroup.rules
+        : [];
 
       if (existingGroupIndex < 0) {
         const newRules: StoredForwardRule[] = [];
         for (const importedRule of importedRules) {
           const pattern = sanitizeText(importedRule.pattern, "").toLowerCase();
           const method = sanitizeText(importedRule.method, "GET").toUpperCase();
-          const path = derivePath(importedRule.path ?? parseSourceUrl(importedRule.url)?.path ?? "/");
+          const path = derivePath(
+            importedRule.path ?? parseSourceUrl(importedRule.url)?.path ?? "/",
+          );
           if (!pattern) {
             skipped += 1;
             continue;
@@ -195,12 +242,18 @@ export function ProxyForwardPage() {
           newRules.push({
             ...fallbackRule,
             id: createId("proxy-rule"),
-            name: sanitizeText(importedRule.name, sanitizeText(importedRule.url, pattern)),
+            name: sanitizeText(
+              importedRule.name,
+              sanitizeText(importedRule.url, pattern),
+            ),
             pattern,
             method,
             path,
             url: sanitizeText(importedRule.url, `https://${pattern}${path}`),
-            targetUrl: sanitizeText(importedRule.targetUrl, fallbackRule.targetUrl),
+            targetUrl: sanitizeText(
+              importedRule.targetUrl,
+              fallbackRule.targetUrl,
+            ),
             action: importedRule.action === "direct" ? "direct" : "proxy",
             enabled: Boolean(importedRule.enabled),
             createdAt: new Date().toISOString(),
@@ -208,19 +261,29 @@ export function ProxyForwardPage() {
           });
           ruleCreated += 1;
         }
-        nextGroups.push({ id: createId("proxy-group"), name: groupName, rules: newRules });
+        nextGroups.push({
+          id: createId("proxy-group"),
+          name: groupName,
+          rules: newRules,
+        });
         groupCreated += 1;
         continue;
       }
 
       const existingGroup = nextGroups[existingGroupIndex];
-      const indexByKey = new Map(existingGroup.rules.map((rule) => [buildRuleCollisionKey(rule), rule] as const));
+      const indexByKey = new Map(
+        existingGroup.rules.map(
+          (rule) => [buildRuleCollisionKey(rule), rule] as const,
+        ),
+      );
       const mergedRules = [...existingGroup.rules];
 
       for (const importedRule of importedRules) {
         const pattern = sanitizeText(importedRule.pattern, "").toLowerCase();
         const method = sanitizeText(importedRule.method, "GET").toUpperCase();
-        const path = derivePath(importedRule.path ?? parseSourceUrl(importedRule.url)?.path ?? "/");
+        const path = derivePath(
+          importedRule.path ?? parseSourceUrl(importedRule.url)?.path ?? "/",
+        );
         if (!pattern) {
           skipped += 1;
           continue;
@@ -251,12 +314,18 @@ export function ProxyForwardPage() {
         mergedRules.unshift({
           ...fallbackRule,
           id: createId("proxy-rule"),
-          name: sanitizeText(importedRule.name, sanitizeText(importedRule.url, pattern)),
+          name: sanitizeText(
+            importedRule.name,
+            sanitizeText(importedRule.url, pattern),
+          ),
           pattern,
           method,
           path,
           url: sanitizeText(importedRule.url, `https://${pattern}${path}`),
-          targetUrl: sanitizeText(importedRule.targetUrl, fallbackRule.targetUrl),
+          targetUrl: sanitizeText(
+            importedRule.targetUrl,
+            fallbackRule.targetUrl,
+          ),
           action: importedRule.action === "direct" ? "direct" : "proxy",
           enabled: Boolean(importedRule.enabled),
           createdAt: new Date().toISOString(),
@@ -268,14 +337,18 @@ export function ProxyForwardPage() {
       groupUpdated += 1;
     }
 
-    const nextActiveGroupId = nextGroups.some((group) => group.id === activeGroupId)
+    const nextActiveGroupId = nextGroups.some(
+      (group) => group.id === activeGroupId,
+    )
       ? activeGroupId
-      : nextGroups[0]?.id ?? activeGroupId;
+      : (nextGroups[0]?.id ?? activeGroupId);
     commitGroups(nextGroups, nextActiveGroupId);
 
     const importedCurrentActiveGroup = importedGroupNames.has(activeGroupName);
     if (importedCurrentActiveGroup) {
-      const currentActiveGroup = nextGroups.find((group) => group.id === nextActiveGroupId);
+      const currentActiveGroup = nextGroups.find(
+        (group) => group.id === nextActiveGroupId,
+      );
       if (currentActiveGroup) {
         await setActiveGroupMutation.mutateAsync({ group: currentActiveGroup });
       }
@@ -323,19 +396,28 @@ export function ProxyForwardPage() {
 
   const visibleGroups = useMemo(() => {
     const keyword = sanitizeText(groupSearch, "").toLowerCase();
-    return groups.filter((group) => !keyword || group.name.toLowerCase().includes(keyword));
+    return groups.filter(
+      (group) => !keyword || group.name.toLowerCase().includes(keyword),
+    );
   }, [groupSearch, groups]);
 
-  const activeGroup = groups.find((group) => group.id === activeGroupId) ?? groups[0] ?? null;
+  const activeGroup =
+    groups.find((group) => group.id === activeGroupId) ?? groups[0] ?? null;
   const rules = useMemo(
-    () => (activeGroup ? activeGroup.rules.map((rule) => buildRuleStats(rule, requests)) : []),
+    () =>
+      activeGroup
+        ? activeGroup.rules.map((rule) => buildRuleStats(rule, requests))
+        : [],
     [activeGroup, requests],
   );
 
   const filteredRules = useMemo(() => {
     const keyword = sanitizeText(ruleSearch, "").toLowerCase();
     const next = rules.filter((rule) => {
-      if (keyword && !`${rule.name} ${rule.pattern}`.toLowerCase().includes(keyword)) {
+      if (
+        keyword &&
+        !`${rule.name} ${rule.pattern}`.toLowerCase().includes(keyword)
+      ) {
         return false;
       }
       if (filterMode === "enabled" && !rule.enabled) {
@@ -354,7 +436,9 @@ export function ProxyForwardPage() {
       if (sortMode === "hits") {
         return right.hitCountToday - left.hitCountToday;
       }
-      return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+      return (
+        new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
+      );
     });
 
     return next;
@@ -362,7 +446,8 @@ export function ProxyForwardPage() {
 
   const overview = useMemo(() => {
     const total = activeGroup?.rules.length ?? 0;
-    const enabled = activeGroup?.rules.filter((rule) => rule.enabled).length ?? 0;
+    const enabled =
+      activeGroup?.rules.filter((rule) => rule.enabled).length ?? 0;
     const hits = rules.reduce((sum, rule) => sum + rule.hitCountToday, 0);
     const errors = rules.reduce((sum, rule) => sum + rule.recentErrorCount, 0);
     return { total, enabled, hits, errors };
@@ -373,7 +458,9 @@ export function ProxyForwardPage() {
     updater: (rules: StoredForwardRule[]) => StoredForwardRule[],
   ) =>
     currentGroups.map((group) =>
-      group.id === activeGroupId ? { ...group, rules: updater(group.rules) } : group,
+      group.id === activeGroupId
+        ? { ...group, rules: updater(group.rules) }
+        : group,
     );
 
   const hasOtherEnabledRuleWithPattern = (
@@ -385,7 +472,8 @@ export function ProxyForwardPage() {
       (item) =>
         item.id !== excludeRuleId &&
         item.enabled &&
-        sanitizeText(item.pattern, "").toLowerCase() === sanitizeText(pattern, "").toLowerCase(),
+        sanitizeText(item.pattern, "").toLowerCase() ===
+          sanitizeText(pattern, "").toLowerCase(),
     );
 
   const normalizeHost = (host: unknown) => sanitizeText(host, "").toLowerCase();
@@ -427,7 +515,9 @@ export function ProxyForwardPage() {
     setRulePending(rule.id, true);
     const previousGroups = groups;
     const nextGroups = updateActiveGroupRules(previousGroups, (activeRules) =>
-      activeRules.map((item) => (item.id === rule.id ? { ...item, enabled: checked } : item)),
+      activeRules.map((item) =>
+        item.id === rule.id ? { ...item, enabled: checked } : item,
+      ),
     );
     commitGroups(nextGroups, activeGroupId);
 
@@ -438,10 +528,17 @@ export function ProxyForwardPage() {
           action: rule.action,
         });
       } else {
-        const activeRules = nextGroups.find((group) => group.id === activeGroupId)?.rules ?? [];
-        const shouldRemoveHost = !hasOtherEnabledRuleWithPattern(rule.pattern, rule.id, activeRules);
+        const activeRules =
+          nextGroups.find((group) => group.id === activeGroupId)?.rules ?? [];
+        const shouldRemoveHost = !hasOtherEnabledRuleWithPattern(
+          rule.pattern,
+          rule.id,
+          activeRules,
+        );
         if (shouldRemoveHost) {
-          await removeRuleMutation.mutateAsync({ host: normalizeHost(rule.pattern) });
+          await removeRuleMutation.mutateAsync({
+            host: normalizeHost(rule.pattern),
+          });
         }
       }
     } catch (error) {
@@ -465,10 +562,17 @@ export function ProxyForwardPage() {
 
     try {
       if (rule.enabled) {
-        const activeRules = nextGroups.find((group) => group.id === activeGroupId)?.rules ?? [];
-        const shouldRemoveHost = !hasOtherEnabledRuleWithPattern(rule.pattern, rule.id, activeRules);
+        const activeRules =
+          nextGroups.find((group) => group.id === activeGroupId)?.rules ?? [];
+        const shouldRemoveHost = !hasOtherEnabledRuleWithPattern(
+          rule.pattern,
+          rule.id,
+          activeRules,
+        );
         if (shouldRemoveHost) {
-          await removeRuleMutation.mutateAsync({ host: normalizeHost(rule.pattern) });
+          await removeRuleMutation.mutateAsync({
+            host: normalizeHost(rule.pattern),
+          });
         }
       }
       showToast("规则已删除", "success");
@@ -502,7 +606,10 @@ export function ProxyForwardPage() {
     const pattern =
       parsedSource?.host ?? sanitizeText(ruleForm.pattern, "").toLowerCase();
     if (!pattern) {
-      showToast("请填写有效的来源 URL，例如 https://api.example.com/v1/resource", "error");
+      showToast(
+        "请填写有效的来源 URL，例如 https://api.example.com/v1/resource",
+        "error",
+      );
       return;
     }
 
@@ -526,7 +633,9 @@ export function ProxyForwardPage() {
         sourceUrlInput ||
         pattern,
       pattern,
-      url: parsedSource?.normalizedUrl ?? (sourceUrlInput || `https://${pattern}${normalizedPath}`),
+      url:
+        parsedSource?.normalizedUrl ??
+        (sourceUrlInput || `https://${pattern}${normalizedPath}`),
       path: normalizedPath,
       createdAt: editingRule?.createdAt ?? new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -542,18 +651,22 @@ export function ProxyForwardPage() {
     commitGroups(nextGroups, activeGroupId);
 
     const previousPattern = editingRule?.pattern;
-    const patternChanged = !!editingRule && previousPattern !== nextRule.pattern;
+    const patternChanged =
+      !!editingRule && previousPattern !== nextRule.pattern;
 
     try {
       if (editingRule?.enabled && patternChanged && previousPattern) {
-        const nextActiveRules = nextGroups.find((group) => group.id === activeGroupId)?.rules ?? [];
+        const nextActiveRules =
+          nextGroups.find((group) => group.id === activeGroupId)?.rules ?? [];
         const shouldRemovePreviousHost = !hasOtherEnabledRuleWithPattern(
           previousPattern,
           editingRule.id,
           nextActiveRules,
         );
         if (shouldRemovePreviousHost) {
-          await removeRuleMutation.mutateAsync({ host: normalizeHost(previousPattern) });
+          await removeRuleMutation.mutateAsync({
+            host: normalizeHost(previousPattern),
+          });
         }
       }
       if (nextRule.enabled) {
@@ -562,14 +675,17 @@ export function ProxyForwardPage() {
           action: nextRule.action,
         });
       } else if (editingRule?.enabled && !patternChanged) {
-        const nextActiveRules = nextGroups.find((group) => group.id === activeGroupId)?.rules ?? [];
+        const nextActiveRules =
+          nextGroups.find((group) => group.id === activeGroupId)?.rules ?? [];
         const shouldRemoveHost = !hasOtherEnabledRuleWithPattern(
           editingRule.pattern,
           editingRule.id,
           nextActiveRules,
         );
         if (shouldRemoveHost) {
-          await removeRuleMutation.mutateAsync({ host: normalizeHost(editingRule.pattern) });
+          await removeRuleMutation.mutateAsync({
+            host: normalizeHost(editingRule.pattern),
+          });
         }
       }
       setProxyFilterMode("all");
@@ -601,11 +717,16 @@ export function ProxyForwardPage() {
     }
     if (editingGroup) {
       commitGroups(
-        groups.map((group) => (group.id === editingGroup.id ? { ...group, name: nextName } : group)),
+        groups.map((group) =>
+          group.id === editingGroup.id ? { ...group, name: nextName } : group,
+        ),
         activeGroupId,
       );
     } else {
-      commitGroups([...groups, { id: createId("proxy-group"), name: nextName, rules: [] }], activeGroupId);
+      commitGroups(
+        [...groups, { id: createId("proxy-group"), name: nextName, rules: [] }],
+        activeGroupId,
+      );
     }
     setIsGroupModalOpen(false);
   };
@@ -623,8 +744,12 @@ export function ProxyForwardPage() {
     const previousActiveGroupId = activeGroupId;
     const nextGroups = groups.filter((item) => item.id !== group.id);
     const isDeletingActive = group.id === activeGroupId;
-    const nextActiveGroupId = isDeletingActive ? nextGroups[0]?.id ?? activeGroupId : activeGroupId;
-    const nextActiveGroup = nextGroups.find((item) => item.id === nextActiveGroupId);
+    const nextActiveGroupId = isDeletingActive
+      ? (nextGroups[0]?.id ?? activeGroupId)
+      : activeGroupId;
+    const nextActiveGroup = nextGroups.find(
+      (item) => item.id === nextActiveGroupId,
+    );
 
     commitGroups(nextGroups, nextActiveGroupId);
 
@@ -681,7 +806,6 @@ export function ProxyForwardPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerCopy}>
-          <span className={styles.pageEyebrow}>代理转发</span>
           <h2>代理转发</h2>
           <p>管理站点级转发规则、运行状态和最近命中流量。</p>
         </div>
@@ -691,7 +815,10 @@ export function ProxyForwardPage() {
           buildGroupMenu={buildGroupMenu}
           onImportGroups={() => {
             void importGroups().catch((error) =>
-              showToast(error instanceof Error ? error.message : "导入失败", "error"),
+              showToast(
+                error instanceof Error ? error.message : "导入失败",
+                "error",
+              ),
             );
           }}
           onSelectGroup={(id) => void handleSelectGroup(id)}
@@ -721,7 +848,9 @@ export function ProxyForwardPage() {
             isRulePending={(ruleId) => pendingRuleIds[ruleId] === true}
             onDeleteRule={(rule) => void handleDeleteRule(rule)}
             onOpenEditRule={openEditRule}
-            onToggleRule={(rule, checked) => void handleToggleRule(rule, checked)}
+            onToggleRule={(rule, checked) =>
+              void handleToggleRule(rule, checked)
+            }
           />
         </section>
       </div>
@@ -748,8 +877,3 @@ export function ProxyForwardPage() {
     </div>
   );
 }
-
-
-
-
-

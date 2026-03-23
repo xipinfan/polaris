@@ -1,0 +1,203 @@
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: rgba(15, 23, 42, 0.56);
+  backdrop-filter: blur(10px);
+}
+
+.modalCard {
+  width: min(100%, 780px);
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+  border-radius: 28px;
+  border: 1px solid rgba(224, 230, 239, 0.92);
+  background:
+    radial-gradient(circle at top right, rgba(49, 89, 201, 0.12), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(247, 249, 252, 0.98) 100%);
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.26);
+}
+
+.modalHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+
+  h3 {
+    margin: 6px 0 0;
+    font-size: 28px;
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+    color: #101828;
+  }
+}
+
+.featureBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(49, 89, 201, 0.1);
+  color: #3159c9;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.closeButton {
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(215, 222, 232, 0.96);
+  background: #fff;
+  color: #344054;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.stepCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(223, 229, 238, 0.94);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.stepBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: #3159c9;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.stepContent {
+  display: grid;
+  gap: 12px;
+
+  strong {
+    color: #101828;
+    font-size: 20px;
+    line-height: 1.2;
+  }
+
+  p,
+  li {
+    margin: 0;
+    color: #667085;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 8px;
+  }
+}
+
+.platformSection,
+.platformCard,
+.tipBox {
+  display: grid;
+  gap: 10px;
+}
+
+.platformSection h4,
+.platformCard h4 {
+  margin: 0;
+  color: #101828;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.platformGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.platformCard {
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(225, 231, 239, 0.94);
+  background: rgba(255, 255, 255, 0.92);
+
+  ul {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 8px;
+  }
+}
+
+.tipBox {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(49, 89, 201, 0.06);
+  border: 1px solid rgba(188, 203, 240, 0.92);
+}
+
+.metricGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.metricCard {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(225, 231, 239, 0.94);
+  background: #fff;
+
+  span {
+    color: #667085;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  strong {
+    color: #101828;
+    font-size: 18px;
+    line-height: 1.25;
+    word-break: break-word;
+  }
+}
+
+@media (max-width: 700px) {
+  .modalCard {
+    padding: 18px;
+  }
+
+  .modalHead,
+  .stepCard {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .metricGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .platformGrid {
+    grid-template-columns: 1fr;
+  }
+}

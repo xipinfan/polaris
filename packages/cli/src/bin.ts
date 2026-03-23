@@ -152,7 +152,7 @@ async function statusCommand(): Promise<void> {
 
   try {
     const healthUrl =
-      typeof state?.urls?.health === "string" ? state.urls.health : "http://127.0.0.1:9001/api/health";
+      typeof state?.urls?.health === "string" ? state.urls.health : "http://127.0.0.1:19601/api/health";
     const response = await fetch(healthUrl);
     health = response.ok ? await response.json() : null;
   } catch {
@@ -168,8 +168,8 @@ async function statusCommand(): Promise<void> {
         state,
         health,
         urls: {
-          apiHealth: state?.urls?.health ?? "http://127.0.0.1:9001/api/health",
-          mcp: state?.urls?.mcp ?? "http://127.0.0.1:9002/mcp"
+          apiHealth: state?.urls?.health ?? "http://127.0.0.1:19601/api/health",
+          mcp: state?.urls?.mcp ?? "http://127.0.0.1:19602/mcp"
         }
       },
       null,
@@ -180,7 +180,7 @@ async function statusCommand(): Promise<void> {
 
 async function mcpUrlCommand(): Promise<void> {
   const state = await fileExists(stateFile) ? JSON.parse(await readFile(stateFile, "utf8")) : null;
-  console.log(state?.urls?.mcp ?? "http://127.0.0.1:9002/mcp");
+  console.log(state?.urls?.mcp ?? "http://127.0.0.1:19602/mcp");
 }
 
 async function mcpStdioCommand(): Promise<void> {

@@ -1,7 +1,7 @@
 const API_PORT_STORAGE_KEY = "polaris.apiPort";
 const CONSOLE_PORT_STORAGE_KEY = "polaris.consolePort";
 const CONSOLE_PORT_CANDIDATES = Array.from({ length: 15 }, (_, index) => 5173 + index);
-const API_PORT_CANDIDATES = Array.from({ length: 100 }, (_, index) => 9001 + index);
+const API_PORT_CANDIDATES = Array.from({ length: 100 }, (_, index) => 19601 + index);
 let cachedApiBaseUrl: string | null = null;
 let cachedConsoleBaseUrl: string | null = null;
 

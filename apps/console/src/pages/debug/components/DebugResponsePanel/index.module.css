@@ -1,7 +1,9 @@
-﻿.detailGrid {
+.detailGrid {
   display: grid;
   gap: var(--space-5);
   align-content: start;
+  max-height: min(760px, calc(100vh - 220px));
+  overflow: auto;
 }
 
 .responseCard {
@@ -81,6 +83,8 @@
   place-items: center;
   min-height: 220px;
   padding: 24px;
+  max-height: min(760px, calc(100vh - 220px));
+  overflow: auto;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--panel);
@@ -94,8 +98,13 @@
 }
 
 @media (max-width: 700px) {
-.statsGrid {
+  .detailGrid,
+  .empty {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .statsGrid {
     grid-template-columns: 1fr;
   }
 }
-
