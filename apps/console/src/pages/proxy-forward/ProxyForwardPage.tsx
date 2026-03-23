@@ -788,7 +788,7 @@ export function ProxyForwardPage() {
           title: `删除分组「${group.name}」？`,
           content: "分组内规则会一并删除，且不可恢复。",
           okText: "删除",
-          maskClosable: false,
+          mask: { closable: false },
           okButtonProps: { danger: true },
           cancelText: "取消",
           onOk: () => handleDeleteGroup(group),

@@ -24,7 +24,7 @@ export function GroupEditorModal({
     <Modal
       cancelText="取消"
       okText={editingGroup ? "保存修改" : "创建分组"}
-      maskClosable={false}
+      mask={{ closable: false }}
       onCancel={onCancel}
       onOk={onSave}
       open={isOpen}

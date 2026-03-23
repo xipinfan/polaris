@@ -3,8 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const legacyDataDir = path.resolve(__dirname, "../../data");
+const moduleDir = typeof __dirname === "string" ? __dirname : path.dirname(fileURLToPath(import.meta.url));
+const legacyDataDir = path.resolve(moduleDir, "../../data");
 
 function getDefaultPolarisHome(): string {
   if (process.env.POLARIS_HOME) {

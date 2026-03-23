@@ -1,4 +1,7 @@
+import { existsSync } from "node:fs";
 import http from "node:http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import cors from "cors";
 import express from "express";
 import { createApiRouter } from "../api/routes/createApiRouter";
@@ -10,6 +13,24 @@ import { createRuntime } from "./runtime";
 import { defaultSettings } from "./config";
 
 const LAN_LISTEN_HOST = "0.0.0.0";
+const moduleDir = typeof __dirname === "string" ? __dirname : path.dirname(fileURLToPath(import.meta.url));
+
+function resolveConsoleDistDir(): string | null {
+  const configuredDir = process.env.POLARIS_CONSOLE_DIST;
+  const candidateDirs = [
+    configuredDir,
+    path.resolve(moduleDir, "../../../console/dist"),
+    path.resolve(process.cwd(), "apps/console/dist")
+  ].filter((value): value is string => Boolean(value));
+
+  for (const candidateDir of candidateDirs) {
+    if (existsSync(path.join(candidateDir, "index.html"))) {
+      return candidateDir;
+    }
+  }
+
+  return null;
+}
 
 export async function startServers() {
   const runtime = await createRuntime();
@@ -43,6 +64,15 @@ export async function startServers() {
     "/api",
     createApiRouter(runtime.requestService, runtime.mockService, runtime.proxyService, runtime.certificateManager)
   );
+
+  const consoleDistDir = resolveConsoleDistDir();
+  if (consoleDistDir) {
+    apiApp.use(express.static(consoleDistDir));
+    apiApp.get(/^(?!\/api(?:\/|$)|\/mcp(?:\/|$)|\/sse(?:\/|$)).*/, (_req, res) => {
+      res.sendFile(path.join(consoleDistDir, "index.html"));
+    });
+  }
+
   const usedPorts = new Set<number>();
   const { server: proxyServer, port: proxyPort } = await bindServerWithFallback(
     () => runtime.proxyEngine.createServer(),

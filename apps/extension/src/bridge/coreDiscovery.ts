@@ -1,9 +1,12 @@
 const API_PORT_STORAGE_KEY = "polaris.apiPort";
 const CONSOLE_PORT_STORAGE_KEY = "polaris.consolePort";
 const CONSOLE_PORT_CANDIDATES = Array.from({ length: 15 }, (_, index) => 5173 + index);
-const API_PORT_CANDIDATES = Array.from({ length: 100 }, (_, index) => 19601 + index);
+const DEFAULT_API_PORT = 19601;
+const API_PORT_CANDIDATES = Array.from({ length: 8 }, (_, index) => DEFAULT_API_PORT + index);
 let cachedApiBaseUrl: string | null = null;
 let cachedConsoleBaseUrl: string | null = null;
+let apiBaseUrlPromise: Promise<string> | null = null;
+let consoleBaseUrlPromise: Promise<string> | null = null;
 
 async function getStoredApiPort(): Promise<number | null> {
   return new Promise((resolve) => {
@@ -59,17 +62,51 @@ export async function getApiBaseUrl(): Promise<string> {
     return cachedApiBaseUrl;
   }
 
-  const stored = await getStoredApiPort();
-  const candidates = [...new Set([stored, ...API_PORT_CANDIDATES].filter((item): item is number => Boolean(item)))];
-  for (const port of candidates) {
-    if (await isApiPortAvailable(port)) {
-      await setStoredApiPort(port);
-      cachedApiBaseUrl = `http://127.0.0.1:${port}/api`;
-      return cachedApiBaseUrl;
-    }
+  if (apiBaseUrlPromise) {
+    return apiBaseUrlPromise;
   }
 
-  throw new Error("Polaris Core API not found on localhost");
+  apiBaseUrlPromise = (async () => {
+    const stored = await getStoredApiPort();
+    const candidates = [...new Set([stored, ...API_PORT_CANDIDATES].filter((item): item is number => Boolean(item)))];
+    for (const port of candidates) {
+      if (await isApiPortAvailable(port)) {
+        await setStoredApiPort(port);
+        cachedApiBaseUrl = `http://127.0.0.1:${port}/api`;
+        return cachedApiBaseUrl;
+      }
+    }
+
+    throw new Error("Polaris Core API not found on localhost");
+  })();
+
+  try {
+    return await apiBaseUrlPromise;
+  } finally {
+    apiBaseUrlPromise = null;
+  }
+}
+
+async function isConsoleAvailable(baseUrl: string): Promise<boolean> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 800);
+
+  try {
+    const response = await fetch(`${baseUrl}/`, {
+      method: "GET",
+      signal: controller.signal
+    });
+    if (!response.ok) {
+      return false;
+    }
+
+    const html = await response.text();
+    return html.includes("<div id=\"root\">") || html.includes("Polaris");
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function getConsoleBaseUrl(): Promise<string> {
@@ -77,35 +114,40 @@ export async function getConsoleBaseUrl(): Promise<string> {
     return cachedConsoleBaseUrl;
   }
 
-  const stored = await getStoredConsolePort();
-  const candidates = [...new Set([stored, ...CONSOLE_PORT_CANDIDATES].filter((item): item is number => Boolean(item)))];
-  for (const port of candidates) {
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    try {
-      const controller = new AbortController();
-      timer = setTimeout(() => controller.abort(), 800);
-      const response = await fetch(`http://127.0.0.1:${port}/`, {
-        method: "GET",
-        signal: controller.signal,
-      });
-      if (!response.ok) {
-        continue;
-      }
+  if (consoleBaseUrlPromise) {
+    return consoleBaseUrlPromise;
+  }
 
-      const html = await response.text();
-      if (html.includes("<div id=\"root\">") || html.includes("Polaris") || html.includes("北极星")) {
-        await setStoredConsolePort(port);
-        cachedConsoleBaseUrl = `http://127.0.0.1:${port}`;
+  consoleBaseUrlPromise = (async () => {
+    try {
+      const apiBaseUrl = await getApiBaseUrl();
+      const apiUrl = new URL(apiBaseUrl);
+      const packagedConsoleBaseUrl = `http://${apiUrl.hostname}:${apiUrl.port}`;
+      if (await isConsoleAvailable(packagedConsoleBaseUrl)) {
+        cachedConsoleBaseUrl = packagedConsoleBaseUrl;
         return cachedConsoleBaseUrl;
       }
     } catch {
-      continue;
-    } finally {
-      if (timer) {
-        clearTimeout(timer);
+      // Fall back to legacy Vite console discovery.
+    }
+
+    const stored = await getStoredConsolePort();
+    const candidates = [...new Set([stored, ...CONSOLE_PORT_CANDIDATES].filter((item): item is number => Boolean(item)))];
+    for (const port of candidates) {
+      const baseUrl = `http://127.0.0.1:${port}`;
+      if (await isConsoleAvailable(baseUrl)) {
+        await setStoredConsolePort(port);
+        cachedConsoleBaseUrl = baseUrl;
+        return cachedConsoleBaseUrl;
       }
     }
-  }
 
-  return "http://127.0.0.1:5173";
+    return "http://127.0.0.1:5173";
+  })();
+
+  try {
+    return await consoleBaseUrlPromise;
+  } finally {
+    consoleBaseUrlPromise = null;
+  }
 }

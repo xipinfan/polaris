@@ -3,9 +3,9 @@
   "private": true,
   "packageManager": "pnpm@10.7.1",
   "scripts": {
-    "polaris:start": "corepack pnpm --filter polaris build && node packages/cli/dist/bin.js start",
-    "polaris:stop": "node packages/cli/dist/bin.js stop",
-    "polaris:status": "node packages/cli/dist/bin.js status",
+    "polaris:start": "corepack pnpm --filter polaris-workbench build && node packages/cli/dist/bin.cjs start",
+    "polaris:stop": "node packages/cli/dist/bin.cjs stop",
+    "polaris:status": "node packages/cli/dist/bin.cjs status",
     "dev": "node scripts/dev/start.mjs",
     "dev:core": "corepack pnpm --filter @polaris/core dev",
     "dev:mcp": "node scripts/mcp-stdio.mjs --watch",

@@ -85,7 +85,7 @@ export function MockSidebar({
       {contextHolder}
       <Modal
         cancelText={t("mock.form.cancel")}
-        maskClosable={false}
+        mask={{ closable: false }}
         okButtonProps={{ disabled: !nextCreateName }}
         okText="确定"
         onCancel={() => {
@@ -106,7 +106,7 @@ export function MockSidebar({
       </Modal>
       <Modal
         cancelText={t("mock.form.cancel")}
-        maskClosable={false}
+        mask={{ closable: false }}
         okButtonProps={{ disabled: !nextRenameName }}
         okText="确定"
         onCancel={() => {
@@ -227,7 +227,7 @@ export function MockSidebar({
                             cancelText: t("mock.form.cancel"),
                             content: t("mock.groupDeleteConfirm", { name: group }),
                             icon: null,
-                            maskClosable: false,
+                            mask: { closable: false },
                             okButtonProps: { danger: true },
                             okText: t("mock.groupDelete"),
                             onOk: async () => {

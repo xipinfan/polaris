@@ -1,422 +1,259 @@
-# Polaris
+ï»¿# Polaris
 
-Polaris ÊÇÒ»¸öÃæÏò±¾µØ¿ª·¢Áªµ÷µÄ API ¹¤×÷Ì¨¡£
+Polaris is a local API workbench for request proxying, capture, replay, mocking, proxy rules, Web Console, browser extension, and MCP integration.
 
-Ëü°Ñ¼¸¼şÔ­±¾·ÖÉ¢µÄÊÂÇéÕûºÏ³ÉÁËÒ»¸ö±¾µØ·şÎñ£º
+å®ƒæŠŠè¯·æ±‚ä»£ç†ã€æŠ“åŒ…è°ƒè¯•ã€Mock ç®¡ç†ã€è§„åˆ™è½¬å‘ã€Web Consoleã€æµè§ˆå™¨æ‰©å±•å’Œ MCP æ¥å…¥æ•´åˆæˆä¸€ä¸ªæœ¬åœ°æœåŠ¡ï¼Œç›®æ ‡æ˜¯ï¼š
 
-- ´úÀí²¢²¶»ñÇëÇó
-- ±£´æ¡¢ÖØ·ÅºÍµ÷ÊÔÇëÇó
-- ¹ÜÀí Mock ¹æÔò
-- Í¨¹ı MCP °ÑÕâĞ©ÄÜÁ¦Ìá¹©¸ø AI ¹¤¾ß
+- å®‰è£…ä¸€æ¬¡
+- å¯åŠ¨ä¸€ä¸ªæœ¬åœ°æœåŠ¡
+- è®©æµè§ˆå™¨ã€æ‰‹æœºã€AI å·¥å…·éƒ½è¿æ¥åˆ°åŒä¸€ä¸ª Polaris å·¥ä½œå°
 
-Polaris µÄÄ¿±êºÜ¼òµ¥£º
+è¿›ä¸€æ­¥é˜…è¯»ï¼š
 
-°²×°Ò»´Î£¬Æô¶¯Ò»¸ö±¾µØ·şÎñ£¬È»ºóÈÃ Web Console¡¢ä¯ÀÀÆ÷À©Õ¹ºÍ AI ¹¤¾ß¶¼Á¬½Óµ½Ëü¡£
+- [MCP æ¥å…¥è¯´æ˜](/E:/code/polaris/docs/mcp.md)
+- [Web Console ä½¿ç”¨è¯´æ˜](/E:/code/polaris/docs/console.md)
+- [æµè§ˆå™¨æ‰©å±•ä½¿ç”¨è¯´æ˜](/E:/code/polaris/docs/extension.md)
+- [å¼€å‘è¯´æ˜](/E:/code/polaris/docs/development.md)
+- [E2E ä¸è§†è§‰æµ‹è¯•](/E:/code/polaris/docs/e2e-testing.md)
 
-½øÒ»²½ÔÄ¶Á£º
+## æ ¸å¿ƒèƒ½åŠ›
 
-- [MCP ½ÓÈëËµÃ÷](/E:/code/polaris/docs/mcp.md)
-- [Web Console Ê¹ÓÃËµÃ÷](/E:/code/polaris/docs/console.md)
-- [ä¯ÀÀÆ÷À©Õ¹Ê¹ÓÃËµÃ÷](/E:/code/polaris/docs/extension.md)
-- [¿ª·¢ËµÃ÷](/E:/code/polaris/docs/development.md)
-- [E2E ÓëÊÓ¾õ²âÊÔ](/E:/code/polaris/docs/e2e-testing.md)
-
-## ÊÊºÏË­
-
-Èç¹ûÄãÕıÔÚ×öÏÂÃæÕâĞ©ÊÂÇé£¬Polaris »á±È½ÏÊÊºÏ£º
-
-- ±¾µØÁªµ÷Ç°ºó¶Ë½Ó¿Ú
-- ĞèÒª¿ìËÙ×¥È¡ºÍÖØ·ÅÇëÇó
-- ĞèÒªÎ¬»¤×Ô¼ºµÄ Mock Êı¾İ
-- Ïë°ÑÇëÇóµ÷ÊÔÄÜÁ¦½Ó¸ø Gemini CLI¡¢Cursor¡¢Cline »òÆäËû MCP ¿Í»§¶Ë
-
-## ºËĞÄÄÜÁ¦
-
-- ±¾µØ´úÀí·şÎñ
+- æœ¬åœ°ä»£ç†æœåŠ¡
+- å®æ—¶è¯·æ±‚æ•è·ã€ä¿å­˜ã€é‡æ”¾ä¸è°ƒè¯•
+- Mock è§„åˆ™ä¸åˆ†ç»„ç®¡ç†
+- ä»£ç†è§„åˆ™ä¸è½¬å‘èƒ½åŠ›
 - Web Console
-- ä¯ÀÀÆ÷À©Õ¹
-- ±ê×¼ MCP Streamable HTTP
-- MCP stdio ¼æÈİÈë¿Ú
-- ¶Ë¿ÚÕ¼ÓÃÊ±×Ô¶¯ÇĞ»»µ½¿ÉÓÃ¶Ë¿Ú
-- ±¾µØÓÃ»§¼¶Êı¾İÄ¿Â¼£¬²»°Ñ¸öÈËµ÷ÊÔÊı¾İĞ´½ø Git
+- æµè§ˆå™¨æ‰©å±•
+- Streamable HTTP MCP
+- stdio MCP å…¼å®¹å…¥å£
+- å±€åŸŸç½‘ / æ‰‹æœºä»£ç†æ¥å…¥
 
-## ¿ìËÙ¿ªÊ¼
+## é€‚åˆè°
 
-### 1. °²×°ÒÀÀµ
+å¦‚æœä½ æ­£åœ¨åšä¸‹é¢è¿™äº›äº‹æƒ…ï¼ŒPolaris ä¼šæ¯”è¾ƒé€‚åˆï¼š
 
-```bash
-pnpm install
-```
+- æœ¬åœ°è”è°ƒå‰åç«¯æ¥å£
+- éœ€è¦å¿«é€ŸæŠ“å–å’Œé‡æ”¾è¯·æ±‚
+- éœ€è¦ç»´æŠ¤è‡ªå·±çš„ Mock æ•°æ®
+- éœ€è¦æŠŠè¯·æ±‚è°ƒè¯•èƒ½åŠ›æ¥ç»™ Cursorã€Clineã€Gemini CLI ç­‰ MCP å®¢æˆ·ç«¯
+- éœ€è¦è®©åŒä¸€å±€åŸŸç½‘ä¸‹çš„æ‰‹æœºæ¥å…¥æœ¬æœºä»£ç†åšè°ƒè¯•
 
-### 2. ¹¹½¨ÏîÄ¿
+## å®‰è£…ä½¿ç”¨
 
-```bash
-pnpm build
-```
+### 1. å…¨å±€å®‰è£…
 
-### 3. Æô¶¯ Polaris
-
-```bash
-pnpm polaris:start
-```
-
-²é¿´ÔËĞĞ×´Ì¬£º
+æ¨èç›´æ¥é€šè¿‡ npm å…¨å±€å®‰è£…å·²å‘å¸ƒåŒ…ï¼š
 
 ```bash
-pnpm polaris:status
+npm i -g polaris-workbench
 ```
 
-Í£Ö¹·şÎñ£º
+å®‰è£…åä¼šæä¾›å…¨å±€å‘½ä»¤ï¼š
 
 ```bash
-pnpm polaris:stop
+polaris
 ```
 
-## Ê¹ÓÃ Web Console
+### 2. å¯åŠ¨æœåŠ¡
 
-¿ª·¢Ä£Ê½ÏÂÆô¶¯ Console£º
+å¯åŠ¨ Polarisï¼š
 
 ```bash
-pnpm dev
+polaris start
 ```
 
-È»ºó·ÃÎÊ£º
+æŸ¥çœ‹è¿è¡ŒçŠ¶æ€ï¼š
 
-- [http://127.0.0.1:5173](http://127.0.0.1:5173)
+```bash
+polaris status
+```
 
-Ö÷ÒªÒ³Ãæ£º
+åœæ­¢æœåŠ¡ï¼š
 
-- `/` Ê×Ò³×ÜÀÀ
-- `/traffic` ÊµÊ±ÇëÇó
-- `/requests` ÒÑ±£´æÇëÇó
-- `/mock` Mock ¹ÜÀí
-- `/debug` ÊÖ¶¯µ÷ÊÔ
-- `/settings` ·şÎñ×´Ì¬ÓëÅäÖÃ
+```bash
+polaris stop
+```
 
-ÏêÏ¸ËµÃ÷¼û£º
+æŸ¥çœ‹ Console åœ°å€ï¼š
 
-- [Web Console Ê¹ÓÃËµÃ÷](/E:/code/polaris/docs/console.md)
+```bash
+polaris console-url
+```
 
-## ½ÓÈë MCP
+æŸ¥çœ‹ MCP åœ°å€ï¼š
 
-Polaris Ä¿Ç°Ö§³ÖÁ½ÖÖ MCP ½ÓÈë·½Ê½¡£
+```bash
+polaris mcp-url
+```
 
-### ·½Ê½Ò»£ºÁ¬½Ó±¾µØ HTTP MCP
+æŸ¥çœ‹æµè§ˆå™¨æ‰©å±•äº§ç‰©ç›®å½•ï¼š
 
-ÕâÊÇ¸üÍÆ¼öµÄ·½Ê½£¬ÊÊºÏ¡°ÏÈÆô¶¯ Polaris£¬ÔÙÈÃ AI ¹¤¾ßÁ¬½Óµ½Ëü¡±µÄ³¡¾°¡£
+```bash
+polaris extension-path
+```
 
-Ä¬ÈÏµØÖ·£º
+### 3. é»˜è®¤ç«¯å£
+
+Polaris é»˜è®¤ä¼˜å…ˆä½¿ç”¨ï¼š
+
+- ä»£ç†ç«¯å£ï¼š`19600`
+- API / Console ç«¯å£ï¼š`19601`
+- MCP ç«¯å£ï¼š`19602`
+- Console å¼€å‘ç«¯å£ï¼š`5173`
+
+å¦‚æœç«¯å£è¢«å ç”¨ï¼ŒPolaris ä¼šè‡ªåŠ¨åˆ‡æ¢åˆ°ä¸‹ä¸€ä¸ªå¯ç”¨ç«¯å£ã€‚
+
+### 4. Web Console
+
+ç”Ÿäº§æ€å¯åŠ¨åï¼ŒConsole ç”± Polaris Core ç›´æ¥æ‰˜ç®¡ã€‚
+
+é»˜è®¤è®¿é—®åœ°å€ï¼š
+
+- [http://127.0.0.1:19601](http://127.0.0.1:19601)
+
+ä¸»è¦é¡µé¢ï¼š
+
+- `/` é¦–é¡µæ€»è§ˆ
+- `/traffic` å®æ—¶è¯·æ±‚
+- `/requests` å·²ä¿å­˜è¯·æ±‚
+- `/mock` Mock ç®¡ç†
+- `/debug` æ‰‹åŠ¨è°ƒè¯•
+- `/settings` æœåŠ¡çŠ¶æ€ä¸é…ç½®
+
+è¯¦ç»†è¯´æ˜è§ï¼š
+
+- [Web Console ä½¿ç”¨è¯´æ˜](/E:/code/polaris/docs/console.md)
+
+### 5. æµè§ˆå™¨æ‰©å±•
+
+å…¨å±€åŒ…ä¼šåŒæ—¶é™„å¸¦æµè§ˆå™¨æ‰©å±•äº§ç‰©ï¼Œä½†æµè§ˆå™¨å®‰å…¨æ¨¡å‹ä¸å…è®¸é€šè¿‡ npm è‡ªåŠ¨å®‰è£…æ‰©å±•ã€‚
+
+ä½ å¯ä»¥å…ˆè·å–æ‰©å±•ç›®å½•ï¼š
+
+```bash
+polaris extension-path
+```
+
+ç„¶ååœ¨ Chrome / Edge ä¸­åŠ è½½è¯¥ç›®å½•ã€‚
+
+æ‰©å±•å½“å‰æ”¯æŒï¼š
+
+- æŸ¥çœ‹ Core æ˜¯å¦åœ¨çº¿
+- åˆ‡æ¢ä»£ç†æ¨¡å¼
+- å°†å½“å‰ç«™ç‚¹åŠ å…¥æˆ–ç§»å‡ºè§„åˆ™
+- æ‰“å¼€ Console å’Œè®¾ç½®é¡µ
+
+è¯¦ç»†è¯´æ˜è§ï¼š
+
+- [æµè§ˆå™¨æ‰©å±•ä½¿ç”¨è¯´æ˜](/E:/code/polaris/docs/extension.md)
+
+### 6. MCP æ¥å…¥
+
+Polaris å¯ä»¥æŠŠæŠ“åŒ…ã€Mockã€ä»£ç†è§„åˆ™ã€è¿è¡ŒçŠ¶æ€è¿™äº›èƒ½åŠ›é€šè¿‡ MCP æš´éœ²ç»™ AI å·¥å…·ã€‚
+
+å¦‚æœä½ æ˜¯ç¬¬ä¸€æ¬¡æ¥å…¥ï¼Œå¯ä»¥å…ˆè®°ä½è¿™æ¡åŸåˆ™ï¼š
+
+- æ”¯æŒ HTTP MCP çš„å·¥å…·ï¼šä¼˜å…ˆå¡«å†™ Polaris æä¾›çš„ MCP URL
+- åªæ”¯æŒå‘½ä»¤å¯åŠ¨ MCP çš„å·¥å…·ï¼šä½¿ç”¨ `polaris mcp-stdio`
+
+#### æœ€ç®€å•çš„è¿æ¥æ–¹å¼
+
+1. å…ˆå¯åŠ¨ Polarisï¼š
+
+```bash
+polaris start
+```
+
+2. æŸ¥çœ‹å½“å‰ MCP åœ°å€ï¼š
+
+```bash
+polaris mcp-url
+```
+
+3. æŠŠè¾“å‡ºåœ°å€å¡«åˆ°ä½ çš„ MCP å®¢æˆ·ç«¯é‡Œ
+
+é»˜è®¤æƒ…å†µä¸‹ä¼šæ˜¯ï¼š
 
 ```text
 http://127.0.0.1:19602/mcp
 ```
 
-Èç¹ûÄã²»È·¶¨µ±Ç°Êµ¼ÊµØÖ·£¬¿ÉÒÔÖ´ĞĞ£º
+#### æ–¹å¼ä¸€ï¼šStreamable HTTP MCPï¼ˆæ¨èï¼‰
+
+è¿™æ˜¯æœ€æ¨èçš„æ–¹å¼ï¼Œé€‚åˆå¤§å¤šæ•°æ”¯æŒ MCP URL çš„å·¥å…·ã€‚
+
+å…¨é‡èƒ½åŠ›å…¥å£ï¼š
+
+- `http://127.0.0.1:19602/mcp`
+
+æŒ‰èƒ½åŠ›åŒ…è®¿é—®ï¼š
+
+- `http://127.0.0.1:19602/mcp/mock`
+- `http://127.0.0.1:19602/mcp/proxy`
+- `http://127.0.0.1:19602/mcp/request`
+- `http://127.0.0.1:19602/mcp/ops`
+
+å»ºè®®ï¼š
+
+- åªæƒ³è®© AI å¤„ç†è¯·æ±‚è°ƒè¯•ï¼šæ¥ `/mcp/request`
+- åªæƒ³è®© AI ç®¡ç† Mockï¼šæ¥ `/mcp/mock`
+- æƒ³è®© AI çœ‹å…¨éƒ¨èƒ½åŠ›ï¼šæ¥ `/mcp`
+
+#### æ–¹å¼äºŒï¼šstdio MCP
+
+å¦‚æœä½ çš„å·¥å…·ä¸æ”¯æŒå¡« URLï¼Œåªæ”¯æŒé€šè¿‡å‘½ä»¤å¯åŠ¨ MCP æœåŠ¡ï¼Œå°±ä½¿ç”¨ stdioã€‚
+
+ç›´æ¥å¯åŠ¨ï¼š
 
 ```bash
-pnpm polaris:status
+polaris mcp-stdio
 ```
 
-»òÕß£º
+æŒ‰ pack å¯åŠ¨ï¼š
 
 ```bash
-node packages/cli/dist/bin.js mcp-url
+polaris mcp-stdio --pack request
 ```
 
-È»ºó°ÑÊä³öµØÖ·Ìîµ½ÄãµÄ MCP ¿Í»§¶ËÀï¡£
+`--pack` å¯é€‰å€¼ï¼š`mock | proxy | request | ops`
 
-ÏêÏ¸ËµÃ÷¼û£º
+#### æ‰‹åŠ¨å†™é…ç½®æ—¶æ€ä¹ˆè¿
 
-- [MCP ½ÓÈëËµÃ÷](/E:/code/polaris/docs/mcp.md)
+å¾ˆå¤š MCP å®¢æˆ·ç«¯éƒ½éœ€è¦æ‰‹åŠ¨ç¼–è¾‘é…ç½®æ–‡ä»¶ã€‚ä½ å¯ä»¥ç›´æ¥å‚è€ƒä¸‹é¢å‡ ç§æ¨¡æ¿ã€‚
 
-### ·½Ê½¶ş£ºÊ¹ÓÃ stdio
+#### é…ç½®ç¤ºä¾‹ 1ï¼šè¿æ¥å…¨é‡ HTTP MCP
 
-Èç¹ûÄãµÄ¹¤¾ßÖ»Ö§³Ö stdio£¬¿ÉÒÔÊ¹ÓÃ£º
-
-```bash
-pnpm mcp
-```
-
-¿ª·¢µ÷ÊÔÄ£Ê½£º
-
-```bash
-pnpm dev:mcp
-```
-
-## Ä¬ÈÏ¶Ë¿Ú
-
-Polaris Ä¬ÈÏÓÅÏÈÊ¹ÓÃ£º
-
-- ´úÀí¶Ë¿Ú£º`19600`
-- API ¶Ë¿Ú£º`19601`
-- MCP ¶Ë¿Ú£º`19602`
-- Console ¿ª·¢¶Ë¿Ú£º`5173`
-
-Èç¹û¶Ë¿Ú±»Õ¼ÓÃ£¬Polaris »á×Ô¶¯ÇĞ»»µ½ÏÂÒ»¸ö¿ÉÓÃ¶Ë¿Ú¡£
-
-ÀıÈç£º
-
-- API ¿ÉÄÜ´Ó `19601` ÇĞµ½ `19604`
-- MCP ¿ÉÄÜ´Ó `19602` ÇĞµ½ `19605`
-
-µ±Ç° Console ºÍä¯ÀÀÆ÷À©Õ¹¶¼ÒÑ¾­Ö§³Ö×Ô¶¯·¢ÏÖ Core API ¶Ë¿Ú¡£
-
-## ä¯ÀÀÆ÷À©Õ¹
-
-¹¹½¨À©Õ¹£º
-
-```bash
-pnpm --filter @polaris/extension build
-```
-
-ÔÚ Chrome »ò Edge ÖĞ¼ÓÔØ£º
-
-- [apps/extension/dist](/E:/code/polaris/apps/extension/dist)
-
-À©Õ¹µ¯´°µ±Ç°Ö§³Ö£º
-
-- ²é¿´ Core ÊÇ·ñÔÚÏß
-- ÇĞ»»´úÀíÄ£Ê½
-- ½«µ±Ç°Õ¾µã¼ÓÈë»òÒÆ³ö¹æÔò
-- ´ò¿ª Console ºÍÉèÖÃÒ³
-
-ÏêÏ¸ËµÃ÷¼û£º
-
-- [ä¯ÀÀÆ÷À©Õ¹Ê¹ÓÃËµÃ÷](/E:/code/polaris/docs/extension.md)
-
-## ±¾µØÊı¾İÄ¿Â¼
-
-Polaris Ä¬ÈÏ°ÑÔËĞĞÊı¾İĞ´µ½µ±Ç°ÓÃ»§×Ô¼ºµÄ±¾µØÄ¿Â¼£¬¶ø²»ÊÇ²Ö¿âÄÚ¡£
-
-Ä¬ÈÏÎ»ÖÃ£º
-
-- Windows£º`%LOCALAPPDATA%\\Polaris`
-- macOS£º`~/Library/Application Support/Polaris`
-- Linux£º`~/.local/state/polaris` »ò `$XDG_STATE_HOME/polaris`
-
-ÕâÒâÎ¶×Å£º
-
-- Ã¿¸öÈË¿ÉÒÔÓĞ×Ô¼ºµÄ Mock Êı¾İ
-- ±¾µØÖ¤ÊéºÍË½Ô¿²»»á½øÈë Git
-- ÇëÇó¼ÇÂ¼ºÍÔËĞĞ×´Ì¬²»»áÎÛÈ¾²Ö¿â
-
-## ³£ÓÃÃüÁî
-
-Æô¶¯±¾µØ·şÎñ£º
-
-```bash
-pnpm polaris:start
-```
-
-Í£Ö¹±¾µØ·şÎñ£º
-
-```bash
-pnpm polaris:stop
-```
-
-²é¿´×´Ì¬£º
-
-```bash
-pnpm polaris:status
-```
-
-Í¬Ê±Æô¶¯ Core ºÍ Console£º
-
-```bash
-pnpm dev
-```
-
-Ö»Æô¶¯ Core£º
-
-```bash
-pnpm dev:core
-```
-
-Ö»Æô¶¯ Console£º
-
-```bash
-pnpm dev:console
-```
-
-Æô¶¯ stdio MCP£º
-
-```bash
-pnpm mcp
-```
-
-Ö´ĞĞÀàĞÍ¼ì²é£º
-
-```bash
-pnpm typecheck
-```
-
-Ö´ĞĞ¹¹½¨£º
-
-```bash
-pnpm build
-```
-
-Ö´ĞĞ smoke ¼ì²é£º
-
-```bash
-pnpm test:smoke
-```
-
-¸üÏêÏ¸µÄ±¾µØ¿ª·¢ËµÃ÷¼û£º
-
-- [¿ª·¢ËµÃ÷](/E:/code/polaris/docs/development.md)
-
-## ³£¼ûÎÊÌâ
-
-### ÎªÊ²Ã´ Polaris Ã»ÓĞÊ¹ÓÃÄ¬ÈÏ¶Ë¿Ú
-
-ÕâÊÇÕı³£ĞĞÎª¡£
-
-Èç¹ûÄ¬ÈÏ¶Ë¿Ú±»Õ¼ÓÃ£¬Polaris »á×Ô¶¯ÇĞ»»µ½ĞÂµÄ¿ÉÓÃ¶Ë¿Ú¡£Äã¿ÉÒÔÓÃÏÂÃæµÄÃüÁî²é¿´µ±Ç°Êµ¼Ê¶Ë¿Ú£º
-
-```bash
-pnpm polaris:status
-```
-
-### ÎªÊ²Ã´ Console Á¬²»ÉÏ Core
-
-ÓÅÏÈ¼ì²é£º
-
-- Polaris ·şÎñÊÇ·ñÒÑÆô¶¯
-- `pnpm polaris:status` Êä³öµÄ½¡¿µ¼ì²éµØÖ·ÊÇ·ñ¿É·ÃÎÊ
-- Console ÊÇ·ñÕı³£´ò¿ª
-
-### ÎªÊ²Ã´À©Õ¹ÏÔÊ¾ Core ÀëÏß
-
-ÓÅÏÈ¼ì²é£º
-
-- Polaris ÊÇ·ñÕıÔÚÔËĞĞ
-- À©Õ¹ÊÇ·ñÊ¹ÓÃÁË×îĞÂ¹¹½¨²úÎï
-- µ±Ç° Core API µØÖ·ÊÇ·ñ¿É·ÃÎÊ
-
-### ÎªÊ²Ã´ MCP ¿Í»§¶ËÁ¬½ÓÊ§°Ü
-
-ÓÅÏÈ¼ì²é£º
-
-- Äã½ÓµÄÊÇ HTTP MCP »¹ÊÇ stdio
-- Polaris ÊÇ·ñÒÑ¾­Æô¶¯
-- MCP µØÖ·ÊÇ·ñÀ´×Ô `pnpm polaris:status`
-
-## ËµÃ÷
-
-Õâ·İ README Ö÷ÒªÃæÏòÊ¹ÓÃÕßºÍ½ÓÈëÕß£¬ÖØµãËµÃ÷£º
-
-- Polaris ÊÇÊ²Ã´
-- ÈçºÎÆô¶¯
-- ÈçºÎ½ÓÈë MCP
-- ÈçºÎ¿ªÊ¼Ê¹ÓÃ
-
-¸üÏ¸µÄÊµÏÖÏ¸½ÚºÍ¿ª·¢±³¾°£¬ÊÊºÏ¼ÌĞø²ğµ½µ¥¶ÀÎÄµµÖĞÎ¬»¤¡£
-
----
-
-## MCP ½ÓÈë£¨2026 ¸üĞÂ£©
-
-Polaris ÏÖÔÚÍ¬Ê±Ö§³ÖÁ½ÖÖ MCP ±©Â¶·½Ê½£ºÈ«Á¿ÄÜÁ¦½ÓÈëÓë°´ pack£¨ÄÜÁ¦°ü£©½ÓÈë¡£
-
-### 1£©Æô¶¯ Polaris ²¢»ñÈ¡ MCP µØÖ·
-
-```bash
-pnpm polaris:start
-pnpm polaris:status
-node packages/cli/dist/bin.js mcp-url
-```
-
-Ä¬ÈÏ MCP µØÖ·£¨ÈôÎ´·¢Éú¶Ë¿Ú»ØÍË£©£º
-
-```text
-http://127.0.0.1:19602/mcp
-```
-
-### 2£©Streamable HTTP MCP
-
-- È«Á¿¹¤¾ß/×ÊÔ´£º
-  - `http://127.0.0.1:<mcpPort>/mcp`
-- °´ pack ¹ıÂËµÄ¹¤¾ß/×ÊÔ´£º
-  - `http://127.0.0.1:<mcpPort>/mcp/mock`
-  - `http://127.0.0.1:<mcpPort>/mcp/proxy`
-  - `http://127.0.0.1:<mcpPort>/mcp/request`
-  - `http://127.0.0.1:<mcpPort>/mcp/ops`
-
-Ö§³ÖµÄ pack ±ğÃû£º`mock`¡¢`proxy`¡¢`request`¡¢`ops`¡£
-
-### 3£©Legacy MCP HTTP£¨¼æÈİÄ£Ê½£©
-
-- ²é¿´ËùÓĞ pack£º
-  - `GET /packs`
-- ²é¿´Ä³¸ö pack µÄ¹¤¾ß£º
-  - `GET /packs/:pack/tools`
-- Í¨¹ı pack ¹ıÂË¹¤¾ß/×ÊÔ´£º
-  - `GET /tools?pack=mock`
-  - `GET /resources?pack=request`
-- °´ pack Ô¼ÊøÖ´ĞĞ¹¤¾ß£º
-  - `POST /invoke/:tool?pack=proxy`
-
-Î´Öª pack »á·µ»Ø½á¹¹»¯´íÎó£º
+é€‚åˆæƒ³ä¸€æ¬¡æš´éœ²å…¨éƒ¨ Polaris èƒ½åŠ›çš„åœºæ™¯ã€‚
 
 ```json
 {
-  "error": {
-    "code": "UNKNOWN_PACK",
-    "message": "Unknown MCP pack: <pack>",
-    "retryable": false
+  "mcpServers": {
+    "polaris": {
+      "transport": "http",
+      "url": "http://127.0.0.1:19602/mcp"
+    }
   }
 }
 ```
 
-### 4£©stdio MCP
+#### é…ç½®ç¤ºä¾‹ 2ï¼šåªè¿æ¥è¯·æ±‚è°ƒè¯•èƒ½åŠ›
 
-Ê¹ÓÃ¹¤×÷Çø½Å±¾£º
+é€‚åˆå¸Œæœ›å‡å°‘å·¥å…·æ•°é‡ã€è®©æ¨¡å‹æ›´èšç„¦çš„åœºæ™¯ã€‚
 
-```bash
-pnpm mcp
-pnpm dev:mcp
+```json
+{
+  "mcpServers": {
+    "polaris-request": {
+      "transport": "http",
+      "url": "http://127.0.0.1:19602/mcp/request"
+    }
+  }
+}
 ```
 
-»òÖ±½ÓÊ¹ÓÃ CLI£º
+#### é…ç½®ç¤ºä¾‹ 3ï¼šåŒæ—¶æ‹†åˆ†å¤šä¸ªèƒ½åŠ›åŒ…
 
-```bash
-node packages/cli/dist/bin.js mcp-stdio
-node packages/cli/dist/bin.js mcp-stdio --pack mock
-```
-
-`--pack` Ö§³Ö£º`mock | proxy | request | ops`¡£
-
-### 5£©Pack ¶¨Òå
-
-- `mock_pack.v1`
-  - Mock ¹æÔòÉúÃüÖÜÆÚ¹ÜÀí + »î¶¯·Ö×é¹ÜÀí
-- `proxy_pack.v1`
-  - ´úÀíÄ£Ê½¹ÜÀí + Host ¹æÔò¹ÜÀí + ´úÀí¾ö²ßÔ¤ÀÀ
-- `request_pack.v1`
-  - ×¥°ü/±£´æÇëÇó²éÑ¯ + ÔËĞĞ/»Ø·Å + ÇåÀíÇëÇó
-- `ops_pack.v1`
-  - ½¡¿µ×´Ì¬/ÔËĞĞÅäÖÃ/Ö¤Êé¾ÍĞ÷ĞÔ²éÑ¯
-
-### 6£©ÍÆ¼ö½ÓÈë²ßÂÔ
-
-- ¶Ô AI Agent Ä¬ÈÏÊ¹ÓÃ pack ½ÓÈë£¬½µµÍ¹¤¾ßÑ¡Ôñ¸ºµ£ÓëÉÏÏÂÎÄ¿ªÏú¡£
-- ±£ÁôÈ«Á¿ `/mcp` Èë¿ÚÓÃÓÚ¹ÜÀíÓëµ÷ÊÔ¡£
-- ±£Áô legacy Èë¿ÚÓÃÓÚ¾É¿Í»§¶Ë¼æÈİ¡£
-
-### 7£©CLI/AI ¹¤¾ßÅäÖÃÊ¾Àı
-
-ÏÂÃæ¸ø³öÍ¨ÓÃ MCP ¿Í»§¶Ë³£¼ûµÄÁ½ÖÖÅäÖÃ·½Ê½¡£²»Í¬¹¤¾ß×Ö¶ÎÃû¿ÉÄÜ²»Í¬£¬µ«ºËĞÄÊÇ `url`£¨HTTP£©»ò `command + args`£¨stdio£©¡£
-
-#### A. Á¬½Ó Streamable HTTP MCP£¨ÍÆ¼ö£©
-
-ÏÈÈ·ÈÏµ±Ç° MCP µØÖ·£º
-
-```bash
-pnpm polaris:status
-```
-
-Í¨ÓÃÊ¾Àı£¨°´ pack Á¬½Ó£¬ÍÆ¼ö£©£º
+é€‚åˆæ”¯æŒå¤šä¸ª MCP Server çš„å®¢æˆ·ç«¯ã€‚
 
 ```json
 {
@@ -428,38 +265,43 @@ pnpm polaris:status
     "polaris-mock": {
       "transport": "http",
       "url": "http://127.0.0.1:19602/mcp/mock"
+    },
+    "polaris-ops": {
+      "transport": "http",
+      "url": "http://127.0.0.1:19602/mcp/ops"
     }
   }
 }
 ```
 
-Èç¹ûÄãÏ£ÍûÒ»¸öÁ¬½Ó±©Â¶È«²¿ÄÜÁ¦£º
+#### é…ç½®ç¤ºä¾‹ 4ï¼šstdio æ–¹å¼
+
+é€‚åˆåªèƒ½é€šè¿‡å‘½ä»¤å¯åŠ¨ MCP çš„å·¥å…·ã€‚
+
+```json
+{
+  "mcpServers": {
+    "polaris-workbench": {
+      "command": "polaris",
+      "args": ["mcp-stdio", "--pack", "request"],
+      "env": {
+        "POLARIS_MCP_START_PROXY": "false"
+      }
+    }
+  }
+}
+```
+
+#### é…ç½®ç¤ºä¾‹ 5ï¼šstdio å…¨é‡èƒ½åŠ›
+
+å¦‚æœä½ ä¸æƒ³æŒ‰ pack é™åˆ¶ï¼Œä¹Ÿå¯ä»¥ç›´æ¥æš´éœ²å…¨éƒ¨èƒ½åŠ›ã€‚
 
 ```json
 {
   "mcpServers": {
     "polaris-all": {
-      "transport": "http",
-      "url": "http://127.0.0.1:19602/mcp"
-    }
-  }
-}
-```
-
-#### B. Á¬½Ó stdio MCP£¨½öµ±¹¤¾ß²»Ö§³Ö HTTP MCP£©
-
-Èç¹ûÄãÊÇÍ¨¹ı `npm i -g polaris` °²×°£¬ÓÅÏÈÊ¹ÓÃÈ«¾ÖÃüÁî£º
-
-```json
-{
-  "mcpServers": {
-    "polaris-proxy": {
       "command": "polaris",
-      "args": [
-        "mcp-stdio",
-        "--pack",
-        "proxy"
-      ],
+      "args": ["mcp-stdio"],
       "env": {
         "POLARIS_MCP_START_PROXY": "false"
       }
@@ -468,55 +310,196 @@ pnpm polaris:status
 }
 ```
 
-Èç¹û²»ÏëÈ«¾Ö°²×°£¬Ò²¿ÉÒÔÊ¹ÓÃ `npx`£º
+è¯´æ˜ï¼š
 
-```json
-{
-  "mcpServers": {
-    "polaris-proxy": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "polaris",
-        "mcp-stdio",
-        "--pack",
-        "proxy"
-      ],
-      "env": {
-        "POLARIS_MCP_START_PROXY": "false"
-      }
-    }
-  }
-}
+- å¦‚æœä½ çš„å®¢æˆ·ç«¯ä¸è®¤è¯† `transport: "http"`ï¼Œé€šå¸¸åªéœ€è¦ä¿ç•™å®ƒè¦æ±‚çš„ URL å­—æ®µå³å¯
+- å¦‚æœå½“å‰ç«¯å£ä¸æ˜¯é»˜è®¤å€¼ï¼Œè¯·å…ˆè¿è¡Œ `polaris mcp-url`ï¼Œç„¶åæŠŠç¤ºä¾‹é‡Œçš„ URL æ›¿æ¢æˆä½ çš„å®é™…åœ°å€
+- æ¨èä¼˜å…ˆæ¥æŒ‰ pack çš„å…¥å£ï¼Œèƒ½å‡å°‘æ¨¡å‹å¯è§å·¥å…·æ•°é‡
+
+è¯¦ç»†è¯´æ˜è§ï¼š
+
+- [MCP æ¥å…¥è¯´æ˜](/E:/code/polaris/docs/mcp.md)
+
+### 7. æ‰‹æœº / å±€åŸŸç½‘ä»£ç†
+
+Polaris æ”¯æŒè®©åŒä¸€å±€åŸŸç½‘ä¸‹çš„æ‰‹æœºè¿æ¥åˆ°æœ¬æœºä»£ç†ã€‚
+
+å¤§è‡´æµç¨‹ï¼š
+
+1. å¯åŠ¨ Polaris
+2. åœ¨ Console è®¾ç½®é¡µæŸ¥çœ‹å½“å‰ `LAN IP` å’Œä»£ç†ç«¯å£
+3. åœ¨æ‰‹æœº Wi-Fi é‡Œæ‰‹åŠ¨é…ç½® HTTP ä»£ç†
+4. ç”¨æ‰‹æœºæµè§ˆå™¨è®¿é—® `http://polaris.local`
+5. ä¸‹è½½å¹¶å®‰è£… Polaris æ ¹è¯ä¹¦
+
+è¯´æ˜ï¼š
+
+- åªæœ‰ä»£ç†ç«¯å£ä¼šå¯¹å±€åŸŸç½‘å¼€æ”¾
+- API / MCP ä»ä¿æŒå›ç¯åœ°å€è®¿é—®ï¼Œé¿å…æ§åˆ¶é¢æš´éœ²åˆ°å±€åŸŸç½‘
+
+### 8. æœ¬åœ°æ•°æ®ç›®å½•
+
+Polaris é»˜è®¤æŠŠè¿è¡Œæ•°æ®å†™åˆ°å½“å‰ç”¨æˆ·è‡ªå·±çš„æœ¬åœ°ç›®å½•ï¼Œè€Œä¸æ˜¯ä»“åº“å†…ã€‚
+
+é»˜è®¤ä½ç½®ï¼š
+
+- Windowsï¼š`%LOCALAPPDATA%\\Polaris`
+- macOSï¼š`~/Library/Application Support/Polaris`
+- Linuxï¼š`~/.local/state/polaris` æˆ– `$XDG_STATE_HOME/polaris`
+
+è¿™æ„å‘³ç€ï¼š
+
+- æ¯ä¸ªäººå¯ä»¥æœ‰è‡ªå·±çš„ Mock æ•°æ®
+- æœ¬åœ°è¯ä¹¦å’Œç§é’¥ä¸ä¼šè¿›å…¥ Git
+- è¯·æ±‚è®°å½•å’Œè¿è¡ŒçŠ¶æ€ä¸ä¼šæ±¡æŸ“ä»“åº“
+
+## å¼€å‘
+
+### 1. å®‰è£…ä¾èµ–
+
+```bash
+corepack pnpm install
 ```
 
-ËµÃ÷£º
+### 2. å¸¸ç”¨å¼€å‘å‘½ä»¤
 
-- `--pack` ¿ÉÑ¡Öµ£º`mock | proxy | request | ops`¡£
-- `POLARIS_MCP_START_PROXY` Ä¬ÈÏ½¨ÒéÎª `false`£¬±ÜÃâ stdio ½ø³Ì¶îÍâÕ¼ÓÃ±¾µØ´úÀí¶Ë¿Ú¡£
-- Èç¹ûÄãÈ·ÊµÏ£Íû stdio ½ø³ÌÍ¬Ê±À­Æğ±¾µØ´úÀí£¬¿ÉÏÔÊ½¸ÄÎª `true`¡£
-- Ö»ÓĞÔÚ¡°±¾µØ²Ö¿â¿ª·¢Ä£Ê½¡±ÏÂ£¬²Å½¨ÒéÊ¹ÓÃ `node packages/cli/dist/bin.js ...` ÕâÖÖÂ·¾¶·½Ê½¡£
+å¯åŠ¨ Core + Consoleï¼š
 
-#### C. ¶à¹¤¾ß²ğ·Ö½¨Òé
+```bash
+corepack pnpm dev
+```
 
-¶ÔÖ§³Ö¶à¸ö MCP server µÄ AI ¹¤¾ß£¬½¨Òé°´Ö°Ôğ²ğ·Ö£º
+åªå¯åŠ¨ Coreï¼š
 
-- ´úÂë/µ÷ÊÔÖúÊÖ£º½Ó `request + mock`
-- ÍøÂçÎÊÌâÅÅ²éÖúÊÖ£º½Ó `proxy + ops`
-- ¹ÜÀíÔ±ÖúÊÖ£º½Ó `all` »ò `ops`
+```bash
+corepack pnpm dev:core
+```
 
-ÕâÑù¿ÉÒÔ¼õÉÙÄ£ĞÍ¿É¼û¹¤¾ßÊıÁ¿£¬½µµÍ¹¤¾ßÑ¡Ôñ´íÎóºÍÉÏÏÂÎÄ¸ºµ£¡£
+åªå¯åŠ¨ Consoleï¼š
 
-#### D. ÆäËû¿ÉÓÃ½ÓÈë·½°¸
+```bash
+corepack pnpm dev:console
+```
 
-- Streamable HTTP£¨ÍÆ¼ö£©
-  - ÊÊºÏ³¤ÆÚÎÈ¶¨½ÓÈëÓë¶à¹¤¾ß¹²Ïí
-  - µØÖ·Ê¾Àı£º`http://127.0.0.1:19602/mcp/request`
-- stdio£¨¼æÈİ£©
-  - ÊÊºÏ½öÖ§³ÖÃüÁîÆô¶¯ MCP µÄ¹¤¾ß
-  - ÍÆ¼öÓÃÈ«¾Ö `polaris mcp-stdio --pack <pack>`
-- Legacy HTTP£¨¼æÈİ¾É¿Í»§¶Ë£©
-  - Ê¹ÓÃ `/tools`¡¢`/resources`¡¢`/invoke/:tool` ½Ó¿Ú
-  - ÊÊºÏÉĞÎ´ÍêÕûÖ§³Ö Streamable MCP µÄ¼¯³É
+å¯åŠ¨ stdio MCPï¼š
 
+```bash
+corepack pnpm dev:mcp
+```
 
+### 3. æ„å»º
+
+æ„å»ºæ•´ä¸ªå·¥ä½œåŒºï¼š
+
+```bash
+corepack pnpm build
+```
+
+åªæ„å»ºæœ€ç»ˆå‘å¸ƒåŒ…ï¼š
+
+```bash
+corepack pnpm --filter polaris-workbench build
+```
+
+è¿™ä¸ªæ„å»ºä¼šï¼š
+
+- æ‰“åŒ… CLI
+- æ‰“åŒ… Core runtime
+- æ„å»º Console
+- æ„å»ºæµè§ˆå™¨æ‰©å±•
+- å°†æœ€ç»ˆäº§ç‰©èšåˆåˆ° `packages/cli/dist`
+
+### 4. ç±»å‹æ£€æŸ¥ä¸æµ‹è¯•
+
+ç±»å‹æ£€æŸ¥ï¼š
+
+```bash
+corepack pnpm typecheck
+```
+
+Smoke æ£€æŸ¥ï¼š
+
+```bash
+corepack pnpm test:smoke
+```
+
+E2Eï¼š
+
+```bash
+corepack pnpm test:e2e
+```
+
+### 5. æœ¬åœ°å‘å¸ƒéªŒè¯
+
+ç”Ÿæˆå‘å¸ƒåŒ…ï¼š
+
+```bash
+corepack pnpm --dir packages/cli pack --pack-destination ../temp/pack
+```
+
+å…¨å±€å®‰è£…æœ¬åœ° tarballï¼š
+
+```bash
+npm i -g .\packages\temp\pack\polaris-workbench-0.1.0.tgz
+```
+
+### 6. æ­£å¼å‘å¸ƒ
+
+è¿›å…¥å‘å¸ƒåŒ…ç›®å½•ï¼š
+
+```bash
+cd packages/cli
+```
+
+å‘å¸ƒå‰å»ºè®®ç¡®è®¤ï¼š
+
+```bash
+npm whoami
+npm config get registry
+npm pkg get name version
+```
+
+æ­£å¼å‘å¸ƒï¼š
+
+```bash
+npm publish
+```
+
+å¦‚æœè´¦å·å¼€å¯äº†å‘å¸ƒ 2FAï¼Œéœ€è¦ä½¿ç”¨ OTP æˆ–å¸¦ bypass 2FA çš„ tokenã€‚
+
+## å¸¸è§é—®é¢˜
+
+### ä¸ºä»€ä¹ˆ Polaris æ²¡æœ‰ä½¿ç”¨é»˜è®¤ç«¯å£
+
+è¿™æ˜¯æ­£å¸¸è¡Œä¸ºã€‚
+
+å¦‚æœé»˜è®¤ç«¯å£è¢«å ç”¨ï¼ŒPolaris ä¼šè‡ªåŠ¨åˆ‡æ¢åˆ°æ–°çš„å¯ç”¨ç«¯å£ã€‚ä½ å¯ä»¥é€šè¿‡ä¸‹é¢çš„å‘½ä»¤æŸ¥çœ‹å½“å‰å®é™…ç«¯å£ï¼š
+
+```bash
+polaris status
+```
+
+### ä¸ºä»€ä¹ˆ Console è¿ä¸ä¸Š Core
+
+ä¼˜å…ˆæ£€æŸ¥ï¼š
+
+- Polaris æœåŠ¡æ˜¯å¦å·²å¯åŠ¨
+- `polaris status` è¾“å‡ºçš„å¥åº·æ£€æŸ¥åœ°å€æ˜¯å¦å¯è®¿é—®
+- å½“å‰ Console åœ°å€æ˜¯å¦æ¥è‡ª `polaris console-url`
+
+### ä¸ºä»€ä¹ˆæ‰©å±•æ˜¾ç¤º Core ç¦»çº¿
+
+ä¼˜å…ˆæ£€æŸ¥ï¼š
+
+- Polaris æ˜¯å¦æ­£åœ¨è¿è¡Œ
+- æ‰©å±•æ˜¯å¦ä½¿ç”¨äº† `polaris extension-path` å¯¹åº”çš„æœ€æ–°æ„å»ºäº§ç‰©
+- å½“å‰ Core API åœ°å€æ˜¯å¦å¯è®¿é—®
+
+### ä¸ºä»€ä¹ˆ MCP å®¢æˆ·ç«¯è¿æ¥å¤±è´¥
+
+ä¼˜å…ˆæ£€æŸ¥ï¼š
+
+- ä½ æ¥çš„æ˜¯ HTTP MCP è¿˜æ˜¯ stdio
+- Polaris æ˜¯å¦å·²ç»å¯åŠ¨
+- MCP åœ°å€æ˜¯å¦æ¥è‡ª `polaris mcp-url` æˆ– `polaris status`
+- å¦‚æœæ˜¯ stdioï¼Œæ˜¯å¦æ­£ç¡®ä¼ å…¥äº† `--pack`

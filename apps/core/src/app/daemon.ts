@@ -30,7 +30,8 @@ async function writeRunFiles(settings: AppSetting) {
         },
         urls: {
           health: `http://127.0.0.1:${settings.localApiPort}/api/health`,
-          mcp: `http://127.0.0.1:${settings.mcpPort}/mcp`
+          mcp: `http://127.0.0.1:${settings.mcpPort}/mcp`,
+          console: `http://127.0.0.1:${settings.localApiPort}/`
         }
       },
       null,

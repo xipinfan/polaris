@@ -1,26 +1,23 @@
 {
-  "name": "polaris-proxy",
+  "name": "polaris-workbench",
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "polaris": "dist/bin.js"
+    "polaris": "dist/bin.cjs"
   },
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node ./scripts/build.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "dependencies": {
-    "@polaris/core": "workspace:*",
-    "tsx": "^4.19.3"
-  },
   "devDependencies": {
-    "@polaris/core": "workspace:*",
     "@types/node": "^22.13.10",
+    "esbuild": "^0.25.1",
     "typescript": "^5.8.2"
   }
 }

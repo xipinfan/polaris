@@ -1,19 +1,19 @@
-#!/usr/bin/env node
 import { spawn } from "node:child_process";
 import { access, mkdir, readFile, rm } from "node:fs/promises";
 import { constants, openSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
-import { createRequire } from "node:module";
 
-const require = createRequire(import.meta.url);
-const corePackageJson = require.resolve("@polaris/core/package.json");
-const tsxPackageJson = require.resolve("tsx/package.json");
-const corePackageDir = path.dirname(corePackageJson);
-const daemonEntry = path.join(corePackageDir, "src", "app", "daemon.ts");
-const mcpStdioEntry = path.join(corePackageDir, "src", "app", "mcpStdio.ts");
-const tsxCli = path.join(path.dirname(tsxPackageJson), "dist", "cli.mjs");
+const moduleDir = typeof __dirname === "string" ? __dirname : path.dirname(fileURLToPath(import.meta.url));
+const packageDistDir = moduleDir;
+const runtimeDir = path.join(packageDistDir, "runtime");
+const assetsDir = path.join(packageDistDir, "assets");
+const daemonEntry = path.join(runtimeDir, "daemon.cjs");
+const mcpStdioEntry = path.join(runtimeDir, "mcp-stdio.cjs");
+const consoleDistDir = path.join(assetsDir, "console");
+const extensionDistDir = path.join(assetsDir, "extension");
 
 function getPolarisHomeDir(): string {
   if (process.env.POLARIS_HOME) {
@@ -100,14 +100,17 @@ async function startCommand(): Promise<void> {
   await mkdir(runDir, { recursive: true });
   await mkdir(logsDir, { recursive: true });
 
-  const child = spawn(process.execPath, [tsxCli, daemonEntry], {
+  const child = spawn(process.execPath, [daemonEntry], {
     detached: true,
     stdio: [
       "ignore",
       openSync(stdoutLog, "a"),
       openSync(stderrLog, "a")
     ],
-    env: process.env
+    env: {
+      ...process.env,
+      POLARIS_CONSOLE_DIST: consoleDistDir
+    }
   });
   child.unref();
 
@@ -120,6 +123,7 @@ async function startCommand(): Promise<void> {
   console.log("Polaris started");
   console.log(`Health: ${state.urls.health}`);
   console.log(`MCP: ${state.urls.mcp}`);
+  console.log(`Console: ${state.urls.console}`);
 }
 
 async function stopCommand(): Promise<void> {
@@ -169,7 +173,8 @@ async function statusCommand(): Promise<void> {
         health,
         urls: {
           apiHealth: state?.urls?.health ?? "http://127.0.0.1:19601/api/health",
-          mcp: state?.urls?.mcp ?? "http://127.0.0.1:19602/mcp"
+          mcp: state?.urls?.mcp ?? "http://127.0.0.1:19602/mcp",
+          console: state?.urls?.console ?? "http://127.0.0.1:19601/"
         }
       },
       null,
@@ -181,6 +186,15 @@ async function statusCommand(): Promise<void> {
 async function mcpUrlCommand(): Promise<void> {
   const state = await fileExists(stateFile) ? JSON.parse(await readFile(stateFile, "utf8")) : null;
   console.log(state?.urls?.mcp ?? "http://127.0.0.1:19602/mcp");
+}
+
+async function consoleUrlCommand(): Promise<void> {
+  const state = await fileExists(stateFile) ? JSON.parse(await readFile(stateFile, "utf8")) : null;
+  console.log(state?.urls?.console ?? "http://127.0.0.1:19601/");
+}
+
+async function extensionPathCommand(): Promise<void> {
+  console.log(extensionDistDir);
 }
 
 async function mcpStdioCommand(): Promise<void> {
@@ -198,7 +212,7 @@ async function mcpStdioCommand(): Promise<void> {
     childEnv.POLARIS_MCP_PACK = requestedPack;
   }
 
-  const child = spawn(process.execPath, [tsxCli, mcpStdioEntry], {
+  const child = spawn(process.execPath, [mcpStdioEntry], {
     stdio: "inherit",
     env: childEnv
   });
@@ -235,12 +249,18 @@ async function main() {
     case "mcp-url":
       await mcpUrlCommand();
       return;
+    case "console-url":
+      await consoleUrlCommand();
+      return;
+    case "extension-path":
+      await extensionPathCommand();
+      return;
     case "mcp-stdio":
       await mcpStdioCommand();
       return;
     default:
       console.error(`Unknown command: ${command}`);
-      console.error("Usage: polaris <start|stop|status|mcp-url|mcp-stdio>");
+      console.error("Usage: polaris <start|stop|status|mcp-url|console-url|extension-path|mcp-stdio>");
       process.exitCode = 1;
   }
 }

@@ -180,7 +180,7 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
       <Modal
         cancelText={t("mock.form.cancel")}
         footer={null}
-        maskClosable={false}
+        mask={{ closable: false }}
         onCancel={() => {
           if (!movingGroup) {
             setMoveRule(null);
@@ -222,7 +222,7 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
 
       <Modal
         cancelText={t("mock.form.cancel")}
-        maskClosable={false}
+        mask={{ closable: false }}
         okButtonProps={{ disabled: selectedExportRules.length === 0 }}
         okText="导出"
         onCancel={() => setIsBatchExportOpen(false)}
@@ -314,7 +314,7 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
                         cancelText: t("mock.form.cancel"),
                         content: t("mock.groupDeleteConfirm", { name: currentGroup }),
                         icon: null,
-                        maskClosable: false,
+                        mask: { closable: false },
                         okButtonProps: { danger: true },
                         okText: t("mock.groupDelete"),
                         onOk: async () => {
@@ -434,7 +434,7 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
                                 cancelText: t("mock.form.cancel"),
                                 content: `确认删除规则「${scene.variant}」吗？`,
                                 icon: null,
-                                maskClosable: false,
+                                mask: { closable: false },
                                 okButtonProps: { danger: true },
                                 okText: "删除",
                                 onOk: async () => {
@@ -496,7 +496,7 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
       </div>
       <Modal
         cancelText={t("mock.form.cancel")}
-        maskClosable={false}
+        mask={{ closable: false }}
         okText="确定"
         onCancel={() => {
           setIsEditGroupOpen(false);
