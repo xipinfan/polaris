@@ -14,6 +14,7 @@ import type {
   SavedRequest,
   ServiceStatus
 } from "@polaris/shared-types";
+import type { UpsertSiteRuleInput } from "../domains/proxy-forward/types";
 import { mapApiError, ApiError } from "./apiErrors";
 import { recordApiRequest } from "./apiMetrics";
 import { getApiBaseUrl } from "./coreDiscovery";
@@ -110,8 +111,8 @@ export const apiClient = {
   listProxyRules: () => request<ProxyRule[]>("/proxy-rules"),
   setProxyMode: (mode: ProxyMode) =>
     request<{ mode: ProxyMode }>("/proxy-mode", { method: "POST", body: JSON.stringify({ mode }) }),
-  upsertSiteRule: (host: string, action: "proxy" | "direct") =>
-    request<ProxyRule>("/proxy-rules/site", { method: "POST", body: JSON.stringify({ host, action }) }),
+  upsertSiteRule: (body: UpsertSiteRuleInput) =>
+    request<ProxyRule>("/proxy-rules/site", { method: "POST", body: JSON.stringify(body) }),
   removeSiteRule: (host: string) =>
     request<{ host: string }>(`/proxy-rules/site/${encodeURIComponent(host)}`, { method: "DELETE" }),
   runRequest: (body: RunRequestInput) => request<RequestRecord>("/debug/run", { method: "POST", body: JSON.stringify(body) }),

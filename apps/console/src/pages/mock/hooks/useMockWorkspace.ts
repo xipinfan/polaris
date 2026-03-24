@@ -169,19 +169,6 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
     writePersistence(groupMetaStorageKey, groupMeta);
   }, [groupMeta]);
 
-  useEffect(() => {
-    const active = activeGroupQuery.data?.group;
-    if (active) {
-      if (active !== selectedGroup) {
-        setSelectedGroup(active);
-      }
-      return;
-    }
-    if (!selectedGroup) {
-      setSelectedGroup(defaultGroup);
-    }
-  }, [activeGroupQuery.data?.group, defaultGroup, selectedGroup, setSelectedGroup]);
-
   const groupedRules = useMemo(
     () =>
       rules.reduce<Record<string, MockRule[]>>((acc, rule) => {
@@ -204,10 +191,16 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
   }, [groupSearch, groups]);
 
   useEffect(() => {
-    if (groups.length && (!selectedGroup || !groups.includes(selectedGroup))) {
-      setSelectedGroup(groups[0]);
+    const activeGroup = activeGroupQuery.data?.group;
+    const nextGroup =
+      (activeGroup && groups.includes(activeGroup) ? activeGroup : undefined) ??
+      groups[0] ??
+      defaultGroup;
+
+    if (nextGroup !== selectedGroup) {
+      setSelectedGroup(nextGroup);
     }
-  }, [groups, selectedGroup, setSelectedGroup]);
+  }, [activeGroupQuery.data?.group, defaultGroup, groups, selectedGroup, setSelectedGroup]);
 
   const currentGroup = groups.includes(selectedGroup) ? selectedGroup : defaultGroup;
 

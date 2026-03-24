@@ -53,13 +53,13 @@ function validateExactBodyMatch(value: string): string | null {
     }
 
     if (!(valueLiteral.startsWith('"') && valueLiteral.endsWith('"'))) {
-      return "值必须使用双引号包裹，例如 name:\"xxx\"";
+      return '值必须使用双引号包裹，例如 name:"xxx"';
     }
 
     try {
       const parsed = JSON.parse(valueLiteral);
       if (typeof parsed !== "string") {
-        return "值必须是字符串，例如 name:\"xxx\"";
+        return '值必须是字符串，例如 name:"xxx"';
       }
     } catch {
       return "字符串格式非法，请检查转义字符";
@@ -186,8 +186,8 @@ export function MockRuleModal({
 
   if (!isOpen) return null;
 
-  const editorHeight = isExpanded ? 460 : 360;
-  const codeEditorHeight = Math.max(editorHeight - 44, 260);
+  const editorHeight = isExpanded ? 700 : 580;
+  const codeEditorHeight = Math.max(editorHeight - 44, 470);
   const groupOptions = [defaultGroup, ...groups.filter((group) => group !== defaultGroup)].map((group) => ({
     label: group,
     value: group,
@@ -309,7 +309,7 @@ export function MockRuleModal({
                     value={form.requestBodyExactMatch}
                   />
                   <small className={localStyles.fieldHint}>
-                    支持多条件：每行一条或用分号分隔，例如 `name:"xxx"; user.id:"123"`。
+                    支持多条条件：每行一条或用分号分隔，例如 `name:"xxx"; user.id:"123"`。
                   </small>
                   {exactMatchError ? <div className={localStyles.editorError}>{exactMatchError}</div> : null}
                 </label>
@@ -328,97 +328,70 @@ export function MockRuleModal({
             </section>
           ) : (
             <section className={localStyles.modalSection}>
-              <div className={localStyles.modalSectionHeader}>
-                <div>
-                  <strong>{t("mock.modalReturn")}</strong>
-                  <p>{t("mock.form.responseSectionHint")}</p>
-                </div>
-              </div>
-              <div className={localStyles.modalGrid}>
-                <label className={localStyles.field}>
-                  <span>{t("mock.form.statusLabel")}</span>
-                  <input
-                    className={localStyles.control}
-                    min={100}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, responseStatus: Number(event.target.value) || 200 }))
-                    }
-                    type="number"
-                    value={form.responseStatus}
-                  />
-                </label>
-                <div className={localStyles.field}>
-                  <span>{t("mock.form.returnTypeLabel")}</span>
-                  <div className={localStyles.staticValue}>
-                    <strong>{t("mock.ruleResponseStaticJson")}</strong>
-                    <small>{t("mock.form.groupActiveHintLabel")}</small>
-                  </div>
-                </div>
-                <div className={classNames(localStyles.field, localStyles.fieldFull)}>
-                  <div className={localStyles.editorSection}>
-                    <div className={localStyles.editorShell} style={{ height: editorHeight }}>
-                      <div className={localStyles.editorToolbar}>
-                        <div className={localStyles.editorTabs}>
-                          <button
-                            className={classNames(
-                              localStyles.editorTab,
-                              activePane === "headers" && localStyles.editorTabActive,
-                            )}
-                            onClick={() => setActivePane("headers")}
-                            type="button"
-                          >
-                            {t("mock.form.headersLabel")}
-                          </button>
-                          <button
-                            className={classNames(
-                              localStyles.editorTab,
-                              activePane === "body" && localStyles.editorTabActive,
-                            )}
-                            onClick={() => setActivePane("body")}
-                            type="button"
-                          >
-                            {t("mock.form.bodyContentLabel")}
-                          </button>
-                        </div>
-                        <div className={localStyles.editorActions}>
-                          <button className={localStyles.secondaryButton} onClick={formatActiveJson} type="button">
-                            格式化
-                          </button>
-                          <button
-                            className={localStyles.secondaryButton}
-                            onClick={() => setIsExpanded((value) => !value)}
-                            type="button"
-                          >
-                            {isExpanded ? "还原编辑区" : "放大编辑区"}
-                          </button>
-                        </div>
+              <div className={localStyles.responseEditorLayout}>
+                <div className={localStyles.editorSection}>
+                  <div className={localStyles.editorShell} style={{ height: editorHeight }}>
+                    <div className={localStyles.editorToolbar}>
+                      <div className={localStyles.editorTabs}>
+                        <button
+                          className={classNames(
+                            localStyles.editorTab,
+                            activePane === "headers" && localStyles.editorTabActive,
+                          )}
+                          onClick={() => setActivePane("headers")}
+                          type="button"
+                        >
+                          {t("mock.form.headersLabel")}
+                        </button>
+                        <button
+                          className={classNames(
+                            localStyles.editorTab,
+                            activePane === "body" && localStyles.editorTabActive,
+                          )}
+                          onClick={() => setActivePane("body")}
+                          type="button"
+                        >
+                          {t("mock.form.bodyContentLabel")}
+                        </button>
                       </div>
-                      <div className={localStyles.editorFrame}>
-                        {activePane === "headers" ? (
-                          <Editor
-                            defaultLanguage="json"
-                            height={codeEditorHeight}
-                            onChange={(value) => setForm((current) => ({ ...current, responseHeaders: value ?? "{}" }))}
-                            onMount={handleHeadersMount}
-                            options={editorOptions}
-                            saveViewState={false}
-                            value={form.responseHeaders}
-                          />
-                        ) : (
-                          <Editor
-                            defaultLanguage="json"
-                            height={codeEditorHeight}
-                            onChange={(value) => setForm((current) => ({ ...current, responseBody: value ?? "{}" }))}
-                            onMount={handleBodyMount}
-                            options={editorOptions}
-                            saveViewState={false}
-                            value={form.responseBody}
-                          />
-                        )}
+                      <div className={localStyles.editorActions}>
+                        <button className={localStyles.secondaryButton} onClick={formatActiveJson} type="button">
+                          格式化
+                        </button>
+                        <button
+                          className={localStyles.secondaryButton}
+                          onClick={() => setIsExpanded((value) => !value)}
+                          type="button"
+                        >
+                          {isExpanded ? "还原编辑区" : "放大编辑区"}
+                        </button>
                       </div>
                     </div>
-                    {editorError ? <div className={localStyles.editorError}>{editorError}</div> : null}
+                    <div className={localStyles.editorFrame}>
+                      {activePane === "headers" ? (
+                        <Editor
+                          defaultLanguage="json"
+                          height={codeEditorHeight}
+                          onChange={(value) => setForm((current) => ({ ...current, responseHeaders: value ?? "{}" }))}
+                          onMount={handleHeadersMount}
+                          options={editorOptions}
+                          saveViewState={false}
+                          value={form.responseHeaders}
+                        />
+                      ) : (
+                        <Editor
+                          defaultLanguage="json"
+                          height={codeEditorHeight}
+                          onChange={(value) => setForm((current) => ({ ...current, responseBody: value ?? "{}" }))}
+                          onMount={handleBodyMount}
+                          options={editorOptions}
+                          saveViewState={false}
+                          value={form.responseBody}
+                        />
+                      )}
+                    </div>
                   </div>
+                  {editorError ? <div className={localStyles.editorError}>{editorError}</div> : null}
                 </div>
               </div>
             </section>

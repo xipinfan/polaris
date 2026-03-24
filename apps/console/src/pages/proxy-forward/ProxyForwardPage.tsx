@@ -526,6 +526,10 @@ export function ProxyForwardPage() {
         await upsertRuleMutation.mutateAsync({
           host: normalizeHost(rule.pattern),
           action: rule.action,
+          forwardMode: rule.forwardMode,
+          targetUrl: rule.targetUrl,
+          rewriteHost: rule.rewriteHost,
+          rewritePath: rule.rewritePath,
         });
       } else {
         const activeRules =
@@ -673,6 +677,10 @@ export function ProxyForwardPage() {
         await upsertRuleMutation.mutateAsync({
           host: normalizeHost(nextRule.pattern),
           action: nextRule.action,
+          forwardMode: nextRule.forwardMode,
+          targetUrl: nextRule.targetUrl,
+          rewriteHost: nextRule.rewriteHost,
+          rewritePath: nextRule.rewritePath,
         });
       } else if (editingRule?.enabled && !patternChanged) {
         const nextActiveRules =

@@ -30,7 +30,14 @@ describe("core flows integration", () => {
 
     expect(api.removeSiteRule).toHaveBeenCalledTimes(2);
     expect(api.upsertSiteRule).toHaveBeenCalledTimes(1);
-    expect(api.upsertSiteRule).toHaveBeenCalledWith("enabled-a.com", "proxy");
+    expect(api.upsertSiteRule).toHaveBeenCalledWith({
+      host: "enabled-a.com",
+      action: "proxy",
+      forwardMode: undefined,
+      targetUrl: undefined,
+      rewriteHost: undefined,
+      rewritePath: undefined,
+    });
   });
 
   it("replay flow invalidates traffic list and detail chain", async () => {

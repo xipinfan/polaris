@@ -140,7 +140,11 @@ const proxyModeInputSchema = z.object({
 
 const upsertProxyRuleInputSchema = z.object({
   host: z.string().min(1),
-  action: z.enum(["proxy", "direct"])
+  action: z.enum(["proxy", "direct"]),
+  forwardMode: z.enum(["direct", "rewriteTarget", "rewriteHost", "rewritePath"]).optional(),
+  targetUrl: z.string().url().optional(),
+  rewriteHost: z.string().min(1).optional(),
+  rewritePath: z.string().min(1).optional()
 });
 
 const removeProxyRuleInputSchema = z.object({
@@ -200,6 +204,14 @@ function jsonResourceResult(uri: string, data: unknown) {
 function getRuleGroupName(name: string): string | null {
   const match = name.match(/^\[(.+?)\]\s*(.+)$/);
   return match?.[1]?.trim() || null;
+}
+
+async function syncActiveMockGroupFromRuleName(mockService: MockService, ruleName: string): Promise<void> {
+  const nextGroup = getRuleGroupName(ruleName);
+  if (!nextGroup || nextGroup === mockService.getActiveGroup()) {
+    return;
+  }
+  await mockService.setActiveGroup(nextGroup);
 }
 
 function buildMockRuleSummary(rule: ReturnType<MockService["list"]>[number]) {
@@ -548,7 +560,12 @@ export function createPolarisMcpSdkServer(
       description: createMockRuleTool.description,
       inputSchema: createMockRuleInputSchema
     },
-    async (args) => safe(() => mockService.create(args).then((data) => jsonToolResult(data)))
+    async (args) =>
+      safe(async () => {
+        const data = await mockService.create(args);
+        await syncActiveMockGroupFromRuleName(mockService, data.name);
+        return jsonToolResult(data);
+      })
   );
 
   server.registerTool(
@@ -558,7 +575,11 @@ export function createPolarisMcpSdkServer(
       inputSchema: updateMockRuleToolInputSchema
     },
     async ({ id, ...input }) =>
-      safe(() => mockService.update(id, input as UpdateMockRuleInput).then((data) => jsonToolResult(data)))
+      safe(async () => {
+        const data = await mockService.update(id, input as UpdateMockRuleInput);
+        await syncActiveMockGroupFromRuleName(mockService, data.name);
+        return jsonToolResult(data);
+      })
   );
 
   server.registerTool(
@@ -709,8 +730,8 @@ export function createPolarisMcpSdkServer(
       description: upsertProxyRuleTool.description,
       inputSchema: upsertProxyRuleInputSchema
     },
-    async ({ host, action }) =>
-      safe(() => proxyService.upsertSiteRule(host, action).then((data) => jsonToolResult(data)))
+    async (args) =>
+      safe(() => proxyService.upsertSiteRule(args).then((data) => jsonToolResult(data)))
   );
 
   server.registerTool(

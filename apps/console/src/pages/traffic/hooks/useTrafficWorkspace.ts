@@ -13,6 +13,10 @@ import { useWorkspaceStore } from "../../../stores/workspaceStore";
 import { getRequestResolutionMode } from "../utils/trafficFormatters";
 
 export function useTrafficWorkspace() {
+  const emptyRequests = useMemo(
+    () => [] as NonNullable<ReturnType<typeof useTrafficRequestsQuery>["data"]>,
+    [],
+  );
   const keyword = useUiStore(uiSelectors.trafficKeyword);
   const method = useUiStore(uiSelectors.trafficMethod);
   const statusCode = useUiStore(uiSelectors.trafficStatusCode);
@@ -55,7 +59,7 @@ export function useTrafficWorkspace() {
   const clearRequestsMutation = useClearTrafficRequestsMutation();
   const replayMutation = useReplayTrafficRequestMutation();
 
-  const requests = requestsQuery.data ?? [];
+  const requests = requestsQuery.data ?? emptyRequests;
   const isLoading = requestsQuery.isFetching;
   const settings = settingsQuery.data ?? null;
   const lastUpdatedAt = requestsQuery.dataUpdatedAt
@@ -88,12 +92,17 @@ export function useTrafficWorkspace() {
 
   useEffect(() => {
     if (visibleRequests.length === 0) {
-      setSelectedId(undefined);
+      if (selectedId !== undefined) {
+        setSelectedId(undefined);
+      }
       return;
     }
 
     if (!selectedId || !visibleRequests.some((item) => item.id === selectedId)) {
-      setSelectedId(visibleRequests[visibleRequests.length - 1].id);
+      const nextSelectedId = visibleRequests[visibleRequests.length - 1].id;
+      if (nextSelectedId !== selectedId) {
+        setSelectedId(nextSelectedId);
+      }
     }
   }, [selectedId, setSelectedId, visibleRequests]);
 

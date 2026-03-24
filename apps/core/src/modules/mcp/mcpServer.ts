@@ -60,6 +60,14 @@ function getRuleGroupName(name: string): string | null {
   return match?.[1]?.trim() || null;
 }
 
+async function syncActiveMockGroupFromRuleName(mockService: MockService, ruleName: string): Promise<void> {
+  const nextGroup = getRuleGroupName(ruleName);
+  if (!nextGroup || nextGroup === mockService.getActiveGroup()) {
+    return;
+  }
+  await mockService.setActiveGroup(nextGroup);
+}
+
 function buildMockRuleSummary(rule: ReturnType<MockService["list"]>[number]) {
   return {
     id: rule.id,
@@ -290,10 +298,18 @@ export class MpcServer {
             }
             return;
           case "create_mock_rule":
-            res.json({ data: await this.mockService.create(req.body) });
+            {
+              const rule = await this.mockService.create(req.body);
+              await syncActiveMockGroupFromRuleName(this.mockService, rule.name);
+              res.json({ data: rule });
+            }
             return;
           case "update_mock_rule":
-            res.json({ data: await this.mockService.update(req.body.id, req.body as UpdateMockRuleInput) });
+            {
+              const rule = await this.mockService.update(req.body.id, req.body as UpdateMockRuleInput);
+              await syncActiveMockGroupFromRuleName(this.mockService, rule.name);
+              res.json({ data: rule });
+            }
             return;
           case "delete_mock_rule":
             await this.mockService.remove(req.body.id);
@@ -355,7 +371,7 @@ export class MpcServer {
             res.json({ data: { mode: await this.proxyService.setMode(req.body.mode) } });
             return;
           case "upsert_proxy_rule":
-            res.json({ data: await this.proxyService.upsertSiteRule(req.body.host, req.body.action) });
+            res.json({ data: await this.proxyService.upsertSiteRule(req.body) });
             return;
           case "remove_proxy_rule":
             await this.proxyService.removeSiteRule(req.body.host);

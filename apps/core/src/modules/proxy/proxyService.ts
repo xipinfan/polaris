@@ -2,11 +2,24 @@ import { randomUUID } from "node:crypto";
 import type { AppSetting, ProxyMode, ProxyRule } from "@polaris/shared-types";
 import { StorageAdapter } from "../storage/storageAdapter";
 
+type UpsertSiteRuleInput = {
+  host: string;
+  action: "proxy" | "direct";
+  forwardMode?: ProxyRule["forwardMode"];
+  targetUrl?: ProxyRule["targetUrl"];
+  rewriteHost?: ProxyRule["rewriteHost"];
+  rewritePath?: ProxyRule["rewritePath"];
+};
+
 export interface ProxyForwardDecision {
   mode: "proxy_forward" | "direct";
   source: "proxy_rules" | "proxy_global" | "none";
   matchedRuleId?: string;
   matchedRuleName?: string;
+  forwardMode?: ProxyRule["forwardMode"];
+  targetUrl?: string;
+  rewriteHost?: string;
+  rewritePath?: string;
   reason: string;
 }
 
@@ -110,6 +123,21 @@ export class ProxyService {
       };
     }
 
+    const matchedRule = this.listRules().find((rule) => rule.enabled && this.matchesHostPattern(normalizedHost, rule.pattern));
+    if (matchedRule) {
+      return {
+        mode: matchedRule.action === "proxy" ? "proxy_forward" : "direct",
+        source: "proxy_rules",
+        matchedRuleId: matchedRule.id,
+        matchedRuleName: matchedRule.pattern,
+        forwardMode: matchedRule.forwardMode,
+        targetUrl: matchedRule.targetUrl,
+        rewriteHost: matchedRule.rewriteHost,
+        rewritePath: matchedRule.rewritePath,
+        reason: `Matched rule ${matchedRule.pattern} (${matchedRule.action})`
+      };
+    }
+
     if (mode === "global") {
       return {
         mode: "proxy_forward",
@@ -119,20 +147,10 @@ export class ProxyService {
     }
 
     if (mode === "rules") {
-      const matchedRule = this.listRules().find((rule) => rule.enabled && this.matchesHostPattern(normalizedHost, rule.pattern));
-      if (!matchedRule) {
-        return {
-          mode: "direct",
-          source: "none",
-          reason: "No enabled proxy rule matched host"
-        };
-      }
       return {
-        mode: matchedRule.action === "proxy" ? "proxy_forward" : "direct",
-        source: "proxy_rules",
-        matchedRuleId: matchedRule.id,
-        matchedRuleName: matchedRule.pattern,
-        reason: `Matched rule ${matchedRule.pattern} (${matchedRule.action})`
+        mode: "direct",
+        source: "none",
+        reason: "No enabled proxy rule matched host"
       };
     }
 
@@ -147,11 +165,12 @@ export class ProxyService {
     return this.getForwardDecision(host).mode === "proxy_forward";
   }
 
-  async upsertSiteRule(host: string, action: "proxy" | "direct"): Promise<ProxyRule> {
+  async upsertSiteRule(input: UpsertSiteRuleInput): Promise<ProxyRule> {
+    const { action } = input;
     if (!this.allowedActions.includes(action)) {
       throw new Error("Invalid proxy action");
     }
-    const pattern = this.normalizePattern(host);
+    const pattern = this.normalizePattern(input.host);
     if (!pattern) {
       throw new Error("Host is required");
     }
@@ -160,12 +179,25 @@ export class ProxyService {
     const existing = rules.find((rule) => this.normalizePattern(rule.pattern) === pattern);
 
     const nextRule: ProxyRule = existing
-      ? { ...existing, action, enabled: true, updatedAt: now }
+      ? {
+          ...existing,
+          action,
+          forwardMode: input.forwardMode,
+          targetUrl: input.targetUrl,
+          rewriteHost: input.rewriteHost,
+          rewritePath: input.rewritePath,
+          enabled: true,
+          updatedAt: now
+        }
       : {
           id: randomUUID(),
           pattern,
           matchType: "host",
           action,
+          forwardMode: input.forwardMode,
+          targetUrl: input.targetUrl,
+          rewriteHost: input.rewriteHost,
+          rewritePath: input.rewritePath,
           enabled: true,
           createdAt: now,
           updatedAt: now

@@ -206,7 +206,7 @@ export function createApiRouter(
   router.post(
     "/proxy-rules/site",
     withAsync(async (req, res) => {
-      res.json({ data: await proxyService.upsertSiteRule(req.body.host, req.body.action) });
+      res.json({ data: await proxyService.upsertSiteRule(req.body) });
     })
   );
 

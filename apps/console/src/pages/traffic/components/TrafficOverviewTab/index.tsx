@@ -20,18 +20,31 @@ type TrafficOverviewTabProps = {
   t: TranslateFn;
 };
 
-const buildFacts = (selected: RequestRecord, t: TranslateFn) => [
-  ["URL", selected.url],
-  [t("traffic.column.method"), selected.method],
-  [t("traffic.column.protocol"), getProtocolLabel(selected)],
-  [t("traffic.column.status"), String(selected.statusCode)],
-  [t("traffic.column.host"), selected.host],
-  [t("traffic.column.path"), selected.path],
-  [t("traffic.column.type"), getContentType(selected)],
-  [t("detail.source"), selected.source.toUpperCase()],
-  [t("detail.duration"), `${selected.duration} ms`],
-  [t("detail.capturedAt"), new Date(selected.createdAt).toLocaleString()],
-];
+const buildFacts = (selected: RequestRecord, t: TranslateFn) => {
+  const facts: Array<[string, string]> = [
+    ["URL", selected.url],
+    [t("traffic.column.method"), selected.method],
+    [t("traffic.column.protocol"), getProtocolLabel(selected)],
+    [t("traffic.column.status"), String(selected.statusCode)],
+    [t("traffic.column.host"), selected.host],
+    [t("traffic.column.path"), selected.path],
+    [t("traffic.column.type"), getContentType(selected)],
+    [t("detail.source"), selected.source.toUpperCase()],
+    [t("detail.duration"), `${selected.duration} ms`],
+    [t("detail.capturedAt"), new Date(selected.createdAt).toLocaleString()],
+  ];
+
+  const resolutionTarget = selected.resolution?.target;
+  if (selected.resolution?.mode === "proxy_forward" && resolutionTarget) {
+    const originalAddress = `${selected.host}${selected.path}`;
+    const targetAddress = resolutionTarget.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "");
+    if (targetAddress !== originalAddress) {
+      facts.splice(1, 0, [t("detail.resolution.target"), resolutionTarget]);
+    }
+  }
+
+  return facts;
+};
 
 const decisionCardClassMap = {
   mock: localStyles.decisionCardMock,

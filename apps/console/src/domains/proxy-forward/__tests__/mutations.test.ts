@@ -27,7 +27,14 @@ describe("applyActiveProxyForwardGroup", () => {
 
     expect(api.removeSiteRule).toHaveBeenCalledTimes(2);
     expect(api.upsertSiteRule).toHaveBeenCalledTimes(1);
-    expect(api.upsertSiteRule).toHaveBeenCalledWith("x.com", "proxy");
+    expect(api.upsertSiteRule).toHaveBeenCalledWith({
+      host: "x.com",
+      action: "proxy",
+      forwardMode: undefined,
+      targetUrl: undefined,
+      rewriteHost: undefined,
+      rewritePath: undefined,
+    });
   });
 
   it("throws when remove step fails", async () => {
@@ -68,6 +75,13 @@ describe("applyActiveProxyForwardGroup", () => {
     await applyActiveProxyForwardGroup(group, api as any);
 
     expect(api.upsertSiteRule).toHaveBeenCalledTimes(1);
-    expect(api.upsertSiteRule).toHaveBeenCalledWith("dup.com", "proxy");
+    expect(api.upsertSiteRule).toHaveBeenCalledWith({
+      host: "dup.com",
+      action: "proxy",
+      forwardMode: undefined,
+      targetUrl: undefined,
+      rewriteHost: undefined,
+      rewritePath: undefined,
+    });
   });
 });

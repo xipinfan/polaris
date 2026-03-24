@@ -21,11 +21,21 @@ export async function applyActiveProxyForwardGroup(
   const enabledRulesByHost = new Map(
     group.rules
       .filter((rule) => rule.enabled)
-      .map((rule) => [rule.pattern, rule.action] as const),
+      .map((rule) => [
+        rule.pattern,
+        {
+          host: rule.pattern,
+          action: rule.action,
+          forwardMode: rule.forwardMode,
+          targetUrl: rule.targetUrl,
+          rewriteHost: rule.rewriteHost,
+          rewritePath: rule.rewritePath,
+        },
+      ] as const),
   );
 
-  for (const [host, action] of enabledRulesByHost) {
-    await api.upsertSiteRule(host, action);
+  for (const payload of enabledRulesByHost.values()) {
+    await api.upsertSiteRule(payload);
   }
 
   return group;
@@ -53,7 +63,7 @@ export function useUpsertProxyForwardSiteRuleMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ host, action }: UpsertSiteRuleInput) => apiClient.upsertSiteRule(host, action),
+    mutationFn: (payload: UpsertSiteRuleInput) => apiClient.upsertSiteRule(payload),
     onSuccess: async () => {
       await invalidateProxyForwardQueries(queryClient);
     },

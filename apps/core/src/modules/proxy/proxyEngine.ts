@@ -52,6 +52,29 @@ function getHeaderValue(value: string | string[] | undefined): string | undefine
   return Array.isArray(value) ? value[0] : value;
 }
 
+function joinUrlPaths(basePath: string, requestPath: string): string {
+  const normalizedBase = basePath && basePath !== "/" ? basePath.replace(/\/+$/, "") : "";
+  const normalizedRequest = requestPath.startsWith("/") ? requestPath : `/${requestPath}`;
+  const joined = `${normalizedBase}${normalizedRequest}`;
+  return joined || "/";
+}
+
+function mergeSearchParams(targetSearch: string, requestSearch: string): string {
+  const targetQuery = targetSearch.replace(/^\?/, "");
+  const requestQuery = requestSearch.replace(/^\?/, "");
+
+  if (targetQuery && requestQuery) {
+    return `?${targetQuery}&${requestQuery}`;
+  }
+  if (targetQuery) {
+    return `?${targetQuery}`;
+  }
+  if (requestQuery) {
+    return `?${requestQuery}`;
+  }
+  return "";
+}
+
 function createCorsHeaders(req: IncomingMessage): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": getHeaderValue(req.headers.origin) ?? "*",
@@ -407,7 +430,6 @@ export class ProxyEngine {
     const shouldCapture = !isPolarisControlPlaneRequest(targetUrl);
     const requestBuffer = await collectBody(req);
     const requestHeaders = sanitizeProxyHeaders(req.headers);
-    requestHeaders.host = targetUrl.host;
     const normalizedRequestBody = normalizeCapturedBody(requestBuffer, requestHeaders);
     const startedAt = Date.now();
     const forwardDecision = this.proxyService.getForwardDecision(targetUrl.host);
@@ -454,16 +476,64 @@ export class ProxyEngine {
       return;
     }
 
+    let finalProtocol = targetUrl.protocol;
+    let finalHostname = targetUrl.hostname;
+    let finalPort = targetUrl.port || (targetUrl.protocol === "https:" ? "443" : "80");
+    let finalPathname = targetUrl.pathname;
+    let finalSearch = targetUrl.search;
+
+    if (forwardDecision.mode === "proxy_forward" && forwardDecision.forwardMode) {
+      switch (forwardDecision.forwardMode) {
+        case "rewriteTarget": {
+          if (forwardDecision.targetUrl) {
+            const rewrittenTarget = new URL(forwardDecision.targetUrl);
+            finalProtocol = rewrittenTarget.protocol;
+            finalHostname = rewrittenTarget.hostname;
+            finalPort = rewrittenTarget.port || (rewrittenTarget.protocol === "https:" ? "443" : "80");
+            finalPathname = joinUrlPaths(rewrittenTarget.pathname || "/", targetUrl.pathname);
+            finalSearch = mergeSearchParams(rewrittenTarget.search, targetUrl.search);
+          }
+          break;
+        }
+        case "rewriteHost": {
+          if (forwardDecision.rewriteHost) {
+            const rewrittenHost = new URL(`http://${forwardDecision.rewriteHost}`);
+            finalHostname = rewrittenHost.hostname;
+            finalPort = rewrittenHost.port || finalPort;
+          }
+          break;
+        }
+        case "rewritePath": {
+          if (forwardDecision.rewritePath) {
+            finalPathname = forwardDecision.rewritePath.startsWith("/")
+              ? forwardDecision.rewritePath
+              : `/${forwardDecision.rewritePath}`;
+          }
+          break;
+        }
+        case "direct":
+        default:
+          break;
+      }
+    }
+
+    const finalHost =
+      (finalProtocol === "http:" && finalPort === "80") || (finalProtocol === "https:" && finalPort === "443")
+        ? finalHostname
+        : `${finalHostname}:${finalPort}`;
+    const finalTargetUrl = `${finalProtocol}//${finalHost}${finalPathname}${finalSearch}`;
+    requestHeaders.host = finalHost;
+
     const options: RequestOptions = {
-      protocol: targetUrl.protocol,
-      hostname: targetUrl.hostname,
-      port: targetUrl.port || (targetUrl.protocol === "https:" ? 443 : 80),
+      protocol: finalProtocol,
+      hostname: finalHostname,
+      port: finalPort,
       method: req.method,
-      path: `${targetUrl.pathname}${targetUrl.search}`,
+      path: `${finalPathname}${finalSearch}`,
       headers: requestHeaders
     };
 
-    const client = targetUrl.protocol === "https:" ? https : http;
+    const client = finalProtocol === "https:" ? https : http;
     const proxyReq = client.request(options, async (proxyRes) => {
       const chunks: Buffer[] = [];
       proxyRes.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
@@ -498,7 +568,7 @@ export class ProxyEngine {
             source: forwardDecision.source,
             matchedRuleId: forwardDecision.matchedRuleId ?? null,
             matchedRuleName: forwardDecision.matchedRuleName ?? null,
-            target: `${targetUrl.protocol}//${targetUrl.host}`,
+            target: finalTargetUrl,
             reason:
               forwardDecision.mode === "proxy_forward"
                 ? forwardDecision.reason
