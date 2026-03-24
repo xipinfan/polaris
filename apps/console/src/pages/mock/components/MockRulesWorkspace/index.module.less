@@ -1,14 +1,14 @@
-﻿.statusBadge {
+.statusBadge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 28px;
-  padding: 0 12px;
+  min-height: 22px;
+  padding: 0 8px;
   border-radius: 999px;
   border: 1px solid rgba(205, 213, 224, 0.72);
   background: rgba(255, 255, 255, 0.72);
   color: #475467;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -28,7 +28,7 @@
 .main {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 12px;
+  gap: 10px;
   min-height: 0;
   height: var(--mock-main-panels-height);
   min-height: var(--mock-main-panels-height);
@@ -41,38 +41,31 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 14px;
-  padding: 18px 20px;
-  border-radius: 24px;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
   border: 1px solid rgba(223, 229, 238, 0.94);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%);
 }
 
 .overviewCopy {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
-
-  p {
-    margin: 0;
-    font-size: 13px;
-    line-height: 1.55;
-    color: #667085;
-  }
 }
 
 .overviewTitleRow {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 
   h3 {
     margin: 0;
     min-width: 0;
-    font-size: 28px;
-    line-height: 1;
-    letter-spacing: -0.05em;
+    font-size: 22px;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
     color: #101828;
   }
 }
@@ -82,7 +75,7 @@
 .ruleActions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .overviewActions {
@@ -95,16 +88,16 @@
 .iconButton,
 .actionMenu button {
   border: 1px solid transparent;
-  border-radius: 14px;
-  font-size: 13px;
+  border-radius: 12px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1;
 }
 
 .primaryButton,
 .secondaryButton {
-  min-height: 38px;
-  padding: 0 14px;
+  min-height: 34px;
+  padding: 0 12px;
 }
 
 .primaryButton {
@@ -126,12 +119,12 @@
 }
 
 .iconButton {
-  width: 34px;
-  min-width: 34px;
-  height: 34px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
   padding: 0;
   justify-content: center;
-  font-size: 15px;
+  font-size: 13px;
   color: #667085;
 }
 
@@ -145,10 +138,9 @@
   grid-template-rows: auto minmax(0, 1fr);
   min-height: 0;
   height: 100%;
-  min-height: 0;
   max-height: 100%;
-  padding: 0 14px 12px;
-  border-radius: 24px;
+  padding: 0 12px 10px;
+  border-radius: 18px;
   border: 1px solid rgba(223, 229, 238, 0.94);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.92) 100%);
   overflow: hidden;
@@ -157,28 +149,28 @@
 .ruleTableHead,
 .ruleRow {
   display: grid;
-  grid-template-columns: 72px minmax(320px, 1fr) auto;
-  gap: 18px;
+  grid-template-columns: 58px minmax(280px, 1fr) auto;
+  gap: 12px;
   align-items: center;
 }
 
 .ruleTableHead {
-  padding: 12px 8px 10px;
-  font-size: 12px;
+  padding: 10px 6px 8px;
+  font-size: 11px;
   font-weight: 700;
   color: #667085;
   border-bottom: 1px solid rgba(223, 229, 238, 0.9);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .ruleTableHead span:last-child {
   text-align: right;
-  padding-right: 8px;
+  padding-right: 4px;
 }
 
 .ruleTableBody {
   display: grid;
-  gap: 12px;
+  gap: 8px;
   align-content: start;
   grid-auto-rows: max-content;
   min-height: 0;
@@ -195,12 +187,12 @@
 
 .ruleBlock {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
   min-width: 0;
   align-content: start;
-  padding: 10px;
-  border-radius: 18px;
+  padding: 8px;
+  border-radius: 14px;
   border: 1px solid rgba(223, 229, 238, 0.92);
   background: rgba(253, 254, 255, 0.9);
 }
@@ -209,12 +201,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-  padding: 8px 10px;
-  border: 0;
-  border-radius: 16px;
+  padding: 6px 8px;
   border: 1px solid rgba(222, 230, 240, 0.98);
+  border-radius: 12px;
   background: linear-gradient(180deg, rgba(244, 247, 252, 0.95) 0%, rgba(239, 244, 249, 0.9) 100%);
   text-align: left;
   cursor: pointer;
@@ -222,37 +213,30 @@
 
 .ruleBlockCopy {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
 
   strong {
-    font-size: 16px;
-    line-height: 1.3;
+    font-size: 14px;
+    line-height: 1.25;
     color: #0f172a;
     word-break: break-all;
-  }
-
-  span {
-    font-size: 12px;
-    line-height: 1.45;
-    color: #5f6c80;
   }
 }
 
 .ruleBlockMeta {
   justify-content: flex-end;
-  gap: 12px;
 }
 
 .collapseIndicator {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   color: #3556a8;
 }
 
 .ruleRows {
   display: grid;
-  gap: 10px;
+  gap: 6px;
   width: 100%;
   min-width: 0;
   align-content: start;
@@ -263,25 +247,24 @@
 }
 
 .ruleRow {
-  padding: 12px 14px;
-  border-radius: 14px;
+  padding: 8px 10px;
+  border-radius: 12px;
   border: 1px solid rgba(226, 232, 240, 0.88);
   background: rgba(255, 255, 255, 0.96);
   transition:
-    transform 160ms ease,
     border-color 160ms ease,
     background 160ms ease;
 
   &:hover {
-    transform: translateY(-1px);
     border-color: rgba(205, 213, 224, 0.98);
+    background: rgba(250, 252, 255, 0.98);
   }
 }
 
 .groupSearchInput {
-  width: min(420px, 100%);
-  min-height: 38px;
-  padding: 8px 12px;
+  width: min(380px, 100%);
+  min-height: 34px;
+  padding: 7px 11px;
   border: 1px solid rgba(213, 221, 231, 0.98);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.96);
@@ -307,8 +290,8 @@
 }
 
 .ruleRowActive {
-  border-color: rgba(226, 232, 240, 0.88);
-  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(200, 211, 233, 0.98);
+  background: rgba(248, 250, 255, 0.98);
 }
 
 .ruleRequest,
@@ -316,34 +299,26 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-
-.ruleSelectCheck {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: #667085;
-  font-size: 12px;
+  gap: 4px;
 }
 
 .ruleMatchHint {
   display: inline-flex;
   align-items: center;
   width: fit-content;
-  min-height: 22px;
-  padding: 0 8px;
+  min-height: 18px;
+  padding: 0 6px;
   border-radius: 999px;
   border: 1px solid rgba(213, 221, 231, 0.98);
   background: rgba(248, 250, 252, 0.96);
   color: #475467;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .ruleRequestTop {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 
   strong {
@@ -351,8 +326,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 15px;
-    line-height: 1.45;
+    font-size: 14px;
+    line-height: 1.3;
     color: #0f172a;
   }
 }
@@ -365,17 +340,12 @@
 .ruleActions {
   justify-content: flex-end;
   min-width: max-content;
-  margin-right: -6px;
 }
 
 .ruleActions .secondaryButton {
-  min-height: 38px;
-  padding: 0 14px;
-  font-size: 14px;
-}
-
-.deleteButton {
-  color: #b42318;
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
 }
 
 .menuRoot {
@@ -393,12 +363,12 @@
   display: grid;
   min-width: 168px;
   padding: 8px;
-  border-radius: 18px;
+  border-radius: 16px;
   border: 1px solid rgba(223, 229, 238, 0.96);
   background: rgba(255, 255, 255, 0.98);
 
   button {
-    min-height: 36px;
+    min-height: 32px;
     padding: 0 12px;
     justify-content: flex-start;
     background: transparent;
@@ -408,17 +378,17 @@
 
 .popoverMenu {
   display: grid;
-  min-width: 168px;
+  min-width: 160px;
   gap: 4px;
 
   button {
-    min-height: 36px;
+    min-height: 32px;
     padding: 0 10px;
     border: 0;
     border-radius: 10px;
     background: transparent;
     color: #344054;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     text-align: left;
   }
@@ -439,19 +409,6 @@
   :global(.ant-popover-arrow)::before {
     background: rgba(255, 255, 255, 1);
   }
-}
-
-.menuSectionLabel {
-  margin: 6px 0 4px;
-  padding: 0 10px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #667085;
-}
-
-.groupMoveList {
-  display: grid;
-  gap: 4px;
 }
 
 .movePicker {
@@ -502,21 +459,21 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 44px;
-  height: 24px;
-  padding: 0 8px;
+  min-width: 36px;
+  height: 20px;
+  padding: 0 7px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
 }
 
 .switch {
   position: relative;
   display: inline-flex;
   align-items: center;
-  width: 52px;
-  height: 32px;
+  width: 40px;
+  height: 24px;
 
   input {
     position: absolute;
@@ -528,8 +485,8 @@
 
 .switchTrack {
   position: relative;
-  width: 52px;
-  height: 32px;
+  width: 40px;
+  height: 24px;
   border-radius: 999px;
   background: #d6dce7;
   transition: background 160ms ease;
@@ -537,10 +494,10 @@
   &::after {
     content: "";
     position: absolute;
-    top: 4px;
-    left: 4px;
-    width: 24px;
-    height: 24px;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     background: #ffffff;
     transition: transform 160ms ease;
@@ -552,16 +509,16 @@
 }
 
 .switch input:checked + .switchTrack::after {
-  transform: translateX(20px);
+  transform: translateX(16px);
 }
 
 .emptyState {
   display: grid;
   place-items: center;
   gap: 8px;
-  min-height: 280px;
-  padding: 40px 20px;
-  border-radius: 28px;
+  min-height: 240px;
+  padding: 32px 20px;
+  border-radius: 20px;
   border: 1px dashed rgba(213, 221, 231, 0.98);
   background: rgba(255, 255, 255, 0.7);
   text-align: center;
@@ -573,53 +530,52 @@
 
   h3 {
     color: #0f172a;
-    font-size: 20px;
+    font-size: 18px;
     letter-spacing: -0.02em;
   }
 
   p {
     max-width: 420px;
     color: #667085;
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.6;
   }
 }
 
 @media (max-width: 1602px) {
-.overview {
+  .overview {
     grid-template-columns: 1fr;
   }
 
-.ruleTableHead,
-.ruleRow {
-    grid-template-columns: 72px minmax(220px, 1fr) auto;
+  .ruleTableHead,
+  .ruleRow {
+    grid-template-columns: 58px minmax(220px, 1fr) auto;
   }
 
-.overviewActions {
+  .overviewActions {
     flex-wrap: wrap;
     justify-content: flex-start;
   }
 }
 
 @media (max-width: 1402px) {
-.ruleBlockHeader {
+  .ruleBlockHeader {
     flex-wrap: wrap;
     align-items: flex-start;
   }
 
-.ruleBlockMeta {
+  .ruleBlockMeta {
     width: 100%;
     justify-content: space-between;
     flex-wrap: wrap;
   }
 
-.ruleTableHead,
-.ruleRow {
-    grid-template-columns: 64px minmax(180px, 1fr) auto;
-    gap: 12px;
+  .ruleTableHead,
+  .ruleRow {
+    grid-template-columns: 58px minmax(180px, 1fr) auto;
   }
 
-.ruleActions {
+  .ruleActions {
     grid-column: 1 / -1;
     justify-content: flex-start;
     flex-wrap: wrap;
@@ -627,55 +583,54 @@
 }
 
 @media (max-width: 1100px) {
-.main,
-.ruleTable {
+  .main,
+  .ruleTable {
     height: auto;
     min-height: 0;
     max-height: none;
     overflow: visible;
   }
 
-.ruleTableBody {
+  .ruleTableBody {
     overflow: visible;
   }
 }
 
 @media (max-width: 860px) {
-.main,
-.ruleTable {
+  .main,
+  .ruleTable {
     height: auto;
     min-height: 0;
     max-height: none;
     overflow: visible;
   }
 
-.ruleTableHead {
+  .ruleTableHead {
     display: none;
   }
 
-.ruleRow {
+  .ruleRow {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 10px;
   }
 
-.ruleActions,
-.ruleStatus {
+  .ruleActions,
+  .ruleStatus {
     justify-content: flex-start;
   }
 
-.overviewActions {
+  .overviewActions {
     flex-wrap: wrap;
     justify-content: flex-start;
   }
 
-.primaryButton,
-.secondaryButton {
-    min-height: 40px;
+  .primaryButton,
+  .secondaryButton {
+    min-height: 36px;
   }
 
-.batchExportToolbar {
+  .batchExportToolbar {
     flex-direction: column;
     align-items: stretch;
   }
 }
-

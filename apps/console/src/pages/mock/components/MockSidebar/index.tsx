@@ -126,15 +126,15 @@ export function MockSidebar({
         />
       </Modal>
       <div className={localStyles.sidebarHeader}>
-        <div>
+        <div className={localStyles.sidebarTitle}>
           <strong>{t("mock.groupsTitle")}</strong>
         </div>
         <div className={localStyles.headerActions}>
-          <button className={localStyles.secondaryButton} onClick={onImportGroups} type="button">
+          <button className={classNames(localStyles.secondaryButton, localStyles.compactButton)} onClick={onImportGroups} type="button">
             导入
           </button>
           <button
-            className={localStyles.secondaryButton}
+            className={classNames(localStyles.secondaryButton, localStyles.compactButton)}
             onClick={() => {
               setCreateName("");
               setIsCreateOpen(true);
@@ -181,7 +181,12 @@ export function MockSidebar({
                     />
                     <strong>{group}</strong>
                   </div>
-                  <span className={localStyles.groupMeta}>{t("mock.groupRuleCount", { count: summary.count })}</span>
+                  <div className={localStyles.groupMetaRow}>
+                    <span className={localStyles.groupMeta}>{t("mock.groupRuleCount", { count: summary.count })}</span>
+                    {summary.enabledCount > 0 ? (
+                      <span className={localStyles.groupMetaAccent}>{summary.enabledCount} 启用</span>
+                    ) : null}
+                  </div>
                 </div>
                 <span
                   className={classNames(
@@ -189,7 +194,7 @@ export function MockSidebar({
                     summary.active ? localStyles.statusBadgeSuccess : localStyles.statusBadgeMuted,
                   )}
                 >
-                  {summary.active ? t("mock.groupActive") : t("mock.groupInactive")}
+                  {summary.active ? "当前" : "待命"}
                 </span>
               </button>
 

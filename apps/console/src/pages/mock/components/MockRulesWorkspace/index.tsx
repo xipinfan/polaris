@@ -90,6 +90,7 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
     () => (moveRule ? getRuleScene(moveRule, defaultGroup) : null),
     [defaultGroup, moveRule],
   );
+
   const moveTargets = useMemo(() => {
     if (!moveScene) return [];
     return groups.filter((group) => group !== moveScene.group);
@@ -113,6 +114,7 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
       })
       .filter((block) => block.rules.length > 0);
   }, [defaultGroup, normalizedKeyword, ruleBlocks]);
+
   const hasVisibleRules = filteredRuleBlocks.some((block) => block.rules.length > 0);
 
   const exportRecords = useMemo<ExportTableRecord[]>(
@@ -146,7 +148,7 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
         dataIndex: "method",
         key: "method",
         title: "方法",
-        width: 96,
+        width: 84,
       },
       {
         dataIndex: "name",
@@ -171,6 +173,38 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
     setBatchSearch("");
     setSelectedExportKeys([]);
     setIsBatchExportOpen(true);
+  };
+
+  const openDeleteGroupConfirm = (group: string) => {
+    void modal.confirm({
+      cancelText: t("mock.form.cancel"),
+      content: t("mock.groupDeleteConfirm", { name: group }),
+      icon: null,
+      mask: { closable: false },
+      okButtonProps: { danger: true },
+      okText: t("mock.groupDelete"),
+      onOk: async () => {
+        await onDeleteGroup(group);
+        return undefined;
+      },
+      title: t("mock.groupDelete"),
+    });
+  };
+
+  const openDeleteRuleConfirm = (rule: MockRule, label: string) => {
+    void modal.confirm({
+      cancelText: t("mock.form.cancel"),
+      content: `确认删除规则「${label}」吗？`,
+      icon: null,
+      mask: { closable: false },
+      okButtonProps: { danger: true },
+      okText: "删除",
+      onOk: async () => {
+        await onRemoveRule(rule);
+        return undefined;
+      },
+      title: "删除规则",
+    });
   };
 
   return (
@@ -262,6 +296,14 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
         <div className={localStyles.overviewCopy}>
           <div className={localStyles.overviewTitleRow}>
             <h3>{currentGroup}</h3>
+            <span
+              className={classNames(
+                localStyles.statusBadge,
+                isCurrentGroupEnabled ? localStyles.statusBadgeSuccess : localStyles.statusBadgeMuted,
+              )}
+            >
+              {isCurrentGroupEnabled ? "已启用" : "未启用"}
+            </span>
           </div>
           <Input
             className={localStyles.groupSearchInput}
@@ -273,12 +315,6 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
         <div className={localStyles.overviewActions}>
           <button className={localStyles.primaryButton} onClick={onOpenCreateModal} type="button">
             {t("mock.newRequest")}
-          </button>
-          <button className={localStyles.secondaryButton} onClick={onImportRules} type="button">
-            导入规则
-          </button>
-          <button className={localStyles.secondaryButton} onClick={openBatchExport} type="button">
-            批量导出
           </button>
           <button
             className={localStyles.secondaryButton}
@@ -300,6 +336,12 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
             </button>
             {groupMenuName === "__header__" ? (
               <div className={localStyles.actionMenu}>
+                <button onClick={onImportRules} type="button">
+                  导入规则
+                </button>
+                <button onClick={openBatchExport} type="button">
+                  批量导出
+                </button>
                 <button onClick={() => void onCopyGroup(currentGroup)} type="button">
                   {t("mock.groupCopy")}
                 </button>
@@ -309,21 +351,7 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
                 {currentGroup !== defaultGroup ? (
                   <button
                     className={localStyles.menuDanger}
-                    onClick={() => {
-                      void modal.confirm({
-                        cancelText: t("mock.form.cancel"),
-                        content: t("mock.groupDeleteConfirm", { name: currentGroup }),
-                        icon: null,
-                        mask: { closable: false },
-                        okButtonProps: { danger: true },
-                        okText: t("mock.groupDelete"),
-                        onOk: async () => {
-                          await onDeleteGroup(currentGroup);
-                          return undefined;
-                        },
-                        title: t("mock.groupDelete"),
-                      });
-                    }}
+                    onClick={() => openDeleteGroupConfirm(currentGroup)}
                     type="button"
                   >
                     {t("mock.groupDelete")}
@@ -373,7 +401,7 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
                       {t("mock.groupRuleCount", { count: block.rules.length })}
                     </span>
                     <span className={localStyles.collapseIndicator}>
-                      {collapsedBlocks[block.key] ? `> ${t("mock.expand")}` : `v ${t("mock.collapse")}`}
+                      {collapsedBlocks[block.key] ? `+ ${t("mock.expand")}` : `− ${t("mock.collapse")}`}
                     </span>
                   </div>
                 </button>
@@ -424,34 +452,19 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
                           <button className={localStyles.secondaryButton} onClick={() => onOpenEditModal(rule)} type="button">
                             {t("mock.edit")}
                           </button>
-                          <button className={localStyles.secondaryButton} onClick={() => onExportRule(rule)} type="button">
-                            导出
-                          </button>
-                          <button
-                            className={classNames(localStyles.secondaryButton, localStyles.deleteButton)}
-                            onClick={() => {
-                              void modal.confirm({
-                                cancelText: t("mock.form.cancel"),
-                                content: `确认删除规则「${scene.variant}」吗？`,
-                                icon: null,
-                                mask: { closable: false },
-                                okButtonProps: { danger: true },
-                                okText: "删除",
-                                onOk: async () => {
-                                  await onRemoveRule(rule);
-                                  return undefined;
-                                },
-                                title: "删除规则",
-                              });
-                            }}
-                            type="button"
-                          >
-                            {t("mock.delete")}
-                          </button>
                           <div className={localStyles.menuRoot}>
                             <Popover
                               content={
                                 <div className={localStyles.popoverMenu}>
+                                  <button
+                                    onClick={() => {
+                                      onExportRule(rule);
+                                      setRuleMenuId(null);
+                                    }}
+                                    type="button"
+                                  >
+                                    导出
+                                  </button>
                                   <button
                                     onClick={() => {
                                       void onDuplicateRule(rule);
@@ -469,6 +482,16 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
                                     type="button"
                                   >
                                     移动到分组
+                                  </button>
+                                  <button
+                                    className={localStyles.menuDanger}
+                                    onClick={() => {
+                                      setRuleMenuId(null);
+                                      openDeleteRuleConfirm(rule, scene.variant);
+                                    }}
+                                    type="button"
+                                  >
+                                    {t("mock.delete")}
                                   </button>
                                 </div>
                               }
@@ -494,6 +517,7 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
           </div>
         )}
       </div>
+
       <Modal
         cancelText={t("mock.form.cancel")}
         mask={{ closable: false }}
