@@ -32,6 +32,21 @@ export function buildUniqueGroupName(baseName: string, existing: string[]) {
   return nextName;
 }
 
+export function buildUniqueVariantName(baseName: string, existing: Iterable<string>) {
+  const existingNames = new Set(Array.from(existing, (value) => value.trim()));
+  if (!existingNames.has(baseName)) {
+    return baseName;
+  }
+
+  let index = 2;
+  let nextName = `${baseName} ${index}`;
+  while (existingNames.has(nextName)) {
+    index += 1;
+    nextName = `${baseName} ${index}`;
+  }
+  return nextName;
+}
+
 export function buildEmptyForm(group: string): MockFormState {
   return {
     group,
@@ -84,17 +99,17 @@ export function getMethodWeight(method: string) {
 }
 
 export function getUrlSummary(url: string) {
+  const normalizedUrl = url.trim();
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(normalizedUrl);
     return {
-      blockKey: `${parsed.origin}${parsed.pathname}`,
+      blockKey: normalizedUrl,
       host: parsed.host,
-      label: parsed.pathname || "/",
-      full: url,
+      label: normalizedUrl,
+      full: normalizedUrl,
     };
   } catch {
-    const [pathOnly] = url.split("?");
-    return { blockKey: pathOnly || url, host: "", label: pathOnly || url, full: url };
+    return { blockKey: normalizedUrl, host: "", label: normalizedUrl, full: normalizedUrl };
   }
 }
 

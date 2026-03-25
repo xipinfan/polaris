@@ -21,6 +21,8 @@ interface StorageSnapshot {
 const storageDirName = "data";
 const storageFileName = "polaris-v1.json";
 const storageFile = getPolarisDataPath(storageDirName, storageFileName);
+const DEBOUNCE_DELAY = 500;
+const MAX_DEBOUNCE_DELAY = 2000;
 
 const emptySnapshot: StorageSnapshot = {
   settings: defaultSettings,
@@ -33,6 +35,14 @@ const emptySnapshot: StorageSnapshot = {
 export class StorageAdapter {
   private snapshot: StorageSnapshot = emptySnapshot;
   private persistQueue: Promise<void> = Promise.resolve();
+  private readonly readOnly: boolean;
+  private dirty = false;
+  private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private firstDirtyTimestamp = 0;
+
+  constructor(options?: { readOnly?: boolean }) {
+    this.readOnly = options?.readOnly ?? false;
+  }
 
   async init(): Promise<void> {
     await ensurePolarisDir(storageDirName);
@@ -63,17 +73,61 @@ export class StorageAdapter {
         }
       };
       if (proxyRulesChanged) {
-        await this.persist();
+        await this.persistImmediate();
       }
     } catch {
-      await this.persist();
+      await this.persistImmediate();
     }
   }
 
-  private async persist(): Promise<void> {
+  private flushNow(): void {
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = null;
+    }
+    this.dirty = false;
+    this.firstDirtyTimestamp = 0;
+    if (this.readOnly) {
+      return;
+    }
+
     this.persistQueue = this.persistQueue
       .catch(() => undefined)
       .then(() => writeFile(storageFile, JSON.stringify(this.snapshot, null, 2), "utf8"));
+  }
+
+  private schedulePersist(): void {
+    if (this.readOnly) {
+      return;
+    }
+
+    this.dirty = true;
+    if (!this.firstDirtyTimestamp) {
+      this.firstDirtyTimestamp = Date.now();
+    }
+
+    if (Date.now() - this.firstDirtyTimestamp >= MAX_DEBOUNCE_DELAY) {
+      this.flushNow();
+      return;
+    }
+
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+    }
+    this.debounceTimer = setTimeout(() => {
+      this.flushNow();
+    }, DEBOUNCE_DELAY);
+  }
+
+  private async persistImmediate(): Promise<void> {
+    this.flushNow();
+    await this.persistQueue;
+  }
+
+  async flush(): Promise<void> {
+    if (this.dirty) {
+      this.flushNow();
+    }
     await this.persistQueue;
   }
 
@@ -83,21 +137,21 @@ export class StorageAdapter {
 
   async setSettings(settings: AppSetting): Promise<void> {
     this.snapshot.settings = settings;
-    await this.persist();
+    await this.persistImmediate();
   }
 
   getRequests(): RequestRecord[] {
     return [...this.snapshot.requests].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
-  async appendRequest(request: RequestRecord): Promise<void> {
+  appendRequest(request: RequestRecord): void {
     this.snapshot.requests = [request, ...this.snapshot.requests].slice(0, 200);
-    await this.persist();
+    this.schedulePersist();
   }
 
   async clearRequests(): Promise<void> {
     this.snapshot.requests = [];
-    await this.persist();
+    await this.persistImmediate();
   }
 
   getSavedRequests(): SavedRequest[] {
@@ -106,7 +160,7 @@ export class StorageAdapter {
 
   async setSavedRequests(savedRequests: SavedRequest[]): Promise<void> {
     this.snapshot.savedRequests = savedRequests;
-    await this.persist();
+    await this.persistImmediate();
   }
 
   getMockRules(): MockRule[] {
@@ -115,7 +169,7 @@ export class StorageAdapter {
 
   async setMockRules(mockRules: MockRule[]): Promise<void> {
     this.snapshot.mockRules = mockRules;
-    await this.persist();
+    await this.persistImmediate();
   }
 
   getProxyRules(): ProxyRule[] {
@@ -124,6 +178,6 @@ export class StorageAdapter {
 
   async setProxyRules(proxyRules: ProxyRule[]): Promise<void> {
     this.snapshot.proxyRules = proxyRules;
-    await this.persist();
+    await this.persistImmediate();
   }
 }

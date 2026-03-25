@@ -87,12 +87,22 @@ const runRequestInputSchema = z.object({
 });
 
 const createMockRuleInputSchema = z.object({
-  name: z.string().min(1),
+  name: z.string().min(1).describe("Rule name. Use '[Group] Name' format for grouping."),
   group: z.string().min(1).optional(),
-  method: z.string().min(1),
-  url: z.string().url(),
-  requestBodyExactMatch: z.string().min(1).nullable().optional(),
-  requestBodyKeyMatch: z.string().min(1).nullable().optional(),
+  method: z.string().min(1).describe("HTTP method, e.g. GET, POST."),
+  url: z.string().min(1).describe("URL substring to match against. Plain string matching, not URL validation."),
+  requestBodyExactMatch: z
+    .string()
+    .min(1)
+    .nullable()
+    .optional()
+    .describe("DSL: 'dot.path: \"stringValue\"', combine with ';'. Only string values."),
+  requestBodyKeyMatch: z
+    .string()
+    .min(1)
+    .nullable()
+    .optional()
+    .describe("Dot-path to check key existence, e.g. 'user.premium'."),
   responseStatus: z.number().int(),
   responseHeaders: stringMapSchema.optional(),
   responseBody: z.unknown().nullable().optional(),
@@ -473,7 +483,10 @@ export function createPolarisMcpSdkServer(
       description: deleteSavedRequestTool.description,
       inputSchema: z.object({
         id: z.string().min(1)
-      })
+      }),
+      annotations: {
+        destructiveHint: true
+      }
     },
     async ({ id }) => {
       return safe(async () => {
@@ -497,7 +510,10 @@ export function createPolarisMcpSdkServer(
   server.registerTool(
     clearRequestsTool.name,
     {
-      description: clearRequestsTool.description
+      description: clearRequestsTool.description,
+      annotations: {
+        destructiveHint: true
+      }
     },
     async () => {
       return safe(async () => {
@@ -586,7 +602,10 @@ export function createPolarisMcpSdkServer(
     deleteMockRuleTool.name,
     {
       description: deleteMockRuleTool.description,
-      inputSchema: mockRuleIdInputSchema
+      inputSchema: mockRuleIdInputSchema,
+      annotations: {
+        destructiveHint: true
+      }
     },
     async ({ id }) => {
       return safe(async () => {
@@ -738,7 +757,10 @@ export function createPolarisMcpSdkServer(
     removeProxyRuleTool.name,
     {
       description: removeProxyRuleTool.description,
-      inputSchema: removeProxyRuleInputSchema
+      inputSchema: removeProxyRuleInputSchema,
+      annotations: {
+        destructiveHint: true
+      }
     },
     async ({ host }) => {
       return safe(async () => {

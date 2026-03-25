@@ -50,7 +50,7 @@ async function main() {
     throw new Error(`Unknown MCP pack: ${process.env.POLARIS_MCP_PACK}`);
   }
 
-  const runtime = await createRuntime();
+  const runtime = await createRuntime({ readOnly: true });
   const settings = runtime.proxyService.getSettings();
   const shouldStartProxy = process.env.POLARIS_MCP_START_PROXY === "true";
   let runtimeSettings = settings;

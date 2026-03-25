@@ -20,6 +20,7 @@ import {
   buildFormFromRule,
   buildRuleName,
   buildUniqueGroupName,
+  buildUniqueVariantName,
   getMethodWeight,
   getQueryCount,
   getRuleScene,
@@ -472,8 +473,10 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
 
   const duplicateRule = async (rule: MockRule) => {
     const scene = getRuleScene(rule, defaultGroup);
+    const existingVariants = currentGroupRules.map((item) => getRuleScene(item, defaultGroup).variant);
+    const nextVariant = buildUniqueVariantName(`${scene.variant} 副本`, existingVariants);
     await createRuleMutation.mutateAsync({
-      name: buildRuleName(currentGroup, `${scene.variant} 副本`),
+      name: buildRuleName(currentGroup, nextVariant),
       group: currentGroup,
       method: rule.method,
       url: rule.url,
@@ -487,6 +490,61 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
     await load();
     setRuleMenuId(null);
     showToast(t("common.mockDuplicated", { name: scene.variant }));
+  };
+
+  const openCreateModalForUrl = (url: string) => {
+    setEditingId(null);
+    setMockForm({
+      ...buildEmptyForm(currentGroup),
+      group: currentGroup,
+      url,
+    });
+    setIsModalOpen(true);
+  };
+
+  const duplicateRulesForUrlBlock = async (
+    rulesInBlock: MockRule[],
+    nextMatch: { url: string; requestBodyExactMatch: string; requestBodyKeyMatch: string }
+  ) => {
+    if (!rulesInBlock.length) {
+      return;
+    }
+
+    const existingVariants = new Set(currentGroupRules.map((rule) => getRuleScene(rule, defaultGroup).variant));
+    let duplicatedCount = 0;
+
+    for (const rule of rulesInBlock) {
+      const scene = getRuleScene(rule, defaultGroup);
+      const nextVariant = buildUniqueVariantName(`${scene.variant} 副本`, existingVariants);
+      existingVariants.add(nextVariant);
+
+      await createRuleMutation.mutateAsync({
+        name: buildRuleName(currentGroup, nextVariant),
+        group: currentGroup,
+        method: rule.method,
+        url: nextMatch.url.trim(),
+        requestBodyExactMatch: nextMatch.requestBodyExactMatch.trim() || null,
+        requestBodyKeyMatch: nextMatch.requestBodyKeyMatch.trim() || null,
+        responseStatus: rule.responseStatus,
+        responseHeaders: rule.responseHeaders,
+        responseBody: rule.responseBody,
+        enabled: false,
+      });
+      duplicatedCount += 1;
+    }
+
+    await load();
+    showToast(`已复制 ${duplicatedCount} 条 Mock 到新匹配条件`);
+  };
+
+  const removeRulesForUrlBlock = async (rulesInBlock: MockRule[]) => {
+    if (!rulesInBlock.length) {
+      return;
+    }
+
+    await Promise.all(rulesInBlock.map((rule) => deleteRuleMutation.mutateAsync(rule.id)));
+    await load();
+    showToast(`已删除 ${rulesInBlock.length} 条同地址 Mock`);
   };
 
   const moveRuleToGroup = async (rule: MockRule, nextGroup: string) => {
@@ -704,6 +762,7 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
     defaultGroup,
     deleteGroup,
     duplicateRule,
+    duplicateRulesForUrlBlock,
     editGroupDescription,
     editingId,
     exportMockGroup,
@@ -723,9 +782,11 @@ export function useMockWorkspace({ defaultGroup, locationState, pathname, showTo
     importRulesToCurrentGroup,
     load,
     moveRuleToGroup,
+    openCreateModalForUrl,
     openCreateModal,
     openEditModal,
     removeRule,
+    removeRulesForUrlBlock,
     renameGroup,
     ruleMenuId,
     saveRule,

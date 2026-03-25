@@ -1,7 +1,8 @@
-import { randomBytes } from "node:crypto";
+import { generateKeyPair, randomBytes } from "node:crypto";
 import { execFile } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import tls from "node:tls";
 import { promisify } from "node:util";
 import forge from "node-forge";
 import { ensurePolarisDir, getPolarisDataPath, migrateLegacyFile } from "../../app/paths";
@@ -12,6 +13,7 @@ const authorityCertPath = path.join(certificateDir, "polaris-root-ca.cert.pem");
 const hostCertificateDir = path.join(certificateDir, "hosts");
 const authorityCommonName = "Polaris Development Root CA";
 const execFileAsync = promisify(execFile);
+const generateKeyPairAsync = promisify(generateKeyPair);
 
 type ForgeCertificate = forge.pki.Certificate;
 type ForgePrivateKey = forge.pki.rsa.PrivateKey;
@@ -49,6 +51,9 @@ function isIpAddress(host: string): boolean {
 
 export class CertificateManager {
   private authority?: { key: ForgePrivateKey; cert: ForgeCertificate };
+  private secureContextCache = new Map<string, tls.SecureContext>();
+  private credentialsCache = new Map<string, { key: string; cert: string }>();
+  private pendingCredentials = new Map<string, Promise<{ key: string; cert: string }>>();
 
   async init(): Promise<void> {
     await ensurePolarisDir("data", "certificates", "hosts");
@@ -111,10 +116,43 @@ export class CertificateManager {
     return false;
   }
 
+  async getSecureContext(hostname: string): Promise<tls.SecureContext> {
+    const host = hostname.toLowerCase();
+    const cached = this.secureContextCache.get(host);
+    if (cached) {
+      return cached;
+    }
+
+    const credentials = await this.getServerCredentials(host);
+    const secureContext = tls.createSecureContext(credentials);
+    this.secureContextCache.set(host, secureContext);
+    return secureContext;
+  }
+
   async getServerCredentials(hostname: string): Promise<{ key: string; cert: string }> {
     const host = hostname.toLowerCase();
     await this.ensureAuthority();
 
+    const cached = this.credentialsCache.get(host);
+    if (cached) {
+      return cached;
+    }
+
+    const pending = this.pendingCredentials.get(host);
+    if (pending) {
+      return pending;
+    }
+
+    const nextCredentials = this.loadOrCreateCredentials(host).finally(() => {
+      this.pendingCredentials.delete(host);
+    });
+    this.pendingCredentials.set(host, nextCredentials);
+    const resolved = await nextCredentials;
+    this.credentialsCache.set(host, resolved);
+    return resolved;
+  }
+
+  private async loadOrCreateCredentials(host: string): Promise<{ key: string; cert: string }> {
     const cacheKey = hostCacheKey(host);
     const keyPath = path.join(hostCertificateDir, `${cacheKey}.key.pem`);
     const certPath = path.join(hostCertificateDir, `${cacheKey}.cert.pem`);
@@ -124,7 +162,7 @@ export class CertificateManager {
       return { key, cert };
     }
 
-    const credentials = this.createServerCertificate(host);
+    const credentials = await this.createServerCertificate(host);
     await Promise.all([
       writeFile(keyPath, credentials.key, "utf8"),
       writeFile(certPath, credentials.cert, "utf8")
@@ -161,10 +199,10 @@ export class CertificateManager {
       return;
     }
 
-    const keys = forge.pki.rsa.generateKeyPair(2048);
+    const { publicKey, privateKey } = await this.generateForgeKeyPairAsync();
     const cert = forge.pki.createCertificate();
     const subject = buildDistinguishedName(authorityCommonName);
-    cert.publicKey = keys.publicKey;
+    cert.publicKey = publicKey;
     cert.serialNumber = createSerialNumber();
     cert.validity.notBefore = new Date(Date.now() - 60_000);
     cert.validity.notAfter = toFutureDate(1000 * 60 * 60 * 24 * 365 * 5);
@@ -175,26 +213,26 @@ export class CertificateManager {
       { name: "keyUsage", keyCertSign: true, cRLSign: true, digitalSignature: true },
       { name: "subjectKeyIdentifier" }
     ]);
-    cert.sign(keys.privateKey, forge.md.sha256.create());
+    cert.sign(privateKey, forge.md.sha256.create());
 
-    const keyPem = forge.pki.privateKeyToPem(keys.privateKey);
+    const keyPem = forge.pki.privateKeyToPem(privateKey);
     const certPem = forge.pki.certificateToPem(cert);
     await Promise.all([
       writeFile(authorityKeyPath, keyPem, "utf8"),
       writeFile(authorityCertPath, certPem, "utf8")
     ]);
 
-    this.authority = { key: keys.privateKey, cert };
+    this.authority = { key: privateKey, cert };
   }
 
-  private createServerCertificate(host: string): { key: string; cert: string } {
+  private async createServerCertificate(host: string): Promise<{ key: string; cert: string }> {
     if (!this.authority) {
       throw new Error("Certificate authority is not initialized");
     }
 
-    const keys = forge.pki.rsa.generateKeyPair(2048);
+    const { publicKey, privateKey } = await this.generateForgeKeyPairAsync();
     const cert = forge.pki.createCertificate();
-    cert.publicKey = keys.publicKey;
+    cert.publicKey = publicKey;
     cert.serialNumber = createSerialNumber();
     cert.validity.notBefore = new Date(Date.now() - 60_000);
     cert.validity.notAfter = toFutureDate(1000 * 60 * 60 * 24 * 397);
@@ -214,8 +252,20 @@ export class CertificateManager {
     cert.sign(this.authority.key, forge.md.sha256.create());
 
     return {
-      key: forge.pki.privateKeyToPem(keys.privateKey),
+      key: forge.pki.privateKeyToPem(privateKey),
       cert: forge.pki.certificateToPem(cert)
+    };
+  }
+
+  private async generateForgeKeyPairAsync(): Promise<{ publicKey: forge.pki.rsa.PublicKey; privateKey: ForgePrivateKey }> {
+    const { publicKey, privateKey } = await generateKeyPairAsync("rsa", {
+      modulusLength: 2048,
+      publicKeyEncoding: { type: "spki", format: "pem" },
+      privateKeyEncoding: { type: "pkcs8", format: "pem" }
+    });
+    return {
+      publicKey: forge.pki.publicKeyFromPem(publicKey),
+      privateKey: forge.pki.privateKeyFromPem(privateKey)
     };
   }
 }

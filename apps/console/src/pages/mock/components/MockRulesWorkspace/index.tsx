@@ -21,11 +21,17 @@ type MockRulesWorkspaceProps = {
   onCopyGroup: (group: string) => Promise<void>;
   onDeleteGroup: (group: string) => Promise<void>;
   onDuplicateRule: (rule: MockRule) => Promise<void>;
+  onDuplicateUrlBlock: (
+    rules: MockRule[],
+    nextMatch: { url: string; requestBodyExactMatch: string; requestBodyKeyMatch: string }
+  ) => Promise<void>;
   onEditGroupDescription: (nextDescription: string) => void;
   onMoveRule: (rule: MockRule, nextGroup: string) => Promise<void>;
+  onOpenCreateModalForUrl: (url: string) => void;
   onOpenCreateModal: () => void;
   onOpenEditModal: (rule: MockRule) => void;
   onRemoveRule: (rule: MockRule) => Promise<void>;
+  onRemoveUrlBlock: (rules: MockRule[]) => Promise<void>;
   onExportRule: (rule: MockRule) => void;
   onExportSelectedRules: (rules: MockRule[]) => void;
   onImportRules: () => void;
@@ -39,6 +45,14 @@ type ExportTableRecord = {
   name: string;
   url: string;
   rule: MockRule;
+};
+
+type DuplicateUrlBlockDraft = {
+  sourceUrl: string;
+  rules: MockRule[];
+  url: string;
+  requestBodyExactMatch: string;
+  requestBodyKeyMatch: string;
 };
 
 export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
@@ -55,11 +69,14 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
     onCopyGroup,
     onDeleteGroup,
     onDuplicateRule,
+    onDuplicateUrlBlock,
     onEditGroupDescription,
     onMoveRule,
+    onOpenCreateModalForUrl,
     onOpenCreateModal,
     onOpenEditModal,
     onRemoveRule,
+    onRemoveUrlBlock,
     onExportRule,
     onExportSelectedRules,
     onImportRules,
@@ -85,6 +102,8 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
   const [isBatchExportOpen, setIsBatchExportOpen] = useState(false);
   const [batchSearch, setBatchSearch] = useState("");
   const [selectedExportKeys, setSelectedExportKeys] = useState<string[]>([]);
+  const [duplicateDraft, setDuplicateDraft] = useState<DuplicateUrlBlockDraft | null>(null);
+  const [isDuplicatingUrlBlock, setIsDuplicatingUrlBlock] = useState(false);
 
   const moveScene = useMemo(
     () => (moveRule ? getRuleScene(moveRule, defaultGroup) : null),
@@ -207,6 +226,23 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
     });
   };
 
+  const openDeleteUrlBlockConfirm = (block: RuleUrlBlock) => {
+    void modal.confirm({
+      cancelText: t("mock.form.cancel"),
+      content: `确认删除地址「${block.key}」下的 ${block.rules.length} 条 Mock 吗？`,
+      icon: null,
+      mask: { closable: false },
+      okButtonProps: { danger: true },
+      okText: "删除",
+      onOk: async () => {
+        await onRemoveUrlBlock(block.rules);
+        setGroupMenuName(null);
+        return undefined;
+      },
+      title: "删除该地址 Mock",
+    });
+  };
+
   return (
     <section className={classNames(localStyles.main, localStyles.root)}>
       {contextHolder}
@@ -251,6 +287,88 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
               ))
             )}
           </div>
+        </div>
+      </Modal>
+
+      <Modal
+        cancelText={t("mock.form.cancel")}
+        mask={{ closable: false }}
+        okButtonProps={{ disabled: !duplicateDraft?.url.trim(), loading: isDuplicatingUrlBlock }}
+        okText="复制"
+        onCancel={() => {
+          if (!isDuplicatingUrlBlock) {
+            setDuplicateDraft(null);
+          }
+        }}
+        onOk={() => {
+          if (!duplicateDraft) {
+            return;
+          }
+          setIsDuplicatingUrlBlock(true);
+          void onDuplicateUrlBlock(duplicateDraft.rules, {
+            url: duplicateDraft.url,
+            requestBodyExactMatch: duplicateDraft.requestBodyExactMatch,
+            requestBodyKeyMatch: duplicateDraft.requestBodyKeyMatch,
+          })
+            .then(() => setDuplicateDraft(null))
+            .finally(() => setIsDuplicatingUrlBlock(false));
+        }}
+        open={Boolean(duplicateDraft)}
+        title="复制到新地址"
+      >
+        <div className={localStyles.duplicateForm}>
+          <div className={localStyles.duplicateFormHint}>当前地址：{duplicateDraft?.sourceUrl ?? "-"}</div>
+          <label className={localStyles.duplicateField}>
+            <span>新的完整地址</span>
+            <Input
+              onChange={(event) =>
+                setDuplicateDraft((current) =>
+                  current
+                    ? {
+                        ...current,
+                        url: event.target.value,
+                      }
+                    : current
+                )
+              }
+              placeholder="请输入新的完整地址"
+              value={duplicateDraft?.url ?? ""}
+            />
+          </label>
+          <label className={localStyles.duplicateField}>
+            <span>新的 Body 精确匹配</span>
+            <Input
+              onChange={(event) =>
+                setDuplicateDraft((current) =>
+                  current
+                    ? {
+                        ...current,
+                        requestBodyExactMatch: event.target.value,
+                      }
+                    : current
+                )
+              }
+              placeholder={'例如 name:"demo"'}
+              value={duplicateDraft?.requestBodyExactMatch ?? ""}
+            />
+          </label>
+          <label className={localStyles.duplicateField}>
+            <span>新的 Body Key 匹配</span>
+            <Input
+              onChange={(event) =>
+                setDuplicateDraft((current) =>
+                  current
+                    ? {
+                        ...current,
+                        requestBodyKeyMatch: event.target.value,
+                      }
+                    : current
+                )
+              }
+              placeholder="例如 user.profile.id"
+              value={duplicateDraft?.requestBodyKeyMatch ?? ""}
+            />
+          </label>
         </div>
       </Modal>
 
@@ -397,6 +515,54 @@ export function MockRulesWorkspace(props: MockRulesWorkspaceProps) {
                     <strong>{block.key}</strong>
                   </div>
                   <div className={localStyles.ruleBlockMeta}>
+                    <div className={localStyles.ruleBlockHeaderActions} onClick={(event) => event.stopPropagation()}>
+                      <div className={localStyles.menuRoot}>
+                        <button
+                          className={classNames(localStyles.iconButton, localStyles.compactActionButton, localStyles.blockMenuButton)}
+                          onClick={() =>
+                            setGroupMenuName(groupMenuName === `__url__:${block.key}` ? null : `__url__:${block.key}`)
+                          }
+                          type="button"
+                        >
+                          ...
+                        </button>
+                        {groupMenuName === `__url__:${block.key}` ? (
+                          <div className={localStyles.actionMenu}>
+                            <button
+                              onClick={() => {
+                                onOpenCreateModalForUrl(block.key);
+                                setGroupMenuName(null);
+                              }}
+                              type="button"
+                            >
+                              同地址新建
+                            </button>
+                            <button
+                              onClick={() => {
+                                setDuplicateDraft({
+                                  sourceUrl: block.key,
+                                  rules: block.rules,
+                                  url: block.key,
+                                  requestBodyExactMatch: "",
+                                  requestBodyKeyMatch: "",
+                                });
+                                setGroupMenuName(null);
+                              }}
+                              type="button"
+                            >
+                              复制到新地址
+                            </button>
+                            <button
+                              className={localStyles.menuDanger}
+                              onClick={() => openDeleteUrlBlockConfirm(block)}
+                              type="button"
+                            >
+                              一键删除
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
                     <span className={classNames(localStyles.statusBadge, localStyles.statusBadgeMuted)}>
                       {t("mock.groupRuleCount", { count: block.rules.length })}
                     </span>

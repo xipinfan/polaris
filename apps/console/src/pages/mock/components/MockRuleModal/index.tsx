@@ -186,8 +186,6 @@ export function MockRuleModal({
 
   if (!isOpen) return null;
 
-  const editorHeight = isExpanded ? 700 : 580;
-  const codeEditorHeight = Math.max(editorHeight - 44, 470);
   const groupOptions = [defaultGroup, ...groups.filter((group) => group !== defaultGroup)].map((group) => ({
     label: group,
     value: group,
@@ -328,9 +326,8 @@ export function MockRuleModal({
             </section>
           ) : (
             <section className={localStyles.modalSection}>
-              <div className={localStyles.responseEditorLayout}>
-                <div className={localStyles.editorSection}>
-                  <div className={localStyles.editorShell} style={{ height: editorHeight }}>
+              <div className={localStyles.editorSection}>
+                <div className={localStyles.editorShell}>
                     <div className={localStyles.editorToolbar}>
                       <div className={localStyles.editorTabs}>
                         <button
@@ -371,7 +368,7 @@ export function MockRuleModal({
                       {activePane === "headers" ? (
                         <Editor
                           defaultLanguage="json"
-                          height={codeEditorHeight}
+                          height="100%"
                           onChange={(value) => setForm((current) => ({ ...current, responseHeaders: value ?? "{}" }))}
                           onMount={handleHeadersMount}
                           options={editorOptions}
@@ -381,7 +378,7 @@ export function MockRuleModal({
                       ) : (
                         <Editor
                           defaultLanguage="json"
-                          height={codeEditorHeight}
+                          height="100%"
                           onChange={(value) => setForm((current) => ({ ...current, responseBody: value ?? "{}" }))}
                           onMount={handleBodyMount}
                           options={editorOptions}
@@ -390,9 +387,8 @@ export function MockRuleModal({
                         />
                       )}
                     </div>
-                  </div>
-                  {editorError ? <div className={localStyles.editorError}>{editorError}</div> : null}
                 </div>
+                {editorError ? <div className={localStyles.editorError}>{editorError}</div> : null}
               </div>
             </section>
           )}

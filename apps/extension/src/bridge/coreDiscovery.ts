@@ -1,14 +1,14 @@
 const API_PORT_STORAGE_KEY = "polaris.apiPort";
-const CONSOLE_PORT_STORAGE_KEY = "polaris.consolePort";
-const CONSOLE_PORT_CANDIDATES = Array.from({ length: 15 }, (_, index) => 5173 + index);
 const DEFAULT_API_PORT = 19601;
-const API_PORT_CANDIDATES = Array.from({ length: 8 }, (_, index) => DEFAULT_API_PORT + index);
+const API_PORT_SCAN_SIZE = 20;
+const FETCH_TIMEOUT_MS = 2000;
+const API_PORT_CANDIDATES = Array.from({ length: API_PORT_SCAN_SIZE }, (_, index) => DEFAULT_API_PORT + index);
 let cachedApiBaseUrl: string | null = null;
 let cachedConsoleBaseUrl: string | null = null;
 let apiBaseUrlPromise: Promise<string> | null = null;
 let consoleBaseUrlPromise: Promise<string> | null = null;
 
-async function getStoredApiPort(): Promise<number | null> {
+async function readStoredApiPort(): Promise<number | null> {
   return new Promise((resolve) => {
     chrome.storage.local.get(API_PORT_STORAGE_KEY, (result) => {
       const value = result[API_PORT_STORAGE_KEY];
@@ -17,30 +17,17 @@ async function getStoredApiPort(): Promise<number | null> {
   });
 }
 
-async function setStoredApiPort(port: number): Promise<void> {
+async function writeStoredApiPort(port: number): Promise<void> {
   return new Promise((resolve) => {
     chrome.storage.local.set({ [API_PORT_STORAGE_KEY]: port }, () => resolve());
   });
 }
 
-async function getStoredConsolePort(): Promise<number | null> {
-  return new Promise((resolve) => {
-    chrome.storage.local.get(CONSOLE_PORT_STORAGE_KEY, (result) => {
-      const value = result[CONSOLE_PORT_STORAGE_KEY];
-      resolve(Number.isInteger(value) ? value : null);
-    });
-  });
-}
-
-async function setStoredConsolePort(port: number): Promise<void> {
-  return new Promise((resolve) => {
-    chrome.storage.local.set({ [CONSOLE_PORT_STORAGE_KEY]: port }, () => resolve());
-  });
-}
-
 async function isApiPortAvailable(port: number): Promise<boolean> {
   try {
-    const response = await fetch(`http://127.0.0.1:${port}/api/health`);
+    const response = await fetch(`http://127.0.0.1:${port}/api/health`, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
+    });
     if (!response.ok) {
       return false;
     }
@@ -57,6 +44,13 @@ async function isApiPortAvailable(port: number): Promise<boolean> {
   }
 }
 
+export function invalidateApiCache(): void {
+  cachedApiBaseUrl = null;
+  cachedConsoleBaseUrl = null;
+  apiBaseUrlPromise = null;
+  consoleBaseUrlPromise = null;
+}
+
 export async function getApiBaseUrl(): Promise<string> {
   if (cachedApiBaseUrl) {
     return cachedApiBaseUrl;
@@ -67,11 +61,11 @@ export async function getApiBaseUrl(): Promise<string> {
   }
 
   apiBaseUrlPromise = (async () => {
-    const stored = await getStoredApiPort();
+    const stored = await readStoredApiPort();
     const candidates = [...new Set([stored, ...API_PORT_CANDIDATES].filter((item): item is number => Boolean(item)))];
     for (const port of candidates) {
       if (await isApiPortAvailable(port)) {
-        await setStoredApiPort(port);
+        await writeStoredApiPort(port);
         cachedApiBaseUrl = `http://127.0.0.1:${port}/api`;
         return cachedApiBaseUrl;
       }
@@ -87,28 +81,6 @@ export async function getApiBaseUrl(): Promise<string> {
   }
 }
 
-async function isConsoleAvailable(baseUrl: string): Promise<boolean> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 800);
-
-  try {
-    const response = await fetch(`${baseUrl}/`, {
-      method: "GET",
-      signal: controller.signal
-    });
-    if (!response.ok) {
-      return false;
-    }
-
-    const html = await response.text();
-    return html.includes("<div id=\"root\">") || html.includes("Polaris");
-  } catch {
-    return false;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 export async function getConsoleBaseUrl(): Promise<string> {
   if (cachedConsoleBaseUrl) {
     return cachedConsoleBaseUrl;
@@ -119,30 +91,10 @@ export async function getConsoleBaseUrl(): Promise<string> {
   }
 
   consoleBaseUrlPromise = (async () => {
-    try {
-      const apiBaseUrl = await getApiBaseUrl();
-      const apiUrl = new URL(apiBaseUrl);
-      const packagedConsoleBaseUrl = `http://${apiUrl.hostname}:${apiUrl.port}`;
-      if (await isConsoleAvailable(packagedConsoleBaseUrl)) {
-        cachedConsoleBaseUrl = packagedConsoleBaseUrl;
-        return cachedConsoleBaseUrl;
-      }
-    } catch {
-      // Fall back to legacy Vite console discovery.
-    }
-
-    const stored = await getStoredConsolePort();
-    const candidates = [...new Set([stored, ...CONSOLE_PORT_CANDIDATES].filter((item): item is number => Boolean(item)))];
-    for (const port of candidates) {
-      const baseUrl = `http://127.0.0.1:${port}`;
-      if (await isConsoleAvailable(baseUrl)) {
-        await setStoredConsolePort(port);
-        cachedConsoleBaseUrl = baseUrl;
-        return cachedConsoleBaseUrl;
-      }
-    }
-
-    return "http://127.0.0.1:5173";
+    const apiBaseUrl = await getApiBaseUrl();
+    const apiUrl = new URL(apiBaseUrl);
+    cachedConsoleBaseUrl = `http://${apiUrl.host}`;
+    return cachedConsoleBaseUrl;
   })();
 
   try {

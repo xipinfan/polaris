@@ -139,6 +139,8 @@ export async function startServers() {
     proxyService: runtime.proxyService,
     requestService: runtime.requestService,
     mockService: runtime.mockService,
+    storage: runtime.storage,
+    proxyEngine: runtime.proxyEngine,
     runtimeSettings
   };
 }

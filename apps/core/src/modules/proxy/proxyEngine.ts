@@ -1,9 +1,9 @@
 import http from "node:http";
 import https from "node:https";
 import net from "node:net";
-import type { Duplex } from "node:stream";
 import { randomUUID } from "node:crypto";
 import type { IncomingMessage, RequestOptions, ServerResponse } from "node:http";
+import { PassThrough, type Duplex, type Readable } from "node:stream";
 import type { RequestRecord, RequestResolution } from "@polaris/shared-types";
 import { normalizeBody } from "../../shared/normalizeBody";
 import { getLanIpv4Address } from "../../shared/network";
@@ -16,11 +16,30 @@ import { ProxyService } from "./proxyService";
 import { RequestService } from "../requests/requestService";
 import { CertificateManager } from "./certificateManager";
 
-function collectBody(req: IncomingMessage): Promise<Buffer> {
+const MAX_CAPTURE_BODY_SIZE = 2 * 1024 * 1024;
+
+function collectBody(req: Readable, maxSize?: number): Promise<Buffer> {
   return new Promise((resolve) => {
     const chunks: Buffer[] = [];
-    req.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
-    req.on("end", () => resolve(Buffer.concat(chunks)));
+    let size = 0;
+    let overflow = false;
+
+    req.on("data", (chunk) => {
+      if (overflow) {
+        return;
+      }
+
+      const buffer = Buffer.from(chunk);
+      size += buffer.length;
+      if (typeof maxSize === "number" && size > maxSize) {
+        overflow = true;
+        chunks.length = 0;
+        return;
+      }
+
+      chunks.push(buffer);
+    });
+    req.on("end", () => resolve(overflow ? Buffer.alloc(0) : Buffer.concat(chunks)));
     req.on("error", () => resolve(Buffer.alloc(0)));
   });
 }
@@ -41,10 +60,10 @@ function sanitizeProxyHeaders(headers: IncomingMessage["headers"]): Record<strin
   const nextHeaders = normalizeHeaders(headers);
   delete nextHeaders["proxy-connection"];
   delete nextHeaders["proxy-authorization"];
-  delete nextHeaders["connection"];
+  delete nextHeaders.connection;
   delete nextHeaders["keep-alive"];
   delete nextHeaders["transfer-encoding"];
-  delete nextHeaders["upgrade"];
+  delete nextHeaders.upgrade;
   return nextHeaders;
 }
 
@@ -77,8 +96,8 @@ function mergeSearchParams(targetSearch: string, requestSearch: string): string 
 
 function createCorsHeaders(req: IncomingMessage): Record<string, string> {
   return {
-    "Access-Control-Allow-Origin": getHeaderValue(req.headers.origin) ?? "*",
-    "Access-Control-Allow-Credentials": "true"
+    "access-control-allow-origin": getHeaderValue(req.headers.origin) ?? "*",
+    "access-control-allow-credentials": "true"
   };
 }
 
@@ -109,14 +128,14 @@ function isProxyLoopRequest(targetUrl: URL, proxyPort: number, lanIp?: string): 
 function buildPortalHtml(lanIp: string | undefined, apiPort: number, proxyPort: number): string {
   const apiHost = lanIp ?? "127.0.0.1";
   const certificateUrl = `http://${apiHost}:${apiPort}/api/certificates/root-ca`;
-  const lanAddress = lanIp ?? "未检测到局域网 IP，请确认当前电脑已经接入 Wi-Fi 或有线网络。";
+  const lanAddress = lanIp ?? "鏈娴嬪埌灞€鍩熺綉 IP锛岃纭褰撳墠鐢佃剳宸茬粡鎺ュ叆 Wi-Fi 鎴栨湁绾跨綉缁溿€?";
 
   return `<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Polaris 手机代理安装</title>
+    <title>Polaris 鎵嬫満浠ｇ悊瀹夎</title>
     <style>
       :root {
         color-scheme: light;
@@ -239,62 +258,62 @@ function buildPortalHtml(lanIp: string | undefined, apiPort: number, proxyPort: 
     <main>
       <section class="card">
         <span class="eyebrow">Polaris Proxy</span>
-        <h1>手机 / 局域网代理安装向导</h1>
-        <p>当前页面由 Polaris 本地代理直接返回。请确保手机和电脑处于同一局域网，再按下面步骤完成代理配置和证书安装。</p>
+        <h1>鎵嬫満 / 灞€鍩熺綉浠ｇ悊瀹夎鍚戝</h1>
+        <p>褰撳墠椤甸潰鐢?Polaris 鏈湴浠ｇ悊鐩存帴杩斿洖銆傝纭繚鎵嬫満鍜岀數鑴戝浜庡悓涓€灞€鍩熺綉锛屽啀鎸変笅闈㈡楠ゅ畬鎴愪唬鐞嗛厤缃拰璇佷功瀹夎銆?/p>
         <div class="metrics">
           <div class="metric">
-            <span>局域网地址</span>
+            <span>灞€鍩熺綉鍦板潃</span>
             <strong>${lanAddress}</strong>
           </div>
           <div class="metric">
-            <span>代理端口</span>
+            <span>浠ｇ悊绔彛</span>
             <strong>${proxyPort}</strong>
           </div>
         </div>
       </section>
 
       <section class="card" style="margin-top: 16px;">
-        <h2>第 1 步：先连接 Polaris 代理</h2>
+        <h2>绗?1 姝ワ細鍏堣繛鎺?Polaris 浠ｇ悊</h2>
         <ol>
-          <li>确保手机与电脑在同一个 Wi-Fi 网络下。</li>
-          <li>Android：进入当前 Wi-Fi 的详情页，在“代理”里选择“手动”，服务器填写 <code>${lanAddress}</code>，端口填写 <code>${proxyPort}</code>。</li>
-          <li>iPhone / iPad：进入“设置 → Wi-Fi → 当前网络 → 配置代理”，选择“手动”，服务器填写 <code>${lanAddress}</code>，端口填写 <code>${proxyPort}</code>。</li>
-          <li>代理保存成功后，再继续下载 Polaris 根证书。</li>
+          <li>纭繚鎵嬫満涓庣數鑴戝湪鍚屼竴涓?Wi-Fi 缃戠粶涓嬨€?/li>
+          <li>Android锛氳繘鍏ュ綋鍓?Wi-Fi 鐨勮鎯呴〉锛屽湪鈥滀唬鐞嗏€濋噷閫夋嫨鈥滄墜鍔ㄢ€濓紝鏈嶅姟鍣ㄥ～鍐?<code>${lanAddress}</code>锛岀鍙ｅ～鍐?<code>${proxyPort}</code>銆?/li>
+          <li>iPhone / iPad锛氳繘鍏モ€滆缃?鈫?Wi-Fi 鈫?褰撳墠缃戠粶 鈫?閰嶇疆浠ｇ悊鈥濓紝閫夋嫨鈥滄墜鍔ㄢ€濓紝鏈嶅姟鍣ㄥ～鍐?<code>${lanAddress}</code>锛岀鍙ｅ～鍐?<code>${proxyPort}</code>銆?/li>
+          <li>浠ｇ悊淇濆瓨鎴愬姛鍚庯紝鍐嶇户缁笅杞?Polaris 鏍硅瘉涔︺€?/li>
         </ol>
       </section>
 
       <section class="card" style="margin-top: 16px;">
-        <h2>第 2 步：下载并安装 Polaris 根证书</h2>
-        <p>代理生效后，点击下面的按钮下载根证书。如果按钮无法打开，也可以手动访问文末的证书直链。</p>
-        <a class="button" href="${certificateUrl}">下载 Polaris Root CA</a>
-        <p>证书直链：<br /><code>${certificateUrl}</code></p>
+        <h2>绗?2 姝ワ細涓嬭浇骞跺畨瑁?Polaris 鏍硅瘉涔?/h2>
+        <p>浠ｇ悊鐢熸晥鍚庯紝鐐瑰嚮涓嬮潰鐨勬寜閽笅杞芥牴璇佷功銆傚鏋滄寜閽棤娉曟墦寮€锛屼篃鍙互鎵嬪姩璁块棶鏂囨湯鐨勮瘉涔︾洿閾俱€?/p>
+        <a class="button" href="${certificateUrl}">涓嬭浇 Polaris Root CA</a>
+        <p>璇佷功鐩撮摼锛?br /><code>${certificateUrl}</code></p>
         <div class="platform-grid">
           <section class="platform-card">
-            <h3>Android 安装说明</h3>
+            <h3>Android 瀹夎璇存槑</h3>
             <ol>
-              <li>下载证书后，如果系统自动弹出安装页面，按提示继续安装。</li>
-              <li>若未自动弹出，可进入“设置 → 安全 / 隐私 → 安装证书 / 从存储设备安装证书”，手动选择下载的证书文件。</li>
-              <li>证书用途请选择“VPN 和应用”或系统允许的等效选项。</li>
-              <li>安装完成后，重新打开需要抓包的浏览器或 App 再测试 HTTPS 请求。</li>
+              <li>涓嬭浇璇佷功鍚庯紝濡傛灉绯荤粺鑷姩寮瑰嚭瀹夎椤甸潰锛屾寜鎻愮ず缁х画瀹夎銆?/li>
+              <li>鑻ユ湭鑷姩寮瑰嚭锛屽彲杩涘叆鈥滆缃?鈫?瀹夊叏 / 闅愮 鈫?瀹夎璇佷功 / 浠庡瓨鍌ㄨ澶囧畨瑁呰瘉涔︹€濓紝鎵嬪姩閫夋嫨涓嬭浇鐨勮瘉涔︽枃浠躲€?/li>
+              <li>璇佷功鐢ㄩ€旇閫夋嫨鈥淰PN 鍜屽簲鐢ㄢ€濇垨绯荤粺鍏佽鐨勭瓑鏁堥€夐」銆?/li>
+              <li>瀹夎瀹屾垚鍚庯紝閲嶆柊鎵撳紑闇€瑕佹姄鍖呯殑娴忚鍣ㄦ垨 App 鍐嶆祴璇?HTTPS 璇锋眰銆?/li>
             </ol>
           </section>
           <section class="platform-card">
-            <h3>iPhone / iPad 安装说明</h3>
+            <h3>iPhone / iPad 瀹夎璇存槑</h3>
             <ol>
-              <li>在 Safari 中下载证书后，系统会提示“已下载描述文件”。</li>
-              <li>进入“设置 → 已下载描述文件”，或“设置 → 通用 → VPN 与设备管理”，安装 Polaris 描述文件。</li>
-              <li>安装完成后，再进入“设置 → 通用 → 关于本机 → 证书信任设置”。</li>
-              <li>找到 Polaris 根证书并手动开启“完全信任”，否则 HTTPS 无法正常解密。</li>
+              <li>鍦?Safari 涓笅杞借瘉涔﹀悗锛岀郴缁熶細鎻愮ず鈥滃凡涓嬭浇鎻忚堪鏂囦欢鈥濄€?/li>
+              <li>杩涘叆鈥滆缃?鈫?宸蹭笅杞芥弿杩版枃浠垛€濓紝鎴栨€滆缃?鈫?閫氱敤 鈫?VPN 涓庤澶囩鐞嗏€濓紝瀹夎 Polaris 鎻忚堪鏂囦欢銆?/li>
+              <li>瀹夎瀹屾垚鍚庯紝鍐嶈繘鍏モ€滆缃?鈫?閫氱敤 鈫?鍏充簬鏈満 鈫?璇佷功淇′换璁剧疆鈥濄€?/li>
+              <li>鎵惧埌 Polaris 鏍硅瘉涔﹀苟鎵嬪姩寮€鍚€滃畬鍏ㄤ俊浠烩€濓紝鍚﹀垯 HTTPS 鏃犳硶姝ｅ父瑙ｅ瘑銆?/li>
             </ol>
           </section>
         </div>
         <div class="tips">
-          <h3>连接失败时优先检查</h3>
+          <h3>杩炴帴澶辫触鏃朵紭鍏堟鏌?/h3>
           <ol>
-            <li>手机是否和电脑在同一个局域网。</li>
-            <li>代理 IP 和端口是否填写正确。</li>
-            <li>电脑防火墙是否拦截了 Polaris 端口。</li>
-            <li>安装证书后是否真的完成了信任步骤，尤其是 iPhone 的“完全信任”。</li>
+            <li>鎵嬫満鏄惁鍜岀數鑴戝湪鍚屼竴涓眬鍩熺綉銆?/li>
+            <li>浠ｇ悊 IP 鍜岀鍙ｆ槸鍚﹀～鍐欐纭€?/li>
+            <li>鐢佃剳闃茬伀澧欐槸鍚︽嫤鎴簡 Polaris 绔彛銆?/li>
+            <li>瀹夎璇佷功鍚庢槸鍚︾湡鐨勫畬鎴愪簡淇′换姝ラ锛屽挨鍏舵槸 iPhone 鐨勨€滃畬鍏ㄤ俊浠烩€濄€?/li>
           </ol>
         </div>
       </section>
@@ -304,6 +323,8 @@ function buildPortalHtml(lanIp: string | undefined, apiPort: number, proxyPort: 
 }
 
 export class ProxyEngine {
+  private mitmServer: https.Server | null = null;
+
   constructor(
     private readonly requestService: RequestService,
     private readonly mockService: MockService,
@@ -330,6 +351,42 @@ export class ProxyEngine {
     return server;
   }
 
+  async closeMitmServer(): Promise<void> {
+    const server = this.mitmServer;
+    if (!server) {
+      return;
+    }
+
+    this.mitmServer = null;
+    await new Promise<void>((resolve) => {
+      server.close(() => resolve());
+    });
+  }
+
+  private ensureMitmServer(): https.Server {
+    if (this.mitmServer) {
+      return this.mitmServer;
+    }
+
+    this.mitmServer = https.createServer(
+      {
+        SNICallback: (hostname, callback) => {
+          void this.certificateManager
+            .getSecureContext(hostname)
+            .then((secureContext) => callback?.(null, secureContext))
+            .catch((error) => callback?.(error));
+        }
+      },
+      async (req, res) => {
+        await this.handleHttpRequest(req, res, "https:");
+      }
+    );
+
+    this.mitmServer.on("tlsClientError", () => {});
+    this.mitmServer.on("clientError", () => {});
+    return this.mitmServer;
+  }
+
   private async handleConnectRequest(req: IncomingMessage, clientSocket: Duplex, head: Buffer): Promise<void> {
     const [host, portValue] = (req.url ?? "").split(":");
     const targetPort = Number(portValue || 443);
@@ -347,26 +404,12 @@ export class ProxyEngine {
     }
 
     try {
-      const { key, cert } = await this.certificateManager.getServerCredentials(host);
-      const mitmServer = https.createServer({ key, cert }, async (mitmReq, mitmRes) => {
-        await this.handleHttpRequest(mitmReq, mitmRes, "https:");
-      });
-
-      mitmServer.on("tlsClientError", () => {
-        clientSocket.destroy();
-      });
-      mitmServer.on("error", () => {
-        clientSocket.destroy();
-      });
-      clientSocket.on("close", () => {
-        mitmServer.close();
-      });
-
+      await this.certificateManager.getSecureContext(host);
       clientSocket.write("HTTP/1.1 200 Connection Established\r\n\r\n");
       if (head.length) {
         clientSocket.unshift(head);
       }
-      mitmServer.emit("connection", clientSocket);
+      this.ensureMitmServer().emit("connection", clientSocket);
     } catch {
       this.createTunnel(clientSocket, head, host, targetPort);
     }
@@ -375,17 +418,33 @@ export class ProxyEngine {
   private createTunnel(clientSocket: Duplex, head: Buffer, host: string, port: number): void {
     const targetSocket = net.connect(port, host, () => {
       clientSocket.write("HTTP/1.1 200 Connection Established\r\n\r\n");
-      targetSocket.write(head);
+      if (head.length) {
+        targetSocket.write(head);
+      }
       targetSocket.pipe(clientSocket);
       clientSocket.pipe(targetSocket);
     });
 
-    targetSocket.on("error", () => {
-      clientSocket.destroy();
-    });
-    clientSocket.on("error", () => {
-      targetSocket.destroy();
-    });
+    let cleanedUp = false;
+    const cleanup = () => {
+      if (cleanedUp) {
+        return;
+      }
+      cleanedUp = true;
+      clientSocket.unpipe(targetSocket);
+      targetSocket.unpipe(clientSocket);
+      if (!clientSocket.destroyed) {
+        clientSocket.destroy();
+      }
+      if (!targetSocket.destroyed) {
+        targetSocket.destroy();
+      }
+    };
+
+    targetSocket.on("error", cleanup);
+    targetSocket.on("close", cleanup);
+    clientSocket.on("error", cleanup);
+    clientSocket.on("close", cleanup);
   }
 
   private async handleHttpRequest(req: IncomingMessage, res: ServerResponse, protocol: "http:" | "https:"): Promise<void> {
@@ -394,9 +453,9 @@ export class ProxyEngine {
     if (req.method === "OPTIONS") {
       res.writeHead(204, {
         ...corsHeaders,
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-        "Access-Control-Allow-Headers": getHeaderValue(req.headers["access-control-request-headers"]) ?? "*",
-        "Access-Control-Max-Age": "86400"
+        "access-control-allow-methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+        "access-control-allow-headers": getHeaderValue(req.headers["access-control-request-headers"]) ?? "*",
+        "access-control-max-age": "86400"
       });
       res.end();
       return;
@@ -534,56 +593,73 @@ export class ProxyEngine {
     };
 
     const client = finalProtocol === "https:" ? https : http;
-    const proxyReq = client.request(options, async (proxyRes) => {
-      const chunks: Buffer[] = [];
-      proxyRes.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
-      proxyRes.on("end", async () => {
-        const responseBuffer = Buffer.concat(chunks);
-        const responseHeaders = {
-          ...normalizeHeaders(proxyRes.headers),
-          ...corsHeaders
-        };
-        const responseBody = normalizeCapturedBody(responseBuffer, responseHeaders);
-        res.writeHead(proxyRes.statusCode ?? 502, responseHeaders);
-        res.end(responseBuffer);
+    const proxyReq = client.request(options, (proxyRes) => {
+      const responseHeaders = {
+        ...normalizeHeaders(proxyRes.headers),
+        ...corsHeaders
+      };
+      res.writeHead(proxyRes.statusCode ?? 502, responseHeaders);
 
-        const record: RequestRecord = {
-          id: randomUUID(),
-          method: req.method ?? "GET",
-          url: targetUrl.toString(),
-          host: targetUrl.host,
-          path: targetUrl.pathname,
-          statusCode: proxyRes.statusCode ?? 0,
-          duration: Date.now() - startedAt,
-          requestHeaders,
-          requestQuery: parseSearchParamsRecord(targetUrl.searchParams),
-          requestBody: normalizedRequestBody,
-          responseHeaders,
-          responseBody,
-          createdAt: new Date().toISOString(),
-          source: "proxy",
-          secure: targetUrl.protocol === "https:",
-          resolution: this.buildResolution({
-            mode: "proxy_forward",
-            source: forwardDecision.source,
-            matchedRuleId: forwardDecision.matchedRuleId ?? null,
-            matchedRuleName: forwardDecision.matchedRuleName ?? null,
-            target: finalTargetUrl,
-            reason:
-              forwardDecision.mode === "proxy_forward"
-                ? forwardDecision.reason
-                : `Request reached local proxy while routing decision is direct: ${forwardDecision.reason}`
-          })
-        };
+      if (!shouldCapture) {
+        proxyRes.pipe(res);
+      } else {
+        const captureStream = new PassThrough();
+        const capturePromise = collectBody(captureStream, MAX_CAPTURE_BODY_SIZE);
+        proxyRes.pipe(res);
+        proxyRes.pipe(captureStream);
+        proxyRes.on("end", () => {
+          void capturePromise
+            .then((responseBuffer) => {
+              const record: RequestRecord = {
+                id: randomUUID(),
+                method: req.method ?? "GET",
+                url: targetUrl.toString(),
+                host: targetUrl.host,
+                path: targetUrl.pathname,
+                statusCode: proxyRes.statusCode ?? 0,
+                duration: Date.now() - startedAt,
+                requestHeaders,
+                requestQuery: parseSearchParamsRecord(targetUrl.searchParams),
+                requestBody: normalizedRequestBody,
+                responseHeaders,
+                responseBody: normalizeCapturedBody(responseBuffer, responseHeaders),
+                createdAt: new Date().toISOString(),
+                source: "proxy",
+                secure: targetUrl.protocol === "https:",
+                resolution: this.buildResolution({
+                  mode: "proxy_forward",
+                  source: forwardDecision.source,
+                  matchedRuleId: forwardDecision.matchedRuleId ?? null,
+                  matchedRuleName: forwardDecision.matchedRuleName ?? null,
+                  target: finalTargetUrl,
+                  reason:
+                    forwardDecision.mode === "proxy_forward"
+                      ? forwardDecision.reason
+                      : `Request reached local proxy while routing decision is direct: ${forwardDecision.reason}`
+                })
+              };
+              return this.requestService.capture(record);
+            })
+            .catch(() => {});
+        });
+      }
 
-        if (shouldCapture) {
-          await this.requestService.capture(record);
-        }
+      proxyRes.on("error", () => {
+        res.destroy();
       });
     });
 
+    req.on("close", () => {
+      proxyReq.destroy();
+    });
+
     proxyReq.on("error", (error) => {
-      res.writeHead(502, corsHeaders).end(error.message);
+      proxyReq.destroy();
+      if (!res.headersSent) {
+        res.writeHead(502, corsHeaders).end(error.message);
+        return;
+      }
+      res.destroy();
     });
 
     if (requestBuffer.length) {

@@ -1,7 +1,9 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { loader } from "@monaco-editor/react";
 import { ConfigProvider } from "antd";
 import zhCN from "antd/locale/zh_CN";
+import * as monaco from "monaco-editor";
 import { RouterProvider } from "react-router-dom";
 import { router } from "./app/router";
 import { ToastProvider } from "./features/feedback/ToastProvider";
@@ -9,6 +11,9 @@ import { ConsoleI18nProvider } from "./i18n/I18nProvider";
 import { ConsoleQueryProvider } from "./lib/query/queryProvider";
 import "antd/dist/reset.css";
 import "./styles/global.css";
+
+// 使用本地打包的 monaco-editor，避免运行时从 CDN 加载（代理环境下 CDN 请求会被拦截）
+loader.config({ monaco });
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   ProxyMode,
   ProxyRule,
@@ -9,7 +9,7 @@ import {
   applyBrowserProxyMode,
   openBrowserCertificateSettings,
 } from "../../bridge/browserProxyBridge";
-import { getConsoleBaseUrl } from "../../bridge/coreDiscovery";
+import { getConsoleBaseUrl, invalidateApiCache } from "../../bridge/coreDiscovery";
 import { coreBridge } from "../../bridge/coreBridge";
 import { buildSitePatterns, matchesPattern } from "../utils/sitePatterns";
 import styles from "./Popup.module.less";
@@ -22,6 +22,8 @@ export function Popup() {
   const [rules, setRules] = useState<ProxyRule[]>([]);
   const [message, setMessage] = useState("");
   const { t } = useExtensionI18n();
+  const statusRef = useRef(status);
+  statusRef.current = status;
 
   const modes: ModeItem[] = [
     {
@@ -60,16 +62,25 @@ export function Popup() {
         coreBridge.health(),
         coreBridge.listRules(),
       ]);
+      setMessage("");
       setStatus(nextStatus);
       setRules(nextRules);
     } catch (error) {
       console.error(error);
+      invalidateApiCache();
       setMessage(t("popup.error.core"));
     }
   };
 
   useEffect(() => {
     void load();
+    const retryTimer = setInterval(() => {
+      if (!statusRef.current?.online) {
+        invalidateApiCache();
+        void load();
+      }
+    }, 3000);
+
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const tabUrl = tabs[0]?.url;
       if (!tabUrl) return;
@@ -79,6 +90,8 @@ export function Popup() {
         setHost("");
       }
     });
+
+    return () => clearInterval(retryTimer);
   }, []);
 
   const sitePatterns = useMemo(() => buildSitePatterns(host), [host]);
@@ -138,8 +151,8 @@ export function Popup() {
         <div className={styles.heroBrand}>
           <img alt="" className={styles.heroMark} src="/polaris-mark.svg" />
           <div>
-          <span className={styles.brandLabel}>Polaris Extension</span>
-          <h1>Polaris</h1>
+            <span className={styles.brandLabel}>Polaris Extension</span>
+            <h1>Polaris</h1>
           </div>
         </div>
         <span

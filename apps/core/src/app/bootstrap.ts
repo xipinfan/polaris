@@ -27,7 +27,9 @@ async function main() {
       closeNodeServer(runtime.apiServer),
       runtime.mcpHttpServer ? closeNodeServer(runtime.mcpHttpServer) : Promise.resolve(),
       runtime.streamableMcpServer.close(),
-      runtime.sseMcpServer.close()
+      runtime.sseMcpServer.close(),
+      runtime.proxyEngine.closeMitmServer(),
+      runtime.storage.flush()
     ]);
     process.exit(exitCode);
   };

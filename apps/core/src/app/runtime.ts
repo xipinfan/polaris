@@ -16,8 +16,12 @@ export interface PolarisRuntime {
   proxyEngine: ProxyEngine;
 }
 
-export async function createRuntime(): Promise<PolarisRuntime> {
-  const storage = new StorageAdapter();
+export interface CreateRuntimeOptions {
+  readOnly?: boolean;
+}
+
+export async function createRuntime(options?: CreateRuntimeOptions): Promise<PolarisRuntime> {
+  const storage = new StorageAdapter({ readOnly: options?.readOnly });
   await storage.init();
 
   const extensionHost = new ExtensionHost();

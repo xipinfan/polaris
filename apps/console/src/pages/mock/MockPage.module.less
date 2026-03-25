@@ -9,6 +9,8 @@
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
   align-content: stretch;
+  container-type: inline-size;
+  container-name: mock-page;
 }
 
 .header {
@@ -58,6 +60,8 @@
   max-height: 100%;
   align-items: stretch;
   overflow: hidden;
+  container-type: inline-size;
+  container-name: mock-workspace;
 }
 
 .methodGet {
@@ -85,7 +89,7 @@
   color: #c4320a;
 }
 
-@media (max-width: 1100px) {
+@container mock-page (max-width: 1020px) {
   .workspace {
     grid-template-columns: 1fr;
     height: 100%;

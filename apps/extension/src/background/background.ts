@@ -69,7 +69,6 @@ async function checkCoreHealth(): Promise<boolean> {
   const apiPort = lastKnownApiPort || 19601;
   try {
     const response = await fetch(`http://127.0.0.1:${apiPort}/api/health`, {
-      method: "GET",
       signal: AbortSignal.timeout(3000)
     });
     if (!response.ok) {

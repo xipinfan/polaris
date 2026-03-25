@@ -236,6 +236,8 @@
   padding: 24px 26px calc(52px + env(safe-area-inset-bottom));
   overflow-x: hidden;
   overflow-y: auto;
+  container-type: inline-size;
+  container-name: app-content;
 }
 
 .pageSkeleton {

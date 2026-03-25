@@ -219,17 +219,21 @@
   pointer-events: none;
 }
 
-@media (max-width: 1380px) {
-.sidebar {
+@container proxy-workspace (max-width: 1040px) {
+  .sidebar {
     position: static;
     height: auto;
     min-height: auto;
     max-height: none;
   }
+
+  .groupList {
+    max-height: none;
+  }
 }
 
-@media (max-width: 860px) {
-.sidebar {
+@container proxy-workspace (max-width: 680px) {
+  .sidebar {
     height: auto;
     min-height: 0;
     max-height: none;

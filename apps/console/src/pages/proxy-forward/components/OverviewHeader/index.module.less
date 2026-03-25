@@ -115,26 +115,26 @@
   border-radius: 12px !important;
 }
 
-@media (max-width: 1602px) {
-.overview {
+@container proxy-main (max-width: 940px) {
+  .overview {
     grid-template-columns: 1fr;
   }
 
-.metricStrip {
+  .metricStrip {
     min-width: 0;
   }
 
-.overviewActions {
+  .overviewActions {
     justify-content: flex-start;
   }
 }
 
-@media (max-width: 900px) {
-.metricStrip {
+@container proxy-main (max-width: 680px) {
+  .metricStrip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-.overviewActions {
+  .overviewActions {
     flex-wrap: wrap;
     justify-content: flex-start;
   }

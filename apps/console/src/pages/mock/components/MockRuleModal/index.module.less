@@ -255,7 +255,7 @@
 
 .modalCard {
   width: min(1240px, calc(100vw - 40px));
-  max-height: min(860px, calc(100vh - 36px));
+  height: min(860px, calc(100vh - 36px));
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
   gap: 16px;
@@ -268,7 +268,7 @@
 
 .modalCardExpanded {
   width: min(1380px, calc(100vw - 24px));
-  max-height: calc(100vh - 20px);
+  height: calc(100vh - 20px);
 }
 
 .modalHeader {
@@ -343,17 +343,11 @@
 .modalSections {
   display: grid;
   gap: 14px;
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
   padding-right: 4px;
   padding-bottom: 16px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.modalSections::-webkit-scrollbar {
-  width: 0;
-  height: 0;
 }
 
 .modalSection {
@@ -363,6 +357,7 @@
   border-radius: 24px;
   border: 1px solid rgba(226, 232, 240, 0.94);
   background: rgba(255, 255, 255, 0.88);
+  overflow: auto;
 }
 
 .modalTabs {
@@ -393,37 +388,31 @@
 }
 
 .editorSection {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
   min-height: 0;
   padding: 12px;
-  border-radius: 18px;
-  border: 1px solid rgba(213, 221, 231, 0.96);
-  background: rgba(252, 253, 255, 0.95);
-}
-
-.responseEditorLayout {
-  min-height: 0;
+  border-radius: 24px;
+  border: 1px solid rgba(226, 232, 240, 0.94);
+  background: rgba(255, 255, 255, 0.88);
+  overflow: hidden;
 }
 
 .editorShell {
-  position: relative;
-  height: 100%;
-  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .editorToolbar {
   display: flex;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 20;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   flex-wrap: wrap;
-  pointer-events: auto;
+  flex-shrink: 0;
 }
 
 .editorTabs,
@@ -451,14 +440,11 @@
 }
 
 .editorFrame {
-  position: absolute;
-  top: 44px;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  flex: 1;
+  min-height: 0;
   border: 1px solid rgba(213, 221, 231, 0.98);
   border-radius: 14px;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .editorFrame :global(.monaco-editor button:hover),

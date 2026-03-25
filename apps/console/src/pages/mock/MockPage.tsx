@@ -135,6 +135,7 @@ export function MockPage() {
           onCopyGroup={workspace.copyGroup}
           onDeleteGroup={workspace.deleteGroup}
           onDuplicateRule={workspace.duplicateRule}
+          onDuplicateUrlBlock={workspace.duplicateRulesForUrlBlock}
           onEditGroupDescription={workspace.editGroupDescription}
           onExportRule={exportSingleRule}
           onExportSelectedRules={exportMultipleRules}
@@ -144,9 +145,11 @@ export function MockPage() {
             );
           }}
           onMoveRule={workspace.moveRuleToGroup}
+          onOpenCreateModalForUrl={workspace.openCreateModalForUrl}
           onOpenCreateModal={workspace.openCreateModal}
           onOpenEditModal={workspace.openEditModal}
           onRemoveRule={workspace.removeRule}
+          onRemoveUrlBlock={workspace.removeRulesForUrlBlock}
           onToggleCurrentGroup={workspace.toggleCurrentGroup}
           onToggleRule={workspace.toggleRule}
           ruleBlocks={workspace.currentGroupRuleBlocks}
