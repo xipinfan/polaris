@@ -9,4 +9,6 @@ export interface AppSetting {
   certificateInstalled: boolean;
   mcpEnabled: boolean;
   activeMockGroup: string | null;
+  maxRequestCount: number;
+  maxRequestBodySize: number;
 }

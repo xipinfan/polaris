@@ -51,12 +51,6 @@ export function getRequestResolutionMode(item: RequestRecord): TrafficResolution
   if (mode) {
     return mode;
   }
-  if (item.source === "proxy") {
-    return "proxy_forward";
-  }
-  if (item.source === "debug") {
-    return "direct";
-  }
   return "unknown";
 }
 

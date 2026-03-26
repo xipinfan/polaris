@@ -1,97 +1,53 @@
-import { Button, Dropdown, Tag } from "antd";
 import localStyles from "./index.module.less";
 import type { StoredGroup } from "../../types";
 import { classNames } from "../../utils/proxyForwardHelpers";
 
 type OverviewHeaderProps = {
   activeGroup: StoredGroup | null;
-  activeGroupId: string;
-  groups: StoredGroup[];
-  headerMenuOpen: boolean;
   overview: { total: number; enabled: number; hits: number; errors: number };
-  setGroupName: (value: string) => void;
-  setEditingGroup: (value: StoredGroup | null) => void;
-  setHeaderMenuOpen: (value: boolean) => void;
-  setIsGroupModalOpen: (value: boolean) => void;
-  onLoad: () => void;
-  onOpenCreateRule: () => void;
 };
 
-export function OverviewHeader({
-  activeGroup,
-  activeGroupId,
-  groups,
-  headerMenuOpen,
-  overview,
-  setGroupName,
-  setEditingGroup,
-  setHeaderMenuOpen,
-  setIsGroupModalOpen,
-  onLoad,
-  onOpenCreateRule,
-}: OverviewHeaderProps) {
+export function OverviewHeader({ activeGroup, overview }: OverviewHeaderProps) {
   return (
     <div className={classNames(localStyles.overview, localStyles.root)}>
       <div className={localStyles.overviewCopy}>
         <div className={localStyles.overviewTitle}>
-          <h2>{activeGroup?.name ?? "暂无分组"}</h2>
-          <Tag
-            bordered={false}
+          <h2>{activeGroup?.name ?? "\u6682\u65e0\u5206\u7ec4"}</h2>
+          <span
             className={classNames(
               localStyles.statusBadge,
               activeGroup ? localStyles.statusBadgeSuccess : localStyles.statusBadgeMuted,
             )}
           >
-            {activeGroup ? "生效中" : "未生效"}
-          </Tag>
+            {activeGroup ? "\u751f\u6548\u4e2d" : "\u672a\u751f\u6548"}
+          </span>
         </div>
-        <p>仅当前分组生效，切换分组即切换整组代理能力。</p>
+        <p>
+          {
+            "\u4ec5\u5f53\u524d\u5206\u7ec4\u751f\u6548\uff0c\u5207\u6362\u5206\u7ec4\u5373\u5207\u6362\u6574\u7ec4\u4ee3\u7406\u80fd\u529b\u3002"
+          }
+        </p>
       </div>
 
-      <div className={localStyles.metricStrip}>
-        <article className={localStyles.metricCard}>
-          <span>规则总数</span>
-          <strong>{overview.total}</strong>
-        </article>
-        <article className={localStyles.metricCard}>
-          <span>启用规则</span>
-          <strong>{overview.enabled}</strong>
-        </article>
-        <article className={localStyles.metricCard}>
-          <span>今日命中</span>
-          <strong>{overview.hits}</strong>
-        </article>
-        <article className={localStyles.metricCard}>
-          <span>最近错误</span>
-          <strong>{overview.errors}</strong>
-        </article>
-      </div>
-
-      <div className={localStyles.overviewActions}>
-        <Button onClick={onOpenCreateRule} type="primary">
-          新建转发规则
-        </Button>
-        <Button
-          onClick={() => {
-            const group = groups.find((item) => item.id === activeGroupId);
-            if (!group) return;
-            setEditingGroup(group);
-            setGroupName(group.name);
-            setIsGroupModalOpen(true);
-          }}
-        >
-          编辑分组
-        </Button>
-        <Dropdown
-          menu={{ items: [{ key: "refresh", label: "刷新数据", onClick: onLoad }] }}
-          onOpenChange={setHeaderMenuOpen}
-          open={headerMenuOpen}
-          trigger={["click"]}
-        >
-          <Button className={localStyles.iconButton} onClick={(event) => event.stopPropagation()}>
-            ...
-          </Button>
-        </Dropdown>
+      <div className={localStyles.overviewAside}>
+        <div className={localStyles.metricStrip}>
+          <article className={localStyles.metricCard}>
+            <span>{"\u89c4\u5219\u603b\u6570"}</span>
+            <strong>{overview.total}</strong>
+          </article>
+          <article className={localStyles.metricCard}>
+            <span>{"\u542f\u7528\u89c4\u5219"}</span>
+            <strong>{overview.enabled}</strong>
+          </article>
+          <article className={localStyles.metricCard}>
+            <span>{"\u4eca\u65e5\u547d\u4e2d"}</span>
+            <strong>{overview.hits}</strong>
+          </article>
+          <article className={localStyles.metricCard}>
+            <span>{"\u6700\u8fd1\u9519\u8bef"}</span>
+            <strong>{overview.errors}</strong>
+          </article>
+        </div>
       </div>
     </div>
   );

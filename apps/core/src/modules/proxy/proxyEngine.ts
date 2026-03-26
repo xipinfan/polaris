@@ -627,15 +627,15 @@ export class ProxyEngine {
                 source: "proxy",
                 secure: targetUrl.protocol === "https:",
                 resolution: this.buildResolution({
-                  mode: "proxy_forward",
+                  mode:
+                    forwardDecision.source === "proxy_rules" && forwardDecision.mode === "proxy_forward"
+                      ? "proxy_forward"
+                      : "direct",
                   source: forwardDecision.source,
                   matchedRuleId: forwardDecision.matchedRuleId ?? null,
                   matchedRuleName: forwardDecision.matchedRuleName ?? null,
                   target: finalTargetUrl,
-                  reason:
-                    forwardDecision.mode === "proxy_forward"
-                      ? forwardDecision.reason
-                      : `Request reached local proxy while routing decision is direct: ${forwardDecision.reason}`
+                  reason: forwardDecision.reason
                 })
               };
               return this.requestService.capture(record);

@@ -808,7 +808,7 @@ export function createPolarisMcpSdkServer(
       safe(() =>
         jsonToolResult({
           online: true,
-          activeRequestCount: requestService.list({ limit: 200 }).length,
+          activeRequestCount: requestService.list().length,
           settings: proxyService.getSettings()
         })
       )

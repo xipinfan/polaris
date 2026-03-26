@@ -16,5 +16,7 @@ export const defaultSettings: AppSetting = {
   currentProxyMode: (process.env.POLARIS_PROXY_MODE as AppSetting["currentProxyMode"]) ?? "direct",
   certificateInstalled: false,
   mcpEnabled: process.env.POLARIS_MCP_ENABLED === "false" ? false : true,
-  activeMockGroup: null
+  activeMockGroup: null,
+  maxRequestCount: envNumber("POLARIS_MAX_REQUESTS", 1000),
+  maxRequestBodySize: envNumber("POLARIS_MAX_REQUEST_BODY_SIZE", 128 * 1024)
 };

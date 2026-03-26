@@ -1,4 +1,4 @@
-﻿import { Button, Dropdown, Input, Tag } from "antd";
+import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import { uiSelectors, workspaceSelectors } from "../../../../stores/selectors";
 import { useUiStore } from "../../../../stores/uiStore";
@@ -38,27 +38,34 @@ export function GroupSidebar({
     <aside className={classNames(localStyles.sidebar, localStyles.root)}>
       <div className={localStyles.sidebarHeader}>
         <div>
-          <span className={localStyles.sectionLabel}>分组</span>
-          <strong>分组</strong>
+          <strong>{"\u5206\u7ec4"}</strong>
         </div>
         <div className={localStyles.headerActions}>
-          <Button onClick={onImportGroups}>导入</Button>
-          <Button
+          <button
+            className={classNames(localStyles.secondaryButton, localStyles.compactButton)}
+            onClick={onImportGroups}
+            type="button"
+          >
+            {"\u5bfc\u5165"}
+          </button>
+          <button
+            className={classNames(localStyles.secondaryButton, localStyles.compactButton)}
             onClick={() => {
               setEditingGroup(null);
               setGroupName("");
               setIsGroupModalOpen(true);
             }}
+            type="button"
           >
-            新建分组
-          </Button>
+            {"\u65b0\u5efa\u5206\u7ec4"}
+          </button>
         </div>
       </div>
 
-      <Input
+      <input
         className={localStyles.searchInput}
         onChange={(event) => setGroupSearch(event.target.value)}
-        placeholder="搜索分组"
+        placeholder={"\u641c\u7d22\u5206\u7ec4"}
         value={groupSearch}
       />
 
@@ -66,6 +73,7 @@ export function GroupSidebar({
         {visibleGroups.map((group) => {
           const isActive = group.id === activeGroupId;
           const enabledCount = group.rules.filter((rule) => rule.enabled).length;
+
           return (
             <div
               key={group.id}
@@ -91,17 +99,22 @@ export function GroupSidebar({
                     />
                     <strong>{group.name}</strong>
                   </div>
-                  <div className={localStyles.groupMeta}>{`${group.rules.length} 条规则`}</div>
+                  <div className={localStyles.groupMetaRow}>
+                    <span className={localStyles.groupMeta}>{`${group.rules.length} \u6761\u89c4\u5219`}</span>
+                  </div>
                 </div>
-                <Tag
-                  bordered={false}
+                <span
                   className={classNames(
                     localStyles.statusBadge,
                     isActive ? localStyles.statusBadgeSuccess : localStyles.statusBadgeMuted,
                   )}
                 >
-                  {isActive ? "生效中" : enabledCount > 0 ? "待生效" : "未生效"}
-                </Tag>
+                  {isActive
+                    ? "\u751f\u6548\u4e2d"
+                    : enabledCount > 0
+                      ? "\u5f85\u751f\u6548"
+                      : "\u672a\u751f\u6548"}
+                </span>
               </button>
 
               <Dropdown
@@ -109,12 +122,13 @@ export function GroupSidebar({
                 onOpenChange={(open) => setMenuGroupId(open ? group.id : null)}
                 trigger={["click"]}
               >
-                <Button
+                <button
                   className={classNames(localStyles.iconButton, localStyles.moreButton)}
                   onClick={(event) => event.stopPropagation()}
+                  type="button"
                 >
                   ...
-                </Button>
+                </button>
               </Dropdown>
             </div>
           );

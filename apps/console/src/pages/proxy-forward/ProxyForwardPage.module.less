@@ -44,12 +44,14 @@
 
 
 .workspace {
+  --proxy-main-panels-height: calc(100vh - 212px);
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: 248px minmax(0, 1fr);
+  gap: 16px;
   min-height: 0;
-  height: 100%;
-  max-height: 100%;
+  height: var(--proxy-main-panels-height);
+  min-height: var(--proxy-main-panels-height);
+  max-height: var(--proxy-main-panels-height);
   align-items: stretch;
   overflow: hidden;
   container-type: inline-size;
@@ -58,11 +60,11 @@
 
 .main {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   grid-template-rows: auto auto minmax(0, 1fr);
-  height: 100%;
-  min-height: 0;
-  max-height: 100%;
+  height: var(--proxy-main-panels-height);
+  min-height: var(--proxy-main-panels-height);
+  max-height: var(--proxy-main-panels-height);
   align-content: stretch;
   overflow: hidden;
   container-type: inline-size;
@@ -72,10 +74,10 @@
 @container proxy-page (max-width: 1040px) {
   .workspace {
     grid-template-columns: 1fr;
-    height: 100%;
+    height: auto;
     min-height: 0;
-    max-height: 100%;
-    overflow: hidden;
+    max-height: none;
+    overflow: visible;
   }
 
   .page {
@@ -85,9 +87,9 @@
   }
 
   .main {
-    height: 100%;
+    height: auto;
     min-height: 0;
-    max-height: 100%;
-    overflow: hidden;
+    max-height: none;
+    overflow: visible;
   }
 }

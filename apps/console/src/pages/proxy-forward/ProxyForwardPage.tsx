@@ -600,6 +600,14 @@ export function ProxyForwardPage() {
     setIsRuleModalOpen(true);
   };
 
+  const openEditGroup = () => {
+    const group = groups.find((item) => item.id === activeGroupId);
+    if (!group) return;
+    setEditingGroup(group);
+    setGroupName(group.name);
+    setIsGroupModalOpen(true);
+  };
+
   const handleSaveRule = async () => {
     if (submitting) {
       return;
@@ -839,18 +847,16 @@ export function ProxyForwardPage() {
         <section className={styles.main}>
           <OverviewHeader
             activeGroup={activeGroup}
-            activeGroupId={activeGroupId}
-            groups={groups}
+            overview={overview}
+          />
+          <RuleToolbar
+            canEditGroup={Boolean(activeGroup)}
             headerMenuOpen={headerMenuOpen}
             onLoad={() => void refetchProxyData()}
             onOpenCreateRule={openCreateRule}
-            overview={overview}
-            setEditingGroup={setEditingGroup}
-            setGroupName={setGroupName}
+            onOpenEditGroup={openEditGroup}
             setHeaderMenuOpen={setHeaderMenuOpen}
-            setIsGroupModalOpen={setIsGroupModalOpen}
           />
-          <RuleToolbar filteredCount={filteredRules.length} />
           <RuleBlocks
             rules={filteredRules}
             isRulePending={(ruleId) => pendingRuleIds[ruleId] === true}

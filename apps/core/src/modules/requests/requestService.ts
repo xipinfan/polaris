@@ -60,7 +60,7 @@ export class RequestService {
   }
 
   getById(id: string): RequestRecord | undefined {
-    return this.storage.getRequests().find((item) => item.id === id);
+    return this.storage.getRequestById(id);
   }
 
   async capture(record: RequestRecord): Promise<void> {

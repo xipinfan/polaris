@@ -258,8 +258,7 @@ export class MockService {
 
   async toggle(id: string, enabled: boolean): Promise<MockRule> {
     const rules = this.list();
-    const target = rules.find((item) => item.id === id);
-    if (!target) {
+    if (!rules.find((item) => item.id === id)) {
       throw new Error("Mock rule not found");
     }
 
@@ -269,19 +268,6 @@ export class MockService {
         return {
           ...rule,
           enabled,
-          updatedAt: now
-        };
-      }
-
-      if (
-        enabled &&
-        rule.enabled &&
-        rule.method === target.method &&
-        rule.url === target.url
-      ) {
-        return {
-          ...rule,
-          enabled: false,
           updatedAt: now
         };
       }

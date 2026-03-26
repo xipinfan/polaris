@@ -2,6 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import type {
   AppSetting,
+  JsonValue,
   MockRule,
   ProxyRule,
   RequestRecord,
@@ -9,13 +10,17 @@ import type {
 } from "@polaris/shared-types";
 import { defaultSettings } from "../../app/config";
 import { ensurePolarisDir, getPolarisDataPath, migrateLegacyFile } from "../../app/paths";
+import { RequestStore } from "./requestStore";
 
 interface StorageSnapshot {
   settings: AppSetting;
-  requests: RequestRecord[];
   savedRequests: SavedRequest[];
   mockRules: MockRule[];
   proxyRules: ProxyRule[];
+}
+
+interface LegacyStorageSnapshot extends StorageSnapshot {
+  requests?: RequestRecord[];
 }
 
 const storageDirName = "data";
@@ -24,9 +29,25 @@ const storageFile = getPolarisDataPath(storageDirName, storageFileName);
 const DEBOUNCE_DELAY = 500;
 const MAX_DEBOUNCE_DELAY = 2000;
 
+function truncateBody(body: string | JsonValue | null, maxSize: number): string | JsonValue | null {
+  if (body == null || maxSize <= 0) {
+    return body;
+  }
+
+  const serialized = JSON.stringify(body);
+  if (typeof serialized !== "string") {
+    return body;
+  }
+
+  if (serialized.length <= maxSize) {
+    return body;
+  }
+
+  return `[truncated, original size: ${serialized.length} chars]`;
+}
+
 const emptySnapshot: StorageSnapshot = {
   settings: defaultSettings,
-  requests: [],
   savedRequests: [],
   mockRules: [],
   proxyRules: []
@@ -39,6 +60,7 @@ export class StorageAdapter {
   private dirty = false;
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private firstDirtyTimestamp = 0;
+  private requestStore = new RequestStore(defaultSettings.maxRequestCount);
 
   constructor(options?: { readOnly?: boolean }) {
     this.readOnly = options?.readOnly ?? false;
@@ -50,9 +72,10 @@ export class StorageAdapter {
 
     try {
       const raw = await readFile(storageFile, "utf8");
-      const parsed = JSON.parse(raw) as Partial<StorageSnapshot>;
+      const parsed = JSON.parse(raw) as Partial<LegacyStorageSnapshot>;
       const rawProxyRules = parsed.proxyRules ?? [];
       let proxyRulesChanged = false;
+      let needsPersist = false;
       const nextProxyRules = rawProxyRules.map((rule) => {
         if (rule && typeof rule.id === "string" && rule.id.trim()) {
           return rule;
@@ -63,7 +86,6 @@ export class StorageAdapter {
       this.snapshot = {
         ...emptySnapshot,
         ...parsed,
-        requests: parsed.requests ?? [],
         savedRequests: parsed.savedRequests ?? [],
         mockRules: parsed.mockRules ?? [],
         proxyRules: nextProxyRules,
@@ -72,10 +94,22 @@ export class StorageAdapter {
           ...(parsed.settings ?? {})
         }
       };
-      if (proxyRulesChanged) {
+
+      delete (this.snapshot as LegacyStorageSnapshot).requests;
+      if ((parsed.requests ?? []).length > 0) {
+        needsPersist = true;
+      }
+
+      this.requestStore = new RequestStore(this.snapshot.settings.maxRequestCount);
+      for (const record of (parsed.requests ?? []).slice().reverse()) {
+        this.requestStore.append(record);
+      }
+
+      if (proxyRulesChanged || needsPersist) {
         await this.persistImmediate();
       }
     } catch {
+      this.requestStore = new RequestStore(defaultSettings.maxRequestCount);
       await this.persistImmediate();
     }
   }
@@ -136,22 +170,33 @@ export class StorageAdapter {
   }
 
   async setSettings(settings: AppSetting): Promise<void> {
+    const previousMaxRequestCount = this.snapshot.settings.maxRequestCount;
     this.snapshot.settings = settings;
     await this.persistImmediate();
+    if (previousMaxRequestCount !== settings.maxRequestCount) {
+      this.requestStore.resize(settings.maxRequestCount);
+    }
   }
 
   getRequests(): RequestRecord[] {
-    return [...this.snapshot.requests].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return this.requestStore.toArray();
+  }
+
+  getRequestById(id: string): RequestRecord | undefined {
+    return this.requestStore.getById(id);
   }
 
   appendRequest(request: RequestRecord): void {
-    this.snapshot.requests = [request, ...this.snapshot.requests].slice(0, 200);
-    this.schedulePersist();
+    const maxRequestBodySize = this.snapshot.settings.maxRequestBodySize;
+    this.requestStore.append({
+      ...request,
+      requestBody: truncateBody(request.requestBody, maxRequestBodySize),
+      responseBody: truncateBody(request.responseBody, maxRequestBodySize)
+    });
   }
 
   async clearRequests(): Promise<void> {
-    this.snapshot.requests = [];
-    await this.persistImmediate();
+    this.requestStore.clear();
   }
 
   getSavedRequests(): SavedRequest[] {

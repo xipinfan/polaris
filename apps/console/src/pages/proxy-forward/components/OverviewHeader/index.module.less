@@ -1,82 +1,75 @@
-﻿.overview {
-  border-radius: 24px !important;
-  border: 1px solid rgba(223, 229, 238, 0.94) !important;
-  background: rgba(255, 255, 255, 0.98) !important;
-  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.05) !important;
-}
-
 .overview {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: 14px;
-  padding: 18px 20px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(223, 229, 238, 0.94);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%);
 }
 
 .overviewCopy {
   display: grid;
-  gap: 8px;
+  gap: 4px;
+  min-width: 0;
 
   p {
     margin: 0;
-    font-size: 13px;
-    line-height: 1.6;
-    color: #667085;
+    max-width: 520px;
+    font-size: 12px;
+    line-height: 1.55;
+    color: #7c8798;
   }
 }
 
 .overviewTitle {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  min-width: 0;
 
   h2 {
     margin: 0;
-    font-size: 30px;
-    line-height: 1.02;
-    letter-spacing: -0.05em;
+    min-width: 0;
+    font-size: 20px;
+    line-height: 1.05;
+    letter-spacing: -0.025em;
     color: #101828;
   }
 }
 
+.overviewAside {
+  display: flex;
+  align-items: flex-start;
+  justify-items: end;
+}
 .metricStrip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 
 .metricCard {
   display: grid;
-  gap: 5px;
-  min-width: 96px;
-  padding: 11px 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(223, 229, 238, 0.92);
-  background: #ffffff;
+  gap: 4px;
+  min-width: 86px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: rgba(255, 255, 255, 0.94);
 
   span {
-    color: #667085;
-    font-size: 12px;
+    color: #98a2b3;
+    font-size: 11px;
   }
 
   strong {
     color: #0f172a;
-    font-size: 22px;
+    font-size: 18px;
     line-height: 1;
-    letter-spacing: -0.04em;
-  }
-}
-
-.overviewActions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  flex-wrap: wrap;
-
-  :global(.ant-btn:not(.ant-btn-primary)) {
-    background: rgba(255, 255, 255, 0.88);
+    letter-spacing: -0.03em;
   }
 }
 
@@ -84,13 +77,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 28px;
-  padding: 0 12px;
+  min-height: 22px;
+  padding: 0 8px;
   border-radius: 999px;
   border: 1px solid rgba(205, 213, 224, 0.72);
   background: rgba(255, 255, 255, 0.72);
   color: #475467;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -107,24 +100,12 @@
   color: #667085;
 }
 
-.iconButton {
-  min-width: 34px !important;
-  width: 34px;
-  height: 34px;
-  padding: 0 !important;
-  border-radius: 12px !important;
-}
-
 @container proxy-main (max-width: 940px) {
   .overview {
     grid-template-columns: 1fr;
   }
 
-  .metricStrip {
-    min-width: 0;
-  }
-
-  .overviewActions {
+  .overviewAside {
     justify-content: flex-start;
   }
 }
@@ -133,10 +114,4 @@
   .metricStrip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .overviewActions {
-    flex-wrap: wrap;
-    justify-content: flex-start;
-  }
 }
-

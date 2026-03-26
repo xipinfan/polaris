@@ -402,7 +402,7 @@ export class MpcServer {
             res.json({
               data: {
                 online: true,
-                activeRequestCount: this.requestService.list({ limit: 200 }).length,
+                activeRequestCount: this.requestService.list().length,
                 settings: this.proxyService.getSettings()
               }
             });
