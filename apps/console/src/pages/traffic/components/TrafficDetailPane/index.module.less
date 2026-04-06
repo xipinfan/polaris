@@ -22,6 +22,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   min-width: 48px;
   height: 24px;
   padding: 0 8px;
@@ -60,6 +61,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   min-height: 22px;
   max-width: 120px;
   padding: 0 8px;
@@ -149,7 +151,6 @@
 
 .detailTabs,
 .detailContext,
-.detailContextTop,
 .detailContextActions {
   display: grid;
   gap: 12px;
@@ -312,26 +313,22 @@
 }
 
 .detailContext {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
+  display: grid;
+  gap: 2px;
+  padding-top: 6px;
   padding-bottom: 10px;
   border-bottom: 1px solid #e9edf4;
 }
 
-.detailContextMain {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.detailContextTop {
+.detailContextUrl {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
 }
 
-.detailContextTop > strong {
+.detailContextUrl > strong {
+  flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -341,16 +338,27 @@
   line-height: 1.4;
 }
 
-.detailContextSeparator,
+.detailContextMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .detailContextHost {
   color: #667085;
   font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .detailContextActions {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .detailContextActions .button {
@@ -381,7 +389,6 @@
 }
 
 @media (max-width: 900px) {
-.detailContext,
 .detailEmptyGrid {
     grid-template-columns: 1fr;
   }

@@ -1,159 +1,157 @@
-# MCP ½ÓÈë
+# MCP æ¥å…¥è¯´æ˜
 
-Õâ·İÎÄµµËµÃ÷ÈçºÎ°Ñ Polaris ½ÓÈëµ½Ö§³Ö MCP µÄ AI ¹¤¾ß¡£
+è¿™ä»½æ–‡æ¡£è¯´æ˜å¦‚ä½•æŠŠ Polaris æ¥å…¥åˆ°æ”¯æŒ MCP çš„ AI å·¥å…·ã€‚
 
-Polaris µ±Ç°Ö§³ÖÁ½ÖÖ MCP Èë¿Ú£º
+Polaris å½“å‰æ”¯æŒä¸¤ç§ MCP å…¥å£ï¼š
 
 - Streamable HTTP
 - stdio
 
-Èç¹ûÄãµÄÄ¿±êÊÇ¡°ÏÈÆô¶¯ Polaris ·şÎñ£¬ÔÙÈÃ¶à¸ö AI ¹¤¾ß¹²ÏíÁ¬½Ó¡±£¬ÓÅÏÈÊ¹ÓÃ Streamable HTTP¡£
+å¦‚æœä½ çš„ç›®æ ‡æ˜¯â€œå…ˆå¯åŠ¨ Polaris æœåŠ¡ï¼Œå†è®©å¤šä¸ª AI å·¥å…·å…±äº«è¿æ¥â€ï¼Œä¼˜å…ˆä½¿ç”¨ Streamable HTTPã€‚
 
-## ÍÆ¼ö·½Ê½£ºStreamable HTTP
+## æ¨èæ–¹å¼ï¼šStreamable HTTP
 
-### 1. Æô¶¯ Polaris
+### 1. å¯åŠ¨ Polaris
 
 ```bash
 pnpm polaris:start
 ```
 
-### 2. ²é¿´µ±Ç° MCP µØÖ·
+### 2. æŸ¥çœ‹å½“å‰ MCP åœ°å€
 
 ```bash
 pnpm polaris:status
 ```
 
-»òÕß£º
+æˆ–è€…ï¼š
 
 ```bash
-node packages/cli/dist/bin.js mcp-url
+node packages/cli/dist/bin.cjs mcp-url
 ```
 
-Ä¬ÈÏÇé¿öÏÂ£¬MCP µØÖ·Í¨³£ÊÇ£º
+é»˜è®¤æƒ…å†µä¸‹ï¼ŒMCP åœ°å€é€šå¸¸æ˜¯ï¼š
 
 ```text
 http://127.0.0.1:19602/mcp
 ```
 
-Èç¹ûÄ¬ÈÏ¶Ë¿Ú±»Õ¼ÓÃ£¬Polaris »á×Ô¶¯ÇĞ»»µ½ĞÂµÄ¿ÉÓÃ¶Ë¿Ú£¬Òò´ËÇëÒÔÊµ¼ÊÊä³öÎª×¼¡£
+å¦‚æœé»˜è®¤ç«¯å£è¢«å ç”¨ï¼ŒPolaris ä¼šè‡ªåŠ¨åˆ‡æ¢åˆ°æ–°çš„å¯ç”¨ç«¯å£ï¼Œå› æ­¤è¯·ä»¥å®é™…è¾“å‡ºä¸ºå‡†ã€‚
 
-### 3. ÔÚ AI ¹¤¾ßÖĞÅäÖÃ MCP
+### 3. åœ¨ AI å·¥å…·ä¸­é…ç½® MCP
 
-°ÑÉÏÒ»²½µÃµ½µÄµØÖ·Ìîµ½ÄãµÄ MCP ¿Í»§¶ËÖĞ¼´¿É¡£
+æŠŠä¸Šä¸€æ­¥å¾—åˆ°çš„åœ°å€å¡«åˆ°ä½ çš„ MCP å®¢æˆ·ç«¯ä¸­å³å¯ã€‚
 
-ÊÊºÏÕâÖÖÄ£Ê½µÄ¹¤¾ß£º
+é€‚åˆè¿™ç§æ¨¡å¼çš„å·¥å…·ï¼š
 
-- Ö§³Ö HTTP MCP µÄ×ÀÃæ¹¤¾ß
-- Ö§³ÖÁ¬½Ó±¾µØ·şÎñµÄ Agent ¹¤¾ß
-- Ï£Íû¶à¸ö¹¤¾ß¹²ÏíÍ¬Ò»¸ö Polaris ÊµÀıµÄ³¡¾°
+- æ”¯æŒ HTTP MCP çš„æ¡Œé¢å·¥å…·
+- æ”¯æŒè¿æ¥æœ¬åœ°æœåŠ¡çš„ Agent å·¥å…·
+- å¸Œæœ›å¤šä¸ªå·¥å…·å…±äº«åŒä¸€ä¸ª Polaris å®ä¾‹çš„åœºæ™¯
 
-## ¼æÈİ·½Ê½£ºstdio
+## å…¼å®¹æ–¹å¼ï¼šstdio
 
-Èç¹ûÄãµÄ MCP ¿Í»§¶Ë²»Ö§³Ö HTTP£¬Ö»Ö§³ÖÍ¨¹ıÃüÁîÀ­Æğ MCP Server£¬¿ÉÒÔÊ¹ÓÃ stdio¡£
+å¦‚æœä½ çš„ MCP å®¢æˆ·ç«¯ä¸æ”¯æŒ HTTPï¼Œåªæ”¯æŒé€šè¿‡å‘½ä»¤æ‹‰èµ· MCP Serverï¼Œå¯ä»¥ä½¿ç”¨ stdioã€‚
 
-Æô¶¯ÃüÁî£º
+å¯åŠ¨å‘½ä»¤ï¼š
 
 ```bash
 pnpm mcp
 ```
 
-¿ª·¢Ä£Ê½£º
+å¼€å‘æ¨¡å¼ï¼š
 
 ```bash
 pnpm dev:mcp
 ```
 
-ÕâÖÖ·½Ê½¸üÊÊºÏ£º
+è¿™ç§æ–¹å¼æ›´é€‚åˆï¼š
 
-- Ö»ÄÜÅäÖÃÃüÁîµÄ MCP ¿Í»§¶Ë
-- ±¾µØ¿ª·¢ºÍĞ­Òéµ÷ÊÔ
+- åªèƒ½é…ç½®å‘½ä»¤çš„ MCP å®¢æˆ·ç«¯
+- æœ¬åœ°å¼€å‘å’Œåè®®è°ƒè¯•
 
-## MCP ½ÓÈë£¨2026 ¸üĞÂ£©
+## Pack èƒ½åŠ›åŒ…æ¥å…¥
 
-Polaris ÏÖÔÚÍ¬Ê±Ö§³ÖÁ½ÖÖ MCP ±©Â¶·½Ê½£ºÈ«Á¿ÄÜÁ¦½ÓÈëÓë°´ pack£¨ÄÜÁ¦°ü£©½ÓÈë¡£
+Polaris åŒæ—¶æ”¯æŒå…¨é‡èƒ½åŠ›æ¥å…¥ä¸æŒ‰ packï¼ˆèƒ½åŠ›åŒ…ï¼‰æ¥å…¥ã€‚
 
-### 1£©Æô¶¯ Polaris ²¢»ñÈ¡ MCP µØÖ·
+### å…¨é‡å…¥å£
 
-```bash
-pnpm polaris:start
-pnpm polaris:status
-node packages/cli/dist/bin.js mcp-url
-```
+- `http://127.0.0.1:<mcpPort>/mcp`
 
-Ä¬ÈÏ MCP µØÖ·£¨ÈôÎ´·¢Éú¶Ë¿Ú»ØÍË£©£º
+### æŒ‰ pack è¿‡æ»¤çš„å…¥å£
 
-```text
-http://127.0.0.1:19602/mcp
-```
+- `http://127.0.0.1:<mcpPort>/mcp/mock`
+- `http://127.0.0.1:<mcpPort>/mcp/proxy`
+- `http://127.0.0.1:<mcpPort>/mcp/request`
+- `http://127.0.0.1:<mcpPort>/mcp/ops`
 
-### 2£©Streamable HTTP MCP
+æ”¯æŒçš„ pack åˆ«åï¼š
 
-- È«Á¿¹¤¾ß/×ÊÔ´£º
-  - `http://127.0.0.1:<mcpPort>/mcp`
-- °´ pack ¹ıÂËµÄ¹¤¾ß/×ÊÔ´£º
-  - `http://127.0.0.1:<mcpPort>/mcp/mock`
-  - `http://127.0.0.1:<mcpPort>/mcp/proxy`
-  - `http://127.0.0.1:<mcpPort>/mcp/request`
-  - `http://127.0.0.1:<mcpPort>/mcp/ops`
+- `mock`
+- `proxy`
+- `request`
+- `ops`
 
-Ö§³ÖµÄ pack ±ğÃû£º`mock`¡¢`proxy`¡¢`request`¡¢`ops`¡£
+## Legacy MCP HTTPï¼ˆå…¼å®¹æ¨¡å¼ï¼‰
 
-### 3£©Legacy MCP HTTP£¨¼æÈİÄ£Ê½£©
+å¦‚æœä½ æ¥çš„æ˜¯æ—§å®¢æˆ·ç«¯ï¼Œè¿˜å¯ä»¥ä½¿ç”¨å…¼å®¹æ¥å£ï¼š
 
-- ²é¿´ËùÓĞ pack£º
-  - `GET /packs`
-- ²é¿´Ä³¸ö pack µÄ¹¤¾ß£º
-  - `GET /packs/:pack/tools`
-- Í¨¹ı pack ¹ıÂË¹¤¾ß/×ÊÔ´£º
-  - `GET /tools?pack=mock`
-  - `GET /resources?pack=request`
-- °´ pack Ô¼ÊøÖ´ĞĞ¹¤¾ß£º
-  - `POST /invoke/:tool?pack=proxy`
+- `GET /packs`
+- `GET /packs/:pack/tools`
+- `GET /tools?pack=mock`
+- `GET /resources?pack=request`
+- `POST /invoke/:tool?pack=proxy`
 
-Î´Öª pack »á·µ»Ø½á¹¹»¯´íÎó£º
+æœªçŸ¥ pack ä¼šè¿”å›ç»“æ„åŒ–é”™è¯¯ã€‚
 
-```json
-{
-  "error": {
-    "code": "UNKNOWN_PACK",
-    "message": "Unknown MCP pack: <pack>",
-    "retryable": false
-  }
-}
-```
+## stdio MCP
 
-### 4£©stdio MCP
-
-Ê¹ÓÃ¹¤×÷Çø½Å±¾£º
+å¯ä»¥ä½¿ç”¨å·¥ä½œåŒºè„šæœ¬ï¼š
 
 ```bash
 pnpm mcp
 pnpm dev:mcp
 ```
 
-»òÖ±½ÓÊ¹ÓÃ CLI£º
+ä¹Ÿå¯ä»¥ç›´æ¥ä½¿ç”¨ CLIï¼š
 
 ```bash
-node packages/cli/dist/bin.js mcp-stdio
-node packages/cli/dist/bin.js mcp-stdio --pack mock
+node packages/cli/dist/bin.cjs mcp-stdio
+node packages/cli/dist/bin.cjs mcp-stdio --pack mock
 ```
 
-`--pack` Ö§³Ö£º`mock | proxy | request | ops`¡£
+`--pack` æ”¯æŒï¼š
 
-### 5£©Pack ¶¨Òå
+- `mock`
+- `proxy`
+- `request`
+- `ops`
 
-- `mock_pack.v1`
-  - Mock ¹æÔòÉúÃüÖÜÆÚ¹ÜÀí + »î¶¯·Ö×é¹ÜÀí
-- `proxy_pack.v1`
-  - ´úÀíÄ£Ê½¹ÜÀí + Host ¹æÔò¹ÜÀí + ´úÀí¾ö²ßÔ¤ÀÀ
-- `request_pack.v1`
-  - ×¥°ü/±£´æÇëÇó²éÑ¯ + ÔËĞĞ/»Ø·Å + ÇåÀíÇëÇó
-- `ops_pack.v1`
-  - ½¡¿µ×´Ì¬/ÔËĞĞÅäÖÃ/Ö¤Êé¾ÍĞ÷ĞÔ²éÑ¯
+## Pack å®šä¹‰
 
-### 6£©ÍÆ¼ö½ÓÈë²ßÂÔ
+### `mock_pack.v1`
 
-- ¶Ô AI Agent Ä¬ÈÏÊ¹ÓÃ pack ½ÓÈë£¬½µµÍ¹¤¾ßÑ¡Ôñ¸ºµ£ÓëÉÏÏÂÎÄ¿ªÏú¡£
-- ±£ÁôÈ«Á¿ `/mcp` Èë¿ÚÓÃÓÚ¹ÜÀíÓëµ÷ÊÔ¡£
-- ±£Áô legacy Èë¿ÚÓÃÓÚ¾É¿Í»§¶Ë¼æÈİ¡£
+- Mock è§„åˆ™ç”Ÿå‘½å‘¨æœŸç®¡ç†
+- æ´»åŠ¨åˆ†ç»„ç®¡ç†
 
+### `proxy_pack.v1`
+
+- ä»£ç†æ¨¡å¼ç®¡ç†
+- Host è§„åˆ™ç®¡ç†
+- ä»£ç†å†³ç­–é¢„è§ˆ
+
+### `request_pack.v1`
+
+- æŠ“åŒ…ä¸ä¿å­˜è¯·æ±‚æŸ¥è¯¢
+- è¿è¡Œä¸å›æ”¾è¯·æ±‚
+- æ¸…ç†è¯·æ±‚
+
+### `ops_pack.v1`
+
+- å¥åº·çŠ¶æ€æŸ¥è¯¢
+- è¿è¡Œé…ç½®æŸ¥è¯¢
+- è¯ä¹¦å°±ç»ªæ€§æŸ¥è¯¢
+
+## æ¨èæ¥å…¥ç­–ç•¥
+
+- å¯¹ AI Agent é»˜è®¤ä½¿ç”¨ pack æ¥å…¥ï¼Œé™ä½å·¥å…·é€‰æ‹©è´Ÿæ‹…ä¸ä¸Šä¸‹æ–‡å¼€é”€
+- ä¿ç•™å…¨é‡ `/mcp` å…¥å£ç”¨äºç®¡ç†ä¸è°ƒè¯•
+- ä¿ç•™å…¼å®¹å…¥å£ç”¨äºæ—§å®¢æˆ·ç«¯æ¥å…¥

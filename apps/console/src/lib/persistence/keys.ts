@@ -1,5 +1,4 @@
 ﻿export const persistenceKeys = {
-  locale: "polaris.console.locale",
   apiPort: "polaris.apiPort",
   mock: {
     groups: "polaris.console.mock.groups",

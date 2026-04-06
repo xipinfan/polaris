@@ -44,6 +44,65 @@ function collectBody(req: Readable, maxSize?: number): Promise<Buffer> {
   });
 }
 
+function preReadBody(req: Readable, maxSize: number): Promise<{ buffer: Buffer; complete: boolean }> {
+  return new Promise((resolve) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    let resolved = false;
+
+    const cleanup = () => {
+      req.removeListener("data", onData);
+      req.removeListener("end", onEnd);
+      req.removeListener("error", onError);
+    };
+
+    const finish = (complete: boolean) => {
+      if (resolved) {
+        return;
+      }
+      resolved = true;
+      cleanup();
+      resolve({
+        buffer: Buffer.concat(chunks),
+        complete
+      });
+    };
+
+    const onData = (chunk: Buffer | string) => {
+      if (resolved) {
+        return;
+      }
+
+      const buffer = Buffer.from(chunk);
+      chunks.push(buffer);
+      size += buffer.length;
+
+      if (size >= maxSize) {
+        req.pause();
+        finish(false);
+      }
+    };
+
+    const onEnd = () => {
+      if (resolved) {
+        return;
+      }
+      finish(true);
+    };
+
+    const onError = () => {
+      if (resolved) {
+        return;
+      }
+      finish(true);
+    };
+
+    req.on("data", onData);
+    req.on("end", onEnd);
+    req.on("error", onError);
+  });
+}
+
 function normalizeHeaders(headers: IncomingMessage["headers"] | http.IncomingHttpHeaders): Record<string, string> {
   return Object.fromEntries(
     Object.entries(headers).flatMap(([key, value]) => {
@@ -128,14 +187,14 @@ function isProxyLoopRequest(targetUrl: URL, proxyPort: number, lanIp?: string): 
 function buildPortalHtml(lanIp: string | undefined, apiPort: number, proxyPort: number): string {
   const apiHost = lanIp ?? "127.0.0.1";
   const certificateUrl = `http://${apiHost}:${apiPort}/api/certificates/root-ca`;
-  const lanAddress = lanIp ?? "鏈娴嬪埌灞€鍩熺綉 IP锛岃纭褰撳墠鐢佃剳宸茬粡鎺ュ叆 Wi-Fi 鎴栨湁绾跨綉缁溿€?";
+  const lanAddress = lanIp ?? "未检测到局域网 IP，请确认当前电脑已经接入 Wi-Fi 或有线网络。";
 
   return `<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Polaris 鎵嬫満浠ｇ悊瀹夎</title>
+    <title>Polaris 手机代理安装</title>
     <style>
       :root {
         color-scheme: light;
@@ -258,62 +317,62 @@ function buildPortalHtml(lanIp: string | undefined, apiPort: number, proxyPort: 
     <main>
       <section class="card">
         <span class="eyebrow">Polaris Proxy</span>
-        <h1>鎵嬫満 / 灞€鍩熺綉浠ｇ悊瀹夎鍚戝</h1>
-        <p>褰撳墠椤甸潰鐢?Polaris 鏈湴浠ｇ悊鐩存帴杩斿洖銆傝纭繚鎵嬫満鍜岀數鑴戝浜庡悓涓€灞€鍩熺綉锛屽啀鎸変笅闈㈡楠ゅ畬鎴愪唬鐞嗛厤缃拰璇佷功瀹夎銆?/p>
+        <h1>手机 / 局域网代理安装向导</h1>
+        <p>当前页面由 Polaris 本地代理直接返回。请确保手机和电脑处于同一局域网，再按下面步骤完成代理配置和证书安装。</p>
         <div class="metrics">
           <div class="metric">
-            <span>灞€鍩熺綉鍦板潃</span>
+            <span>局域网地址</span>
             <strong>${lanAddress}</strong>
           </div>
           <div class="metric">
-            <span>浠ｇ悊绔彛</span>
+            <span>代理端口</span>
             <strong>${proxyPort}</strong>
           </div>
         </div>
       </section>
 
       <section class="card" style="margin-top: 16px;">
-        <h2>绗?1 姝ワ細鍏堣繛鎺?Polaris 浠ｇ悊</h2>
+        <h2>第 1 步：先连接 Polaris 代理</h2>
         <ol>
-          <li>纭繚鎵嬫満涓庣數鑴戝湪鍚屼竴涓?Wi-Fi 缃戠粶涓嬨€?/li>
-          <li>Android锛氳繘鍏ュ綋鍓?Wi-Fi 鐨勮鎯呴〉锛屽湪鈥滀唬鐞嗏€濋噷閫夋嫨鈥滄墜鍔ㄢ€濓紝鏈嶅姟鍣ㄥ～鍐?<code>${lanAddress}</code>锛岀鍙ｅ～鍐?<code>${proxyPort}</code>銆?/li>
-          <li>iPhone / iPad锛氳繘鍏モ€滆缃?鈫?Wi-Fi 鈫?褰撳墠缃戠粶 鈫?閰嶇疆浠ｇ悊鈥濓紝閫夋嫨鈥滄墜鍔ㄢ€濓紝鏈嶅姟鍣ㄥ～鍐?<code>${lanAddress}</code>锛岀鍙ｅ～鍐?<code>${proxyPort}</code>銆?/li>
-          <li>浠ｇ悊淇濆瓨鎴愬姛鍚庯紝鍐嶇户缁笅杞?Polaris 鏍硅瘉涔︺€?/li>
+          <li>确保手机与电脑在同一个 Wi-Fi 网络下。</li>
+          <li>Android：进入当前 Wi-Fi 的详情页，在“代理”里选择“手动”，服务器填写 <code>${lanAddress}</code>，端口填写 <code>${proxyPort}</code>。</li>
+          <li>iPhone / iPad：进入“设置 → Wi-Fi → 当前网络 → 配置代理”，选择“手动”，服务器填写 <code>${lanAddress}</code>，端口填写 <code>${proxyPort}</code>。</li>
+          <li>代理保存成功后，再继续下载 Polaris 根证书。</li>
         </ol>
       </section>
 
       <section class="card" style="margin-top: 16px;">
-        <h2>绗?2 姝ワ細涓嬭浇骞跺畨瑁?Polaris 鏍硅瘉涔?/h2>
-        <p>浠ｇ悊鐢熸晥鍚庯紝鐐瑰嚮涓嬮潰鐨勬寜閽笅杞芥牴璇佷功銆傚鏋滄寜閽棤娉曟墦寮€锛屼篃鍙互鎵嬪姩璁块棶鏂囨湯鐨勮瘉涔︾洿閾俱€?/p>
-        <a class="button" href="${certificateUrl}">涓嬭浇 Polaris Root CA</a>
-        <p>璇佷功鐩撮摼锛?br /><code>${certificateUrl}</code></p>
+        <h2>第 2 步：下载并安装 Polaris 根证书</h2>
+        <p>代理生效后，点击下面的按钮下载根证书。如果按钮无法打开，也可以手动访问文末的证书直链。</p>
+        <a class="button" href="${certificateUrl}">下载 Polaris Root CA</a>
+        <p>证书直链：<br /><code>${certificateUrl}</code></p>
         <div class="platform-grid">
           <section class="platform-card">
-            <h3>Android 瀹夎璇存槑</h3>
+            <h3>Android 安装说明</h3>
             <ol>
-              <li>涓嬭浇璇佷功鍚庯紝濡傛灉绯荤粺鑷姩寮瑰嚭瀹夎椤甸潰锛屾寜鎻愮ず缁х画瀹夎銆?/li>
-              <li>鑻ユ湭鑷姩寮瑰嚭锛屽彲杩涘叆鈥滆缃?鈫?瀹夊叏 / 闅愮 鈫?瀹夎璇佷功 / 浠庡瓨鍌ㄨ澶囧畨瑁呰瘉涔︹€濓紝鎵嬪姩閫夋嫨涓嬭浇鐨勮瘉涔︽枃浠躲€?/li>
-              <li>璇佷功鐢ㄩ€旇閫夋嫨鈥淰PN 鍜屽簲鐢ㄢ€濇垨绯荤粺鍏佽鐨勭瓑鏁堥€夐」銆?/li>
-              <li>瀹夎瀹屾垚鍚庯紝閲嶆柊鎵撳紑闇€瑕佹姄鍖呯殑娴忚鍣ㄦ垨 App 鍐嶆祴璇?HTTPS 璇锋眰銆?/li>
+              <li>下载证书后，如果系统自动弹出安装页面，按提示继续安装。</li>
+              <li>若未自动弹出，可进入“设置 → 安全 / 隐私 → 安装证书 / 从存储设备安装证书”，手动选择下载的证书文件。</li>
+              <li>证书用途请选择“VPN 和应用”或系统允许的等效选项。</li>
+              <li>安装完成后，重新打开需要抓包的浏览器或 App，再测试 HTTPS 请求。</li>
             </ol>
           </section>
           <section class="platform-card">
-            <h3>iPhone / iPad 瀹夎璇存槑</h3>
+            <h3>iPhone / iPad 安装说明</h3>
             <ol>
-              <li>鍦?Safari 涓笅杞借瘉涔﹀悗锛岀郴缁熶細鎻愮ず鈥滃凡涓嬭浇鎻忚堪鏂囦欢鈥濄€?/li>
-              <li>杩涘叆鈥滆缃?鈫?宸蹭笅杞芥弿杩版枃浠垛€濓紝鎴栨€滆缃?鈫?閫氱敤 鈫?VPN 涓庤澶囩鐞嗏€濓紝瀹夎 Polaris 鎻忚堪鏂囦欢銆?/li>
-              <li>瀹夎瀹屾垚鍚庯紝鍐嶈繘鍏モ€滆缃?鈫?閫氱敤 鈫?鍏充簬鏈満 鈫?璇佷功淇′换璁剧疆鈥濄€?/li>
-              <li>鎵惧埌 Polaris 鏍硅瘉涔﹀苟鎵嬪姩寮€鍚€滃畬鍏ㄤ俊浠烩€濓紝鍚﹀垯 HTTPS 鏃犳硶姝ｅ父瑙ｅ瘑銆?/li>
+              <li>在 Safari 中下载证书后，系统会提示“已下载描述文件”。</li>
+              <li>进入“设置 → 已下载描述文件”，或“设置 → 通用 → VPN 与设备管理”，安装 Polaris 描述文件。</li>
+              <li>安装完成后，再进入“设置 → 通用 → 关于本机 → 证书信任设置”。</li>
+              <li>找到 Polaris 根证书并手动开启“完全信任”，否则 HTTPS 无法正常解密。</li>
             </ol>
           </section>
         </div>
         <div class="tips">
-          <h3>杩炴帴澶辫触鏃朵紭鍏堟鏌?/h3>
+          <h3>连接失败时优先检查</h3>
           <ol>
-            <li>鎵嬫満鏄惁鍜岀數鑴戝湪鍚屼竴涓眬鍩熺綉銆?/li>
-            <li>浠ｇ悊 IP 鍜岀鍙ｆ槸鍚﹀～鍐欐纭€?/li>
-            <li>鐢佃剳闃茬伀澧欐槸鍚︽嫤鎴簡 Polaris 绔彛銆?/li>
-            <li>瀹夎璇佷功鍚庢槸鍚︾湡鐨勫畬鎴愪簡淇′换姝ラ锛屽挨鍏舵槸 iPhone 鐨勨€滃畬鍏ㄤ俊浠烩€濄€?/li>
+            <li>手机是否和电脑在同一个局域网。</li>
+            <li>代理 IP 和端口是否填写正确。</li>
+            <li>电脑防火墙是否拦截了 Polaris 端口。</li>
+            <li>安装证书后是否真的完成了信任步骤，尤其是 iPhone 的“完全信任”。</li>
           </ol>
         </div>
       </section>
@@ -487,14 +546,17 @@ export class ProxyEngine {
     }
 
     const shouldCapture = !isPolarisControlPlaneRequest(targetUrl);
-    const requestBuffer = await collectBody(req);
+    const preRead = await preReadBody(req, MAX_CAPTURE_BODY_SIZE);
     const requestHeaders = sanitizeProxyHeaders(req.headers);
-    const normalizedRequestBody = normalizeCapturedBody(requestBuffer, requestHeaders);
+    const normalizedRequestBody = normalizeCapturedBody(preRead.buffer, requestHeaders);
     const startedAt = Date.now();
     const forwardDecision = this.proxyService.getForwardDecision(targetUrl.host);
 
     const mockRule = await this.mockService.match(req.method ?? "GET", targetUrl.toString(), normalizedRequestBody);
     if (mockRule) {
+      if (!preRead.complete) {
+        req.resume();
+      }
       await this.mockService.registerHit(mockRule.id);
       const mockResponseHeaders = {
         ...mockRule.responseHeaders,
@@ -650,10 +712,17 @@ export class ProxyEngine {
     });
 
     req.on("close", () => {
+      if (!preRead.complete) {
+        req.unpipe(proxyReq);
+      }
       proxyReq.destroy();
     });
 
     proxyReq.on("error", (error) => {
+      if (!preRead.complete) {
+        req.unpipe(proxyReq);
+        req.resume();
+      }
       proxyReq.destroy();
       if (!res.headersSent) {
         res.writeHead(502, corsHeaders).end(error.message);
@@ -662,10 +731,15 @@ export class ProxyEngine {
       res.destroy();
     });
 
-    if (requestBuffer.length) {
-      proxyReq.write(requestBuffer);
+    if (preRead.buffer.length) {
+      proxyReq.write(preRead.buffer);
     }
 
-    proxyReq.end();
+    if (preRead.complete) {
+      proxyReq.end();
+    } else {
+      req.pipe(proxyReq);
+      req.resume();
+    }
   }
 }

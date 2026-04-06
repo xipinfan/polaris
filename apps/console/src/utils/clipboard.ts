@@ -5,7 +5,7 @@ export async function copyTextToClipboard(value: string): Promise<boolean> {
   }
 
   if (typeof document === "undefined") {
-    throw new Error("Clipboard API is not available in this environment.");
+    throw new Error("当前环境不支持剪贴板能力。");
   }
 
   const textarea = document.createElement("textarea");
@@ -27,7 +27,7 @@ export async function copyTextToClipboard(value: string): Promise<boolean> {
   }
 
   if (!copied) {
-    throw new Error("Failed to copy text to clipboard.");
+    throw new Error("复制到剪贴板失败。");
   }
 
   return true;

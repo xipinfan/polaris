@@ -62,16 +62,27 @@ export async function getApiBaseUrl(): Promise<string> {
 
   apiBaseUrlPromise = (async () => {
     const stored = await readStoredApiPort();
-    const candidates = [...new Set([stored, ...API_PORT_CANDIDATES].filter((item): item is number => Boolean(item)))];
-    for (const port of candidates) {
-      if (await isApiPortAvailable(port)) {
-        await writeStoredApiPort(port);
-        cachedApiBaseUrl = `http://127.0.0.1:${port}/api`;
-        return cachedApiBaseUrl;
-      }
+    if (stored && (await isApiPortAvailable(stored))) {
+      cachedApiBaseUrl = `http://127.0.0.1:${stored}/api`;
+      return cachedApiBaseUrl;
     }
 
-    throw new Error("Polaris Core API not found on localhost");
+    const candidates = API_PORT_CANDIDATES.filter((port) => port !== stored);
+    try {
+      const port = await Promise.any(
+        candidates.map(async (candidate) => {
+          if (await isApiPortAvailable(candidate)) {
+            return candidate;
+          }
+          throw new Error(`Port ${candidate} unavailable`);
+        })
+      );
+      await writeStoredApiPort(port);
+      cachedApiBaseUrl = `http://127.0.0.1:${port}/api`;
+      return cachedApiBaseUrl;
+    } catch {
+      throw new Error("Polaris Core API not found on localhost");
+    }
   })();
 
   try {

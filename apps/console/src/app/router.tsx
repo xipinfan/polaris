@@ -18,7 +18,7 @@ const SettingsPage = lazy(() =>
 );
 
 function LazyPage({ children }: { children: React.ReactNode }) {
-  return <Suspense fallback={<div className={styles.pageSkeleton}>Loading...</div>}>{children}</Suspense>;
+  return <Suspense fallback={<div className={styles.pageSkeleton}>加载中...</div>}>{children}</Suspense>;
 }
 
 function AppLayout() {

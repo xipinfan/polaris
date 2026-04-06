@@ -35,7 +35,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       payload = await response.json();
     } catch (error) {
       throw new ApiError({
-        message: "Invalid response payload",
+        message: "响应内容解析失败",
         code: "PARSE_ERROR",
         path,
         status: response.status,
@@ -46,8 +46,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     if (!response.ok) {
       const message =
         typeof payload === "object" && payload && "error" in payload
-          ? String((payload as { error?: unknown }).error ?? "Request failed")
-          : "Request failed";
+          ? String((payload as { error?: unknown }).error ?? "请求失败")
+          : "请求失败";
 
       throw new ApiError({
         message,
@@ -65,7 +65,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     }
 
     throw new ApiError({
-      message: "Missing response data",
+      message: "响应缺少 data 字段",
       code: "PARSE_ERROR",
       path,
       status: response.status,

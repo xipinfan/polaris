@@ -38,6 +38,7 @@ export const extensionMessages = {
     "popup.message.switch": "\u5df2\u5207\u6362\u4e3a{mode}",
     "popup.message.removeRule": "\u5df2\u79fb\u9664\u7ad9\u70b9\u89c4\u5219\uff1a{host}",
     "popup.message.addRule": "\u5df2\u52a0\u5165\u7ad9\u70b9\u89c4\u5219\uff1a{host}",
+    "popup.message.addRulePending": "\u5df2\u6dfb\u52a0\u7ad9\u70b9\u89c4\u5219\uff0c\u5207\u6362\u5230\u300c\u89c4\u5219\u4ee3\u7406\u300d\u6a21\u5f0f\u540e\u751f\u6548",
     "popup.error.switch": "\u5207\u6362\u5931\u8d25",
     "popup.error.openCertSettings": "\u6253\u5f00\u8bc1\u4e66\u8bbe\u7f6e\u5931\u8d25"
   },
@@ -78,6 +79,7 @@ export const extensionMessages = {
     "popup.message.switch": "Switched to {mode}.",
     "popup.message.removeRule": "Removed site rule for {host}.",
     "popup.message.addRule": "Added site rule for {host}.",
+    "popup.message.addRulePending": "Site rule added. Switch to Rules mode to activate it.",
     "popup.error.switch": "Switch failed.",
     "popup.error.openCertSettings": "Failed to open certificate settings."
   }

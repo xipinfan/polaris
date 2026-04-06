@@ -6,7 +6,6 @@ import { StatusState } from "../../features/common/StatusState";
 import { SettingsExtensionCard } from "./components/SettingsExtensionCard";
 import { SettingsHttpsCard } from "./components/SettingsHttpsCard";
 import { SettingsLanProxyCard } from "./components/SettingsLanProxyCard";
-import { SettingsLanguageCard } from "./components/SettingsLanguageCard";
 import { SettingsMcpCard } from "./components/SettingsMcpCard";
 import { SettingsOverview } from "./components/SettingsOverview";
 import { SettingsProxyModeCard } from "./components/SettingsProxyModeCard";
@@ -39,8 +38,7 @@ const mcpTools = [
 ];
 
 export function SettingsPage() {
-  const { locale, setLocale, t } = useConsoleI18n();
-  const localeLabelKey = `locale.name.${locale}` as ConsoleMessageKey;
+  const { t } = useConsoleI18n();
   const overviewQuery = useSettingsOverviewQuery();
 
   const status = overviewQuery.data?.health ?? null;
@@ -115,12 +113,6 @@ export function SettingsPage() {
           </div>
 
           <div className={styles.sideColumn}>
-            <SettingsLanguageCard
-              locale={locale}
-              localeLabel={t(localeLabelKey)}
-              setLocale={setLocale}
-              t={t}
-            />
             <SettingsMcpCard enabled={Boolean(settings.mcpEnabled)} t={t} tools={mcpTools} />
           </div>
         </section>

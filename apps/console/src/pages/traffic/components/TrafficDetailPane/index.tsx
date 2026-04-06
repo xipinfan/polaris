@@ -110,40 +110,39 @@ export function TrafficDetailPane({
 
       {selected ? (
         <section className={localStyles.detailContext}>
-          <div className={localStyles.detailContextMain}>
-            <div className={localStyles.detailContextTop}>
-              <span
-                className={cx(
-                  localStyles.methodBadge,
-                  methodBadgeClassMap[selected.method as keyof typeof methodBadgeClassMap],
-                )}
-              >
-                {selected.method}
-              </span>
-              <strong title={selected.path}>{selected.path}</strong>
-              <span className={localStyles.detailContextSeparator}>·</span>
-              <span className={localStyles.detailContextHost} title={selected.host}>
-                {selected.host}
-              </span>
-              <span
-                className={cx(
-                  localStyles.resolutionBadge,
-                  resolutionBadgeClassMap[getRequestResolutionMode(selected)],
-                )}
-                title={getRequestResolutionTooltip(selected, t)}
-              >
-                <span className={localStyles.resolutionGlyph} aria-hidden="true" />
-                {getRequestResolutionLabel(selected, t)}
-              </span>
-            </div>
+          <div className={localStyles.detailContextUrl}>
+            <span
+              className={cx(
+                localStyles.methodBadge,
+                methodBadgeClassMap[selected.method as keyof typeof methodBadgeClassMap],
+              )}
+            >
+              {selected.method}
+            </span>
+            <strong title={selected.path}>{selected.path}</strong>
           </div>
-          <div className={localStyles.detailContextActions}>
-            <button className={cx(localStyles.button, localStyles.buttonSecondary)} onClick={onCopyCurl} type="button">
-              {t("traffic.action.curl")}
-            </button>
-            <button className={cx(localStyles.button, localStyles.buttonPrimary)} onClick={onOpenDebug} type="button">
-              {t("traffic.action.debug")}
-            </button>
+          <div className={localStyles.detailContextMeta}>
+            <span className={localStyles.detailContextHost} title={selected.host}>
+              {selected.host}
+            </span>
+            <span
+              className={cx(
+                localStyles.resolutionBadge,
+                resolutionBadgeClassMap[getRequestResolutionMode(selected)],
+              )}
+              title={getRequestResolutionTooltip(selected, t)}
+            >
+              <span className={localStyles.resolutionGlyph} aria-hidden="true" />
+              {getRequestResolutionLabel(selected, t)}
+            </span>
+            <div className={localStyles.detailContextActions}>
+              <button className={cx(localStyles.button, localStyles.buttonSecondary)} onClick={onCopyCurl} type="button">
+                {t("traffic.action.curl")}
+              </button>
+              <button className={cx(localStyles.button, localStyles.buttonPrimary)} onClick={onOpenDebug} type="button">
+                {t("traffic.action.debug")}
+              </button>
+            </div>
           </div>
         </section>
       ) : null}

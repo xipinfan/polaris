@@ -6,6 +6,18 @@
 @text-muted: #5f7088;
 @accent: #3f61b7;
 @accent-deep: #2d4f98;
+@text-on-dark: #f6f9ff;
+@text-on-dark-muted: rgba(224, 236, 255, 0.88);
+@bg-subtle: #f3f7ff;
+@bg-subtle-start: #f7f9fe;
+@bg-subtle-end: #eef3fb;
+@chip-bg: #edf2fb;
+@chip-border: rgba(179, 193, 216, 0.68);
+@btn-border: rgba(168, 185, 213, 0.72);
+@hero-start: #223d67;
+@hero-mid: #2d4f7e;
+@hero-end: #345986;
+@focus-ring: rgba(63, 97, 183, 0.5);
 :global(:root) {
   font-family: "Avenir Next", "Segoe UI Variable", "PingFang SC", sans-serif;
 }
@@ -39,11 +51,11 @@
   gap: 10px;
   background:
     radial-gradient(circle at right top, rgba(143, 176, 226, 0.2), transparent 38%),
-    linear-gradient(142deg, #223d67 0%, #2d4f7e 56%, #345986 100%);
+    linear-gradient(142deg, @hero-start 0%, @hero-mid 56%, @hero-end 100%);
 
   h1 {
     margin: 4px 0 0;
-    color: #f6f9ff;
+    color: @text-on-dark;
     font-size: 26px;
     line-height: 1;
     letter-spacing: -0.03em;
@@ -51,7 +63,7 @@
 
   p {
     margin: 8px 0 0;
-    color: rgba(232, 240, 252, 0.9);
+    color: @text-on-dark-muted;
     font-size: 12px;
     line-height: 1.55;
   }
@@ -141,8 +153,8 @@
   min-height: 24px;
   padding: 0 9px;
   border-radius: 999px;
-  border: 1px solid rgba(179, 193, 216, 0.68);
-  background: #edf2fb;
+  border: 1px solid @chip-border;
+  background: @chip-bg;
   color: @accent-deep;
   font-size: 11px;
   font-weight: 600;
@@ -161,7 +173,7 @@
     padding: 10px;
     border-radius: 12px;
     border: 1px solid rgba(204, 216, 235, 0.84);
-    background: linear-gradient(180deg, #f7f9fe 0%, #eef3fb 100%);
+    background: linear-gradient(180deg, @bg-subtle-start 0%, @bg-subtle-end 100%);
     display: grid;
     gap: 4px;
   }
@@ -194,9 +206,9 @@
 .primaryButton,
 .secondaryButton {
   border-radius: 12px;
-  border: 1px solid rgba(168, 185, 213, 0.72);
+  border: 1px solid @btn-border;
   cursor: pointer;
-  transition: all 160ms ease;
+  transition: transform 160ms ease, box-shadow 160ms ease;
 
   &:disabled {
     opacity: 0.45;
@@ -206,11 +218,20 @@
   &:hover:not(:disabled) {
     transform: translateY(-1px);
   }
+
+  &:active:not(:disabled) {
+    transform: translateY(0.5px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid @focus-ring;
+    outline-offset: 2px;
+  }
 }
 .modeButton {
   padding: 10px;
   text-align: left;
-  background: #f3f7ff;
+  background: @bg-subtle;
 
   strong {
     display: block;
@@ -228,20 +249,20 @@
 }
 .modeButtonActive {
   border-color: rgba(73, 104, 174, 0.74);
-  background: linear-gradient(140deg, #2c4f8c 0%, #223f72 100%);
+  background: linear-gradient(140deg, @hero-mid 0%, @hero-start 100%);
 
   strong {
-    color: #f6f9ff;
+    color: @text-on-dark;
   }
 
   span {
-    color: rgba(224, 236, 255, 0.88);
+    color: @text-on-dark-muted;
   }
 }
 .primaryButton {
   min-height: 38px;
   padding: 0 12px;
-  color: #f4f8ff;
+  color: @text-on-dark;
   font-size: 12px;
   font-weight: 700;
   border-color: rgba(65, 95, 159, 0.75);
@@ -254,8 +275,8 @@
 .secondaryButton {
   min-height: 34px;
   padding: 0 10px;
-  background: #f1f5fb;
-  color: #2b4264;
+  background: @bg-subtle-end;
+  color: @text-main;
   font-size: 12px;
   font-weight: 600;
 }

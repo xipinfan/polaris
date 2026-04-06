@@ -4,7 +4,7 @@ import styles from "./AppLayout.module.css";
 
 function getRouteErrorMessage(error: unknown) {
   if (isRouteErrorResponse(error)) {
-    return `${error.status} ${error.statusText}`;
+    return `${error.status}：${error.statusText || "页面请求失败"}`;
   }
   if (error instanceof Error && error.message.trim()) {
     return error.message;

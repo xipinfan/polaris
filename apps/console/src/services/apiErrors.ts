@@ -33,7 +33,7 @@ export function mapApiError(error: unknown, fallbackPath: string): ApiError {
 
   if (error instanceof Error) {
     return new ApiError({
-      message: error.message || "Request failed",
+      message: error.message || "请求失败",
       code: "UNKNOWN_ERROR",
       path: fallbackPath,
       details: error,
@@ -41,7 +41,7 @@ export function mapApiError(error: unknown, fallbackPath: string): ApiError {
   }
 
   return new ApiError({
-    message: "Request failed",
+    message: "请求失败",
     code: "UNKNOWN_ERROR",
     path: fallbackPath,
     details: error,

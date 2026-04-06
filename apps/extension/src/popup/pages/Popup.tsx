@@ -138,10 +138,12 @@ export function Popup() {
       setMessage(t("popup.message.removeRule", { host }));
     } else {
       await Promise.all(sitePatterns.map((pattern) => coreBridge.addSiteRule(pattern)));
-      setMessage(t("popup.message.addRule", { host }));
+      setMessage(
+        status.proxyMode === "rules"
+          ? t("popup.message.addRule", { host })
+          : t("popup.message.addRulePending"),
+      );
     }
-    await coreBridge.setProxyMode("rules");
-    await applyBrowserProxyMode("rules", status);
     await load();
   };
 
