@@ -4,15 +4,14 @@ import localStyles from "./index.module.css";
 
 type DebugResponsePanelProps = {
   response: RequestRecord | null;
-  t: (key: any, params?: Record<string, string | number>) => string;
 };
 
-export function DebugResponsePanel({ response, t }: DebugResponsePanelProps) {
+export function DebugResponsePanel({ response }: DebugResponsePanelProps) {
   if (!response) {
     return (
       <div className={localStyles.empty} data-testid="debug-response-empty">
-        <h3>{t("debug.waitTitle")}</h3>
-        <p>{t("debug.waitBody")}</p>
+        <h3>{"等待响应结果"}</h3>
+        <p>{"发送请求后，这里会显示状态码、响应头和响应体。"}</p>
       </div>
     );
   }
@@ -22,7 +21,7 @@ export function DebugResponsePanel({ response, t }: DebugResponsePanelProps) {
       <div className={localStyles.responseCard}>
         <div className={localStyles.responseHeading}>
           <div>
-            <h3>{t("debug.responseTitle")}</h3>
+            <h3>{"响应概览"}</h3>
             <p>{response.method} {response.path}</p>
           </div>
           <span
@@ -34,17 +33,17 @@ export function DebugResponsePanel({ response, t }: DebugResponsePanelProps) {
         </div>
         <div className={localStyles.statsGrid}>
           <div className={localStyles.statTile}>
-            <span>{t("debug.metric.duration")}</span>
+            <span>{"耗时"}</span>
             <strong>{response.duration} ms</strong>
           </div>
           <div className={localStyles.statTile}>
-            <span>{t("debug.metric.source")}</span>
-            <strong>{response.source === "debug" ? t("debug.source.debug") : t("debug.source.proxy")}</strong>
+            <span>{"来源"}</span>
+            <strong>{response.source === "debug" ? "调试台" : "代理"}</strong>
           </div>
         </div>
       </div>
-      <JsonBlock title={t("debug.responseHeaders")} value={response.responseHeaders} />
-      <JsonBlock title={t("debug.responseBody")} value={response.responseBody} />
+      <JsonBlock title={"响应头"} value={response.responseHeaders} />
+      <JsonBlock title={"响应体"} value={response.responseBody} />
     </div>
   );
 }

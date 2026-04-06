@@ -1,11 +1,10 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import type { RequestRecord } from "@polaris/shared-types";
 import { useRunDebugRequestMutation, useSaveDebugRequestMutation } from "../../domains/debug/mutations";
 import { useToast } from "../../features/feedback/ToastProvider";
-import { useConsoleI18n } from "../../i18n/I18nProvider";
-import { toastQueryError } from "../../lib/query/queryOptions";
 import { UiSlotPlaceholder } from "../../features/slots/UiSlotPlaceholder";
+import { toastQueryError } from "../../lib/query/queryOptions";
 import { copyTextToClipboard } from "../../utils/clipboard";
 import { DebugRequestForm } from "./components/DebugRequestForm";
 import { DebugResponsePanel } from "./components/DebugResponsePanel";
@@ -22,17 +21,51 @@ type DebugDraftState = {
   };
 };
 
+type DebugDraftFields = {
+  name: string;
+  method: string;
+  url: string;
+  body: string;
+};
+
+type DebugPageContentProps = {
+  initialDraft: DebugDraftFields;
+};
+
+function buildInitialDraftFields(routeState: DebugDraftState | null): DebugDraftFields {
+  const draft = routeState?.draft;
+  return {
+    name: draft?.name ?? "",
+    method: draft?.method ?? "GET",
+    url: draft?.url ?? "",
+    body: draft ? JSON.stringify(draft.body ?? {}, null, 2) : "",
+  };
+}
+
+function parseDebugRequestBody(method: string, body: string) {
+  if (method === "GET") {
+    return {
+      value: undefined as unknown,
+      error: null as Error | null,
+    };
+  }
+
+  try {
+    return {
+      value: JSON.parse(body || "{}") as unknown,
+      error: null,
+    };
+  } catch (error) {
+    return {
+      value: undefined,
+      error: error instanceof Error ? error : new Error("请求体 JSON 无法解析"),
+    };
+  }
+}
+
 export function DebugPage() {
   const location = useLocation();
   const routeState = location.state as DebugDraftState | null;
-  const [method, setMethod] = useState("GET");
-  const [url, setUrl] = useState("");
-  const [body, setBody] = useState("");
-  const [name, setName] = useState("");
-  const [response, setResponse] = useState<RequestRecord | null>(null);
-  const runRequestMutation = useRunDebugRequestMutation();
-  const saveRequestMutation = useSaveDebugRequestMutation();
-  const { t } = useConsoleI18n();
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -40,20 +73,28 @@ export function DebugPage() {
       return;
     }
 
-    const draft = routeState.draft;
-    setName(draft.name ?? "");
-    setMethod(draft.method);
-    setUrl(draft.url);
-    setBody(JSON.stringify(draft.body ?? {}, null, 2));
-    showToast(t("common.draftLoaded"));
-  }, [routeState, showToast, t]);
+    showToast("已带入一条请求草稿，你可以继续修改后发送。");
+  }, [routeState?.draft, showToast]);
 
-  const parsedBody = () => {
-    if (method === "GET") {
-      return undefined;
-    }
-    return JSON.parse(body || "{}");
-  };
+  return (
+    <DebugPageContent
+      key={location.key}
+      initialDraft={buildInitialDraftFields(routeState)}
+    />
+  );
+}
+
+function DebugPageContent({ initialDraft }: DebugPageContentProps) {
+  const [method, setMethod] = useState(() => initialDraft.method);
+  const [url, setUrl] = useState(() => initialDraft.url);
+  const [body, setBody] = useState(() => initialDraft.body);
+  const [name, setName] = useState(() => initialDraft.name);
+  const [response, setResponse] = useState<RequestRecord | null>(null);
+  const runRequestMutation = useRunDebugRequestMutation();
+  const saveRequestMutation = useSaveDebugRequestMutation();
+  const { showToast } = useToast();
+
+  const parsedBody = useMemo(() => parseDebugRequestBody(method, body), [body, method]);
 
   const currentDraft = useMemo(
     () => ({
@@ -62,30 +103,40 @@ export function DebugPage() {
       url,
       headers: {},
       query: {},
-      body: method === "GET" ? null : parsedBody(),
+      body: method === "GET" ? null : parsedBody.value,
       tags: ["debug"],
     }),
-    [body, method, name, url],
+    [method, name, parsedBody.value, url],
   );
 
   const runRequest = async () => {
+    if (parsedBody.error) {
+      showToast(parsedBody.error.message, "error");
+      return;
+    }
+
     try {
       const result = await runRequestMutation.mutateAsync({
         method,
         url,
-        body: parsedBody(),
+        body: parsedBody.value,
       });
       setResponse(result);
-      showToast(t("common.requestSent", { status: result.statusCode }));
+      showToast(`请求已发送，状态码 ${result.statusCode}`);
     } catch (error) {
       toastQueryError(showToast, error, "请求发送失败");
     }
   };
 
   const saveDraft = async () => {
+    if (parsedBody.error) {
+      showToast(parsedBody.error.message, "error");
+      return;
+    }
+
     try {
       await saveRequestMutation.mutateAsync(currentDraft);
-      showToast(t("common.savedRequest", { name: currentDraft.name }));
+      showToast(`已保存请求：${currentDraft.name}`);
     } catch (error) {
       toastQueryError(showToast, error, "保存失败");
     }
@@ -97,14 +148,14 @@ export function DebugPage() {
     setUrl("");
     setBody("");
     setResponse(null);
-    showToast(t("common.debugCleared"));
+    showToast("已清空调试表单");
   };
 
   return (
     <div className={styles.page}>
       <section className={styles.header}>
         <div>
-          <h2>{t("debug.title")}</h2>
+          <h2>{"调试"}</h2>
         </div>
       </section>
 
@@ -119,7 +170,7 @@ export function DebugPage() {
           onCopyCurl={(curlText) => {
             void copyTextToClipboard(curlText)
               .then(() => {
-                showToast(t("common.curlCopied"));
+                showToast("已复制 curl 命令");
               })
               .catch(() => {
                 showToast("复制失败", "error");
@@ -132,10 +183,9 @@ export function DebugPage() {
           setMethod={setMethod}
           setName={setName}
           setUrl={setUrl}
-          t={t}
           url={url}
         />
-        <DebugResponsePanel response={response} t={t} />
+        <DebugResponsePanel response={response} />
       </div>
     </div>
   );

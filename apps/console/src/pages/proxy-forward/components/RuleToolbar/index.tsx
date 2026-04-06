@@ -1,6 +1,6 @@
-import { Dropdown } from "antd";
+import { memo } from "react";
+import { Card, Dropdown, Input } from "antd";
 import type { MenuProps } from "antd";
-import { Card, Input } from "antd";
 import { uiSelectors } from "../../../../stores/selectors";
 import { useUiStore } from "../../../../stores/uiStore";
 import localStyles from "./index.module.less";
@@ -15,7 +15,7 @@ type RuleToolbarProps = {
   setHeaderMenuOpen: (value: boolean) => void;
 };
 
-export function RuleToolbar({
+export const RuleToolbar = memo(function RuleToolbar({
   canEditGroup,
   headerMenuOpen,
   onLoad,
@@ -76,4 +76,4 @@ export function RuleToolbar({
       </div>
     </Card>
   );
-}
+});

@@ -126,13 +126,34 @@
   min-height: 0;
   height: 100%;
   overflow: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.65) transparent;
+  overscroll-behavior: contain;
 }
 
 .requestScroll::-webkit-scrollbar {
-  width: 0;
-  height: 0;
+  width: 10px;
+  height: 10px;
+}
+
+.requestScroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.requestScroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background: rgba(148, 163, 184, 0.65);
+  background-clip: padding-box;
+}
+
+.requestScroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.82);
+  background-clip: padding-box;
+}
+
+.requestScroll::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .requestHeader,
@@ -141,6 +162,8 @@
   grid-template-columns: 42px 68px 72px 82px 120px minmax(120px, 0.72fr) minmax(220px, 1.5fr) minmax(120px, 0.72fr) 78px;
   gap: 10px;
   align-items: center;
+  min-width: 1120px;
+  width: max-content;
 }
 
 .requestHeader {
@@ -161,7 +184,6 @@
 }
 
 .requestRow {
-  width: 100%;
   min-height: 48px;
   padding: 10px 14px;
   border: 0;
@@ -173,6 +195,7 @@
   line-height: 1.4;
   color: #334155;
   transform: none !important;
+  position: relative;
 }
 
 .requestRow:nth-child(even) {
@@ -187,6 +210,14 @@
   background: #dce8ff;
   box-shadow: inset 4px 0 0 #1d4ed8;
   color: #0b2457;
+}
+
+.requestRow.requestRowActive::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(29, 78, 216, 0.18);
+  pointer-events: none;
 }
 
 .requestRowActive strong {
@@ -372,9 +403,42 @@
     min-width: 86px;
   }
 
-.requestHeader,
-.requestRow {
-    min-width: 1120px;
+.requestHeader > :first-child,
+.requestRow > :first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+  }
+
+.requestHeader > :first-child {
+    z-index: 3;
+    background: #f8fafc;
+    box-shadow: 10px 0 12px -12px rgba(15, 23, 42, 0.22);
+  }
+
+.requestRow > :first-child {
+    background: #ffffff;
+    box-shadow: 10px 0 12px -12px rgba(15, 23, 42, 0.12);
+  }
+
+.requestRow:nth-child(even) > :first-child {
+    background: #fafbfd;
+  }
+
+.requestRow:hover > :first-child {
+    background: #f5f8ff;
+  }
+
+.requestRow.requestRowActive > :first-child {
+    background: #dce8ff;
+  }
+
+.requestRowWarning > :first-child {
+    background: #fff8ef;
+  }
+
+.requestRowWarning.requestRowActive > :first-child {
+    background: #ffe5bf;
   }
 }
 

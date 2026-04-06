@@ -1,5 +1,4 @@
 ﻿import type { AppSetting, RequestRecord } from "@polaris/shared-types";
-import type { TranslateFn } from "../../../../i18n/I18nProvider";
 import localStyles from "./index.module.less";
 import { cx, formatRequestTime } from "../../utils/trafficFormatters";
 
@@ -18,7 +17,6 @@ type TrafficToolbarProps = {
   onOpenCertificate: () => void;
   onOpenProxyGuide: () => void;
   onToggleAutoRefresh: () => void;
-  t: TranslateFn;
 };
 
 export function TrafficToolbar({
@@ -36,7 +34,6 @@ export function TrafficToolbar({
   onOpenCertificate,
   onOpenProxyGuide,
   onToggleAutoRefresh,
-  t,
 }: TrafficToolbarProps) {
   return (
     <section
@@ -45,7 +42,7 @@ export function TrafficToolbar({
       <div className={localStyles.toolbarGroups}>
         <div className={localStyles.toolbarSection}>
           <span className={localStyles.toolbarCaption}>
-            {t("traffic.toolbar.capture")}
+            {"抓取"}
           </span>
           <button
             className={cx(
@@ -58,8 +55,8 @@ export function TrafficToolbar({
             type="button"
           >
             {settings?.certificateInstalled
-              ? t("traffic.toolbar.certificateInstalled")
-              : t("traffic.toolbar.certificate")}
+              ? "已安装证书"
+              : "安装证书"}
           </button>
           <button
             className={cx(localStyles.button, localStyles.toolbarButton)}
@@ -80,8 +77,8 @@ export function TrafficToolbar({
             type="button"
           >
             {autoRefresh
-              ? t("traffic.toolbar.recording")
-              : t("traffic.toolbar.paused")}
+              ? "录制中"
+              : "已暂停"}
           </button>
           <button
             className={cx(localStyles.button, localStyles.toolbarButton)}
@@ -89,25 +86,25 @@ export function TrafficToolbar({
             onClick={onClear}
             type="button"
           >
-            {t("traffic.toolbar.clear")}
+            {"清空"}
           </button>
         </div>
 
         <div className={localStyles.toolbarSection}>
-          <span className={localStyles.toolbarCaption}>{t("nav.mock")}</span>
+          <span className={localStyles.toolbarCaption}>{"模拟"}</span>
           <button
             className={cx(localStyles.button, localStyles.toolbarButton)}
             disabled={!selected}
             onClick={onCreateMock}
             type="button"
           >
-            {t("traffic.action.mock")}
+            {"创建模拟"}
           </button>
         </div>
 
         <div className={localStyles.toolbarSection}>
           <span className={localStyles.toolbarCaption}>
-            {t("traffic.toolbar.actions")}
+            {"动作"}
           </span>
           <button
             className={cx(localStyles.button, localStyles.toolbarButton)}
@@ -115,7 +112,7 @@ export function TrafficToolbar({
             onClick={onReplay}
             type="button"
           >
-            {t("traffic.action.replay")}
+            {"重放请求"}
           </button>
           <button
             className={cx(localStyles.button, localStyles.toolbarButton)}
@@ -123,14 +120,14 @@ export function TrafficToolbar({
             onClick={onOpenDebug}
             type="button"
           >
-            {t("traffic.action.debug")}
+            {"带入调试"}
           </button>
           <button
             className={cx(localStyles.button, localStyles.toolbarButton)}
             onClick={onOpenMockPage}
             type="button"
           >
-            {t("nav.mock")}
+            {"模拟"}
           </button>
         </div>
       </div>
@@ -142,15 +139,15 @@ export function TrafficToolbar({
             !isLoading && localStyles.statusDotOnline,
           )}
         />
-        <strong>{t("traffic.liveState")}</strong>
+        <strong>{"实时同步中"}</strong>
         <small>
           {lastUpdatedAt
-            ? t("traffic.lastUpdated", {
-                time: formatRequestTime(lastUpdatedAt),
-              })
-            : t("traffic.feedBody")}
+            ? `最后刷新 ${formatRequestTime(lastUpdatedAt)}`
+            : "每 3 秒自动刷新一次。"}
         </small>
       </div>
     </section>
   );
 }
+
+

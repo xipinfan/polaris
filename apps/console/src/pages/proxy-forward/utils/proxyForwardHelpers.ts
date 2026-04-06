@@ -1,6 +1,13 @@
 ﻿import type { ProxyRule, RequestRecord } from "@polaris/shared-types";
 import { persistenceKeys } from "../../../lib/persistence";
-import type { RuleView, StoredForwardRule, StoredGroup } from "../types";
+import type {
+  FallbackPolicy,
+  ForwardMode,
+  HeaderStrategy,
+  RuleView,
+  StoredForwardRule,
+  StoredGroup,
+} from "../types";
 
 export const groupsStorageKey = persistenceKeys.proxyForward.groups;
 export const activeGroupStorageKey = persistenceKeys.proxyForward.activeGroup;
@@ -123,6 +130,62 @@ export function buildRuleUrl(pattern: string, path: string, sourceUrl?: string |
   return `https://${pattern}${derivePath(path)}`;
 }
 
+function resolveForwardMode(value: unknown, fallback: ForwardMode) {
+  return value === "direct" || value === "rewriteHost" || value === "rewritePath"
+    ? value
+    : fallback;
+}
+
+function resolveHeaderStrategy(value: unknown, fallback: HeaderStrategy) {
+  return value === "inject" || value === "override" || value === "remove" ? value : fallback;
+}
+
+function resolveFallbackPolicy(value: unknown, fallback: FallbackPolicy) {
+  return value === "directOnFail" || value === "ignoreOnMiss" ? value : fallback;
+}
+
+function resolveResponseDelay(value: unknown, fallback: number) {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function resolveRuleIdentity(
+  source: {
+    pattern?: unknown;
+    path?: unknown;
+    url?: unknown;
+    method?: unknown;
+  },
+  fallback: Pick<StoredForwardRule, "pattern" | "path" | "method">,
+) {
+  const parsedSource = parseSourceUrl(source.url);
+  const pattern = sanitizeText(source.pattern, parsedSource?.host ?? fallback.pattern).toLowerCase();
+  const path = derivePath(source.path ?? parsedSource?.path ?? source.url);
+
+  return {
+    parsedSource,
+    pattern,
+    path,
+    method: sanitizeText(source.method, fallback.method).toUpperCase(),
+  };
+}
+
+function buildDefaultTargetUrl(path: string) {
+  return `http://127.0.0.1:3000${path}`;
+}
+
+function buildRuleBase(rule: ProxyRule, current?: Partial<StoredForwardRule>) {
+  const parsedSource = parseSourceUrl(current?.url ?? "");
+  const pattern = derivePattern(current?.pattern ?? rule.pattern, parsedSource?.normalizedUrl, current?.targetUrl);
+  const path = derivePath(current?.path ?? parsedSource?.path ?? "/");
+
+  return {
+    parsedSource,
+    pattern,
+    path,
+    targetUrl: sanitizeText(current?.targetUrl, buildDefaultTargetUrl(path)),
+  };
+}
+
 export function formatTime(value: string | null | undefined) {
   if (!value) {
     return "暂无";
@@ -156,10 +219,9 @@ export function buildStoredRuleFromBackend(
   rule: ProxyRule,
   current?: Partial<StoredForwardRule>,
 ): StoredForwardRule {
-  const parsedSource = parseSourceUrl(current?.url ?? "");
-  const pattern = derivePattern(current?.pattern ?? rule.pattern, parsedSource?.normalizedUrl, current?.targetUrl);
-  const path = derivePath(current?.path ?? parsedSource?.path ?? "/");
-  const targetUrl = sanitizeText(current?.targetUrl, `http://127.0.0.1:3000${path}`);
+  const { parsedSource, pattern, path, targetUrl } = buildRuleBase(rule, current);
+  const fallbackForwardMode = rule.action === "direct" ? "direct" : "rewriteTarget";
+
   return {
     id: rule.id,
     name: sanitizeText(current?.name, pattern),
@@ -174,16 +236,16 @@ export function buildStoredRuleFromBackend(
     queryMatch: sanitizeText(current?.queryMatch, defaultMatchValue),
     headerMatch: sanitizeText(current?.headerMatch, defaultMatchValue),
     bodyMatch: sanitizeText(current?.bodyMatch, defaultMatchValue),
-    forwardMode: rule.forwardMode ?? current?.forwardMode ?? (rule.action === "direct" ? "direct" : "rewriteTarget"),
+    forwardMode: resolveForwardMode(rule.forwardMode ?? current?.forwardMode, fallbackForwardMode),
     targetUrl: sanitizeText(rule.targetUrl, targetUrl),
     rewriteHost: sanitizeText(rule.rewriteHost, sanitizeText(current?.rewriteHost, pattern)),
     rewritePath: derivePath(rule.rewritePath ?? current?.rewritePath ?? path),
     rewriteQuery: sanitizeText(current?.rewriteQuery, ""),
-    headerStrategy: current?.headerStrategy ?? "keep",
+    headerStrategy: resolveHeaderStrategy(current?.headerStrategy, "keep"),
     requestHeaderPreview: current?.requestHeaderPreview ?? '{\n  "x-env": "local"\n}',
     responseHeaderPreview: current?.responseHeaderPreview ?? '{\n  "x-proxy-source": "polaris"\n}',
-    responseDelay: current?.responseDelay ?? 0,
-    fallbackPolicy: current?.fallbackPolicy ?? "closed",
+    responseDelay: resolveResponseDelay(current?.responseDelay, 0),
+    fallbackPolicy: resolveFallbackPolicy(current?.fallbackPolicy, "closed"),
     // Keep local timeline stable so list ordering does not jump after backend sync.
     createdAt: sanitizeText(current?.createdAt, rule.createdAt),
     updatedAt: sanitizeText(current?.updatedAt, rule.updatedAt),
@@ -233,16 +295,14 @@ export function buildEmptyRule(activeGroupName: string): StoredForwardRule {
 function coerceStoredRule(input: unknown, groupName: string): StoredForwardRule {
   const fallback = buildEmptyRule(groupName);
   const candidate = typeof input === "object" && input ? (input as Record<string, unknown>) : {};
-  const parsedSource = parseSourceUrl(candidate.url);
-  const pattern = sanitizeText(candidate.pattern, parsedSource?.host ?? fallback.pattern).toLowerCase();
-  const path = derivePath(candidate.path ?? parsedSource?.path ?? candidate.url);
+  const { pattern, path, method } = resolveRuleIdentity(candidate, fallback);
 
   return {
     ...fallback,
     id: sanitizeText(candidate.id, fallback.id),
     name: sanitizeText(candidate.name, pattern),
     pattern,
-    method: sanitizeText(candidate.method, fallback.method).toUpperCase(),
+    method,
     path,
     url: sanitizeText(candidate.url, `https://${pattern}${path}`),
     action: candidate.action === "direct" ? "direct" : "proxy",
@@ -251,32 +311,16 @@ function coerceStoredRule(input: unknown, groupName: string): StoredForwardRule 
     queryMatch: sanitizeText(candidate.queryMatch, fallback.queryMatch),
     headerMatch: sanitizeText(candidate.headerMatch, fallback.headerMatch),
     bodyMatch: sanitizeText(candidate.bodyMatch, fallback.bodyMatch),
-    forwardMode:
-      candidate.forwardMode === "direct" ||
-      candidate.forwardMode === "rewriteHost" ||
-      candidate.forwardMode === "rewritePath"
-        ? candidate.forwardMode
-        : "rewriteTarget",
+    forwardMode: resolveForwardMode(candidate.forwardMode, fallback.forwardMode),
     targetUrl: sanitizeText(candidate.targetUrl, fallback.targetUrl),
     rewriteHost: sanitizeText(candidate.rewriteHost, pattern),
     rewritePath: derivePath(candidate.rewritePath ?? path),
     rewriteQuery: sanitizeText(candidate.rewriteQuery, ""),
-    headerStrategy:
-      candidate.headerStrategy === "inject" ||
-      candidate.headerStrategy === "override" ||
-      candidate.headerStrategy === "remove"
-        ? candidate.headerStrategy
-        : "keep",
+    headerStrategy: resolveHeaderStrategy(candidate.headerStrategy, fallback.headerStrategy),
     requestHeaderPreview: sanitizeText(candidate.requestHeaderPreview, fallback.requestHeaderPreview),
     responseHeaderPreview: sanitizeText(candidate.responseHeaderPreview, fallback.responseHeaderPreview),
-    responseDelay:
-      typeof candidate.responseDelay === "number" && Number.isFinite(candidate.responseDelay)
-        ? candidate.responseDelay
-        : fallback.responseDelay,
-    fallbackPolicy:
-      candidate.fallbackPolicy === "directOnFail" || candidate.fallbackPolicy === "ignoreOnMiss"
-        ? candidate.fallbackPolicy
-        : "closed",
+    responseDelay: resolveResponseDelay(candidate.responseDelay, fallback.responseDelay),
+    fallbackPolicy: resolveFallbackPolicy(candidate.fallbackPolicy, fallback.fallbackPolicy),
     createdAt: sanitizeText(candidate.createdAt, fallback.createdAt),
     updatedAt: sanitizeText(candidate.updatedAt, fallback.updatedAt),
   };

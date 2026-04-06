@@ -1,6 +1,5 @@
-import { useEffect, useState, type ReactNode } from "react";
+﻿import { useState, type ReactNode } from "react";
 import type { RequestRecord } from "@polaris/shared-types";
-import { useConsoleI18n } from "../../i18n/I18nProvider";
 import { JsonBlock } from "../common/JsonBlock";
 import { KeyValueBlock } from "../common/KeyValueBlock";
 import { UiSlotPlaceholder } from "../slots/UiSlotPlaceholder";
@@ -29,22 +28,19 @@ function getMethodClassName(method: string) {
   }
 }
 
-export function RequestDetailPanel({ request, actions }: { request?: RequestRecord; actions?: ReactNode }) {
-  const { t } = useConsoleI18n();
+type RequestDetailPanelProps = {
+  request?: RequestRecord;
+  actions?: ReactNode;
+};
+
+function RequestDetailPanelContent({
+  request,
+  actions,
+}: {
+  request: RequestRecord;
+  actions?: ReactNode;
+}) {
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
-
-  useEffect(() => {
-    setActiveTab("overview");
-  }, [request?.id]);
-
-  if (!request) {
-    return (
-      <div className={styles.empty}>
-        <h3>{t("detail.noneTitle")}</h3>
-        <p>{t("detail.noneBody")}</p>
-      </div>
-    );
-  }
 
   return (
     <div className={styles.panel}>
@@ -53,7 +49,7 @@ export function RequestDetailPanel({ request, actions }: { request?: RequestReco
           <div className={styles.headingCopy}>
             <div className={styles.titleRow}>
               <span className={`${styles.methodBadge} ${getMethodClassName(request.method)}`}>{request.method}</span>
-              <h3>{t("detail.title")}</h3>
+              <h3>{"请求详情"}</h3>
             </div>
             <p>{request.path}</p>
           </div>
@@ -62,30 +58,30 @@ export function RequestDetailPanel({ request, actions }: { request?: RequestReco
 
         <div className={styles.kpiGrid}>
           <div className={styles.kpi}>
-            <span>{t("detail.scheme")}</span>
+            <span>{"协议"}</span>
             <strong>{getSchemeLabel(request)}</strong>
           </div>
           <div className={styles.kpi}>
-            <span>{t("detail.duration")}</span>
+            <span>{"耗时"}</span>
             <strong>{request.duration} ms</strong>
           </div>
           <div className={styles.kpi}>
-            <span>{t("detail.source")}</span>
-            <strong>{request.source === "proxy" ? t("detail.source.proxy") : t("detail.source.debug")}</strong>
+            <span>{"来源"}</span>
+            <strong>{request.source === "proxy" ? "代理" : "调试"}</strong>
           </div>
           <div className={styles.kpi}>
-            <span>{t("detail.capturedAt")}</span>
+            <span>{"捕获时间"}</span>
             <strong>{new Date(request.createdAt).toLocaleString()}</strong>
           </div>
         </div>
 
         <div className={styles.metaGrid}>
           <div>
-            <span>{t("detail.fullUrl")}</span>
+            <span>{"完整 URL"}</span>
             <strong>{request.url}</strong>
           </div>
           <div>
-            <span>{t("detail.host")}</span>
+            <span>{"主机"}</span>
             <strong>{request.host}</strong>
           </div>
         </div>
@@ -96,9 +92,9 @@ export function RequestDetailPanel({ request, actions }: { request?: RequestReco
           <div className={styles.segmented}>
             {(
               [
-                ["overview", t("detail.tab.overview")],
-                ["request", t("detail.tab.request")],
-                ["response", t("detail.tab.response")]
+                ["overview", "总览"],
+                ["request", "请求"],
+                ["response", "响应"]
               ] as const
             ).map(([tab, label]) => (
               <button
@@ -115,25 +111,25 @@ export function RequestDetailPanel({ request, actions }: { request?: RequestReco
 
         {activeTab === "overview" ? (
           <div className={styles.tabGrid}>
-            <KeyValueBlock title={t("detail.requestHeaders")} value={request.requestHeaders} />
-            <KeyValueBlock title={t("detail.responseHeaders")} value={request.responseHeaders} />
-            <KeyValueBlock title={t("detail.queryParams")} value={request.requestQuery} />
-            <JsonBlock title={t("detail.responseBody")} value={request.responseBody} />
+            <KeyValueBlock title={"请求头"} value={request.requestHeaders} />
+            <KeyValueBlock title={"响应头"} value={request.responseHeaders} />
+            <KeyValueBlock title={"查询参数"} value={request.requestQuery} />
+            <JsonBlock title={"响应体"} value={request.responseBody} />
           </div>
         ) : null}
 
         {activeTab === "request" ? (
           <div className={styles.tabGrid}>
-            <KeyValueBlock title={t("detail.requestHeaders")} value={request.requestHeaders} />
-            <KeyValueBlock title={t("detail.queryParams")} value={request.requestQuery} />
-            <JsonBlock title={t("detail.requestBody")} value={request.requestBody} />
+            <KeyValueBlock title={"请求头"} value={request.requestHeaders} />
+            <KeyValueBlock title={"查询参数"} value={request.requestQuery} />
+            <JsonBlock title={"请求体"} value={request.requestBody} />
           </div>
         ) : null}
 
         {activeTab === "response" ? (
           <div className={styles.tabGrid}>
-            <KeyValueBlock title={t("detail.responseHeaders")} value={request.responseHeaders} />
-            <JsonBlock title={t("detail.responseBody")} value={request.responseBody} />
+            <KeyValueBlock title={"响应头"} value={request.responseHeaders} />
+            <JsonBlock title={"响应体"} value={request.responseBody} />
           </div>
         ) : null}
       </section>
@@ -143,3 +139,17 @@ export function RequestDetailPanel({ request, actions }: { request?: RequestReco
     </div>
   );
 }
+
+export function RequestDetailPanel({ request, actions }: RequestDetailPanelProps) {
+  if (!request) {
+    return (
+      <div className={styles.empty}>
+        <h3>{"等待选择请求"}</h3>
+        <p>{"从左侧列表选择一条请求，这里会显示请求头、查询参数、请求体和响应内容。"}</p>
+      </div>
+    );
+  }
+
+  return <RequestDetailPanelContent key={request.id} actions={actions} request={request} />;
+}
+

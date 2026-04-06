@@ -1,6 +1,5 @@
-﻿import { Button, Card, Statistic, Tag, Typography } from "antd";
+import { Button, Card, Statistic, Tag, Typography } from "antd";
 import type { ServiceSnapshot } from "@polaris/shared-contracts";
-import type { TranslateFn } from "../../../../i18n/I18nProvider";
 import localStyles from "./index.module.less";
 import { getProxyModeLabel } from "../../utils";
 
@@ -15,7 +14,6 @@ type HomeHeroProps = {
   onGoSettings: () => void;
   onGoTraffic: () => void;
   onSetProxyMode: (mode: "direct" | "rules") => void;
-  t: TranslateFn;
 };
 
 export function HomeHero({
@@ -27,7 +25,6 @@ export function HomeHero({
   onGoSettings,
   onGoTraffic,
   onSetProxyMode,
-  t,
 }: HomeHeroProps) {
   return (
     <section className={`${localStyles.hero} ${localStyles.root}`}>
@@ -37,22 +34,17 @@ export function HomeHero({
           <div className={localStyles.heroIntro}>
             <div className={localStyles.heroTags}>
               <Tag bordered={false} className={localStyles.darkTag}>
-                {t("home.module.control")}
+                {"代理控制台"}
               </Tag>
-              <Tag
-                bordered={false}
-                color={snapshot.status.online ? "success" : "default"}
-              >
-                {snapshot.status.online
-                  ? t("home.coreOnline")
-                  : t("home.coreOffline")}
+              <Tag bordered={false} color={snapshot.status.online ? "success" : "default"}>
+                {snapshot.status.online ? "核心服务在线" : "核心服务离线"}
               </Tag>
               <Tag bordered={false} className={localStyles.modeTag}>
                 {getProxyModeLabel(snapshot.status.proxyMode)}
               </Tag>
             </div>
             <div className={localStyles.heroText}>
-              <Title level={1}>{t("home.taskTitle")}</Title>
+              <Title level={1}>{"从拉起代理到保存请求，在同一个工作台继续联调。"}</Title>
               <Paragraph>
                 Core 当前在线，当前工作链路为
                 {getProxyModeLabel(snapshot.status.proxyMode)}
@@ -60,49 +52,30 @@ export function HomeHero({
               </Paragraph>
             </div>
             <div className={localStyles.heroActions}>
-              <Button
-                onClick={() => onSetProxyMode(primaryProxyAction)}
-                size="large"
-                type="primary"
-              >
+              <Button onClick={() => onSetProxyMode(primaryProxyAction)} size="large" type="primary">
                 {primaryProxyLabel}
               </Button>
               <Button onClick={onGoTraffic} size="large">
-                {t("home.quick.traffic")}
+                {"查看实时请求"}
               </Button>
               <Button onClick={onGoDebug} size="large">
-                {t("home.quick.debug")}
+                {"新建调试请求"}
               </Button>
             </div>
           </div>
 
           <div className={localStyles.metricGrid}>
             <Card variant="borderless" className={localStyles.metricCard}>
-              <Statistic
-                title={t("home.metric.proxyPort")}
-                value={snapshot.status.proxyPort}
-              />
-              <Text type="secondary">{t("home.workspaceLabel")}</Text>
+              <Statistic title={"代理端口"} value={snapshot.status.proxyPort} />
+              <Text type="secondary">{"当前工作台"}</Text>
             </Card>
             <Card variant="borderless" className={localStyles.metricCard}>
-              <Statistic
-                title={t("home.metric.recentRequests")}
-                value={snapshot.recentRequests.length}
-              />
-              <Text type="secondary">
-                {t("home.activeRequests", {
-                  count: snapshot.status.activeRequestCount,
-                })}
-              </Text>
+              <Statistic title={"最近请求"} value={snapshot.recentRequests.length} />
+              <Text type="secondary">{`活跃请求 ${snapshot.status.activeRequestCount}`}</Text>
             </Card>
             <Card variant="borderless" className={localStyles.metricCard}>
-              <Statistic
-                title={t("home.metric.mockVariants")}
-                value={snapshot.mockRules.length}
-              />
-              <Text type="secondary">
-                {getProxyModeLabel(snapshot.status.proxyMode)}
-              </Text>
+              <Statistic title={"模拟方案"} value={snapshot.mockRules.length} />
+              <Text type="secondary">{getProxyModeLabel(snapshot.status.proxyMode)}</Text>
             </Card>
           </div>
         </div>
@@ -110,34 +83,23 @@ export function HomeHero({
 
       <Card variant="borderless" className={localStyles.sideCard}>
         <div className={localStyles.sideSection}>
-          <Title level={4}>{t("home.nextActionTitle")}</Title>
-          <Paragraph>{t("home.nextActionBody")}</Paragraph>
+          <Title level={4}>{"下一步"}</Title>
+          <Paragraph>{"直接进入抓包、调试、模拟或设置，首页只负责把你带到下一步。"}</Paragraph>
         </div>
         <div className={localStyles.sideActions}>
           <Button block onClick={onGoMock}>
-            {t("home.quick.mock")}
+            {"管理模拟"}
           </Button>
           <Button block onClick={onGoSettings}>
-            {t("home.quick.settings")}
+            {"打开设置"}
           </Button>
         </div>
         <div className={localStyles.tagCluster}>
-          <Tag
-            bordered={false}
-            color={snapshot.status.mcpEnabled ? "success" : "default"}
-          >
-            {snapshot.status.mcpEnabled
-              ? t("home.mcpEnabled")
-              : t("home.mcpDisabled")}
+          <Tag bordered={false} color={snapshot.status.mcpEnabled ? "success" : "default"}>
+            {snapshot.status.mcpEnabled ? "MCP 已启用" : "MCP 未启用"}
           </Tag>
-          <Tag bordered={false}>
-            {t("home.mockRules", { count: snapshot.mockRules.length })}
-          </Tag>
-          <Tag bordered={false}>
-            {t("home.activeRequests", {
-              count: snapshot.status.activeRequestCount,
-            })}
-          </Tag>
+          <Tag bordered={false}>{`模拟规则 ${snapshot.mockRules.length} 条`}</Tag>
+          <Tag bordered={false}>{`活跃请求 ${snapshot.status.activeRequestCount}`}</Tag>
         </div>
       </Card>
     </section>

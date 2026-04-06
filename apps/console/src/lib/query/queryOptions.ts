@@ -1,4 +1,4 @@
-﻿import { toUserMessage } from "../../services/apiErrors";
+import { toUserMessage } from "../errors/userMessage";
 
 export const queryStaleTime = {
   highFrequency: 3_000,

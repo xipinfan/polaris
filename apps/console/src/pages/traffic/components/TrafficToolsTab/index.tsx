@@ -1,6 +1,5 @@
 ﻿import type { RequestRecord } from "@polaris/shared-types";
 import type { RefObject } from "react";
-import type { TranslateFn } from "../../../../i18n/I18nProvider";
 import localStyles from "./index.module.less";
 import { cx } from "../../utils/trafficFormatters";
 
@@ -11,7 +10,6 @@ type TrafficToolsTabProps = {
   onOpenDebug: () => void;
   onOpenMockPage: () => void;
   selected: RequestRecord;
-  t: TranslateFn;
 };
 
 export function TrafficToolsTab({
@@ -21,27 +19,26 @@ export function TrafficToolsTab({
   onOpenDebug,
   onOpenMockPage,
   selected,
-  t,
 }: TrafficToolsTabProps) {
   return (
     <div className={cx(localStyles.detailScroll, localStyles.root)} ref={inspectorBodyRef}>
       <div className={cx(localStyles.toolCard, localStyles.toolCardMuted)}>
         <div className={localStyles.listRow}>
-          <strong>{t("mock.title")}</strong>
+          <strong>{"模拟规则"}</strong>
           <span className={cx(localStyles.statusBadge, localStyles.statusBadgeMuted)}>{selected.host}</span>
         </div>
         <div className={localStyles.actionGrid}>
           <button className={cx(localStyles.button, localStyles.buttonPrimary)} onClick={onCreateMock} type="button">
-            {t("traffic.action.mock")}
+            {"创建模拟"}
           </button>
           <button className={cx(localStyles.button, localStyles.buttonSecondary)} onClick={onCopyCurl} type="button">
-            {t("traffic.action.curl")}
+            {"复制 curl 命令"}
           </button>
           <button className={cx(localStyles.button, localStyles.buttonSecondary)} onClick={onOpenDebug} type="button">
-            {t("traffic.action.debug")}
+            {"带入调试"}
           </button>
           <button className={cx(localStyles.button, localStyles.buttonTertiary)} onClick={onOpenMockPage} type="button">
-            {t("nav.mock")}
+            {"模拟"}
           </button>
         </div>
       </div>
@@ -49,38 +46,38 @@ export function TrafficToolsTab({
       <div className={localStyles.toolPanelGrid}>
         <div className={cx(localStyles.toolCard, localStyles.toolCardStack)}>
           <div className={localStyles.listRow}>
-            <strong>{t("mock.variantsTitle")}</strong>
-            <span className={localStyles.featureBadge}>{t("nav.mock")}</span>
+            <strong>{"模拟方案"}</strong>
+            <span className={localStyles.featureBadge}>{"模拟"}</span>
           </div>
-          <p>{t("mock.workflowBody")}</p>
+          <p>{"先选接口分组，再选择要处理的方案，然后在右侧编辑。"}</p>
           <div className={cx(localStyles.actionGrid, localStyles.compactActionGrid)}>
             <button className={cx(localStyles.button, localStyles.buttonSecondary)} onClick={onCreateMock} type="button">
-              {t("traffic.action.mock")}
+              {"创建模拟"}
             </button>
             <button className={cx(localStyles.button, localStyles.buttonSecondary)} onClick={onCopyCurl} type="button">
-              {t("traffic.action.curl")}
+              {"复制 curl 命令"}
             </button>
           </div>
         </div>
 
         <div className={cx(localStyles.toolCard, localStyles.toolCardStack)}>
           <div className={localStyles.listRow}>
-            <strong>{t("traffic.diagnosisTitle")}</strong>
+            <strong>{"会话诊断"}</strong>
             <span className={cx(localStyles.statusBadge, selected.secure ? localStyles.statusBadgeSuccess : localStyles.statusBadgeMuted)}>
               {selected.secure ? "TLS" : "HTTP"}
             </span>
           </div>
           <div className={cx(localStyles.metaList, localStyles.metaListCompact)}>
             <div>
-              <span>{t("traffic.diagnosis.host")}</span>
+              <span>{"主机"}</span>
               <strong>{selected.host}</strong>
             </div>
             <div>
-              <span>{t("traffic.diagnosis.source")}</span>
+              <span>{"来源"}</span>
               <strong>{selected.source.toUpperCase()}</strong>
             </div>
             <div>
-              <span>{t("traffic.diagnosis.duration")}</span>
+              <span>{"耗时"}</span>
               <strong>{selected.duration} ms</strong>
             </div>
           </div>
@@ -89,5 +86,3 @@ export function TrafficToolsTab({
     </div>
   );
 }
-
-

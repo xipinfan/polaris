@@ -1,16 +1,14 @@
 ﻿import type { RequestRecord } from "@polaris/shared-types";
 import type { RefObject } from "react";
-import type { TranslateFn } from "../../../../i18n/I18nProvider";
 import { uiSelectors } from "../../../../stores/selectors";
 import { useUiStore } from "../../../../stores/uiStore";
 import localStyles from "./index.module.less";
-import { cx } from "../../utils/trafficFormatters";
 import {
+  cx,
   getRequestResolutionLabel,
   getRequestResolutionMode,
   getRequestResolutionTooltip,
 } from "../../utils/trafficFormatters";
-import { TrafficComposerTab } from "../TrafficComposerTab";
 import { TrafficOverviewTab } from "../TrafficOverviewTab";
 import { TrafficTimelineTab } from "../TrafficTimelineTab";
 import { TrafficToolsTab } from "../TrafficToolsTab";
@@ -32,6 +30,27 @@ const resolutionBadgeClassMap = {
   unknown: localStyles.resolutionBadgeUnknown,
 };
 
+const emptyCards = [
+  {
+    key: "overview",
+    label: "总览",
+    title: "查看请求摘要",
+    body: "快速查看方法、状态、Host、Header 和 Body。",
+  },
+  {
+    key: "timeline",
+    label: "时间线",
+    title: "梳理请求阶段",
+    body: "按时间顺序检查请求、传输和响应阶段。",
+  },
+  {
+    key: "tools",
+    label: "工具",
+    title: "执行后续动作",
+    body: "复制 curl、创建模拟或带入调试继续处理。",
+  },
+] as const;
+
 type TrafficDetailPaneProps = {
   inspectorBodyRef: RefObject<HTMLDivElement | null>;
   selected?: RequestRecord;
@@ -41,7 +60,6 @@ type TrafficDetailPaneProps = {
   onOpenDebug: () => void;
   onOpenMockPage: () => void;
   onReplay: () => void;
-  t: TranslateFn;
 };
 
 export function TrafficDetailPane({
@@ -52,8 +70,6 @@ export function TrafficDetailPane({
   onCreateMock,
   onOpenDebug,
   onOpenMockPage,
-  onReplay,
-  t,
 }: TrafficDetailPaneProps) {
   const inspectorTab = useUiStore(uiSelectors.trafficInspectorTab);
   const setInspectorTab = useUiStore((state) => state.setTrafficInspectorTab);
@@ -61,20 +77,14 @@ export function TrafficDetailPane({
   return (
     <section className={cx(localStyles.surface, localStyles.detailPane, localStyles.root)}>
       <div className={localStyles.detailTabs}>
-        {(
-          [
-            ["overview", t("traffic.tab.overview")],
-            ["timeline", t("traffic.tab.timeline")],
-            ["composer", t("traffic.tab.composer")],
-            ["tools", t("traffic.tab.tools")],
-          ] as const
-        ).map(([tab, label]) => (
+        {([
+          ["overview", "总览"],
+          ["timeline", "时间线"],
+          ["tools", "工具"],
+        ] as const).map(([tab, label]) => (
           <button
             key={tab}
-            className={cx(
-              localStyles.detailTabButton,
-              inspectorTab === tab && localStyles.detailTabButtonActive,
-            )}
+            className={cx(localStyles.detailTabButton, inspectorTab === tab && localStyles.detailTabButtonActive)}
             onClick={() => setInspectorTab(tab)}
             type="button"
           >
@@ -86,22 +96,16 @@ export function TrafficDetailPane({
       {!selected ? (
         <div className={localStyles.detailEmptyState}>
           <div className={localStyles.detailEmptyHero}>
-            <span className={localStyles.featureBadge}>{t("traffic.emptyInspectorBadge")}</span>
-            <h3>{t("detail.noneTitle")}</h3>
-            <p>{t("traffic.emptyInspectorBody")}</p>
+            <span className={localStyles.featureBadge}>{"等待会话"}</span>
+            <h3>{"等待选择请求"}</h3>
+            <p>{"选中一条请求后，这里会分区显示总览、时间线与规则工具。"}</p>
           </div>
           <div className={localStyles.detailEmptyGrid}>
-            {(
-              [
-                ["traffic.tab.overview", "traffic.emptyModule.overview", "traffic.emptyModule.overviewBody"],
-                ["traffic.tab.timeline", "traffic.emptyModule.timeline", "traffic.emptyModule.timelineBody"],
-                ["traffic.tab.tools", "traffic.emptyModule.tools", "traffic.emptyModule.toolsBody"],
-              ] as const
-            ).map(([labelKey, titleKey, bodyKey]) => (
-              <div className={localStyles.detailEmptyCard} key={labelKey}>
-                <span>{t(labelKey)}</span>
-                <strong>{t(titleKey)}</strong>
-                <small>{t(bodyKey)}</small>
+            {emptyCards.map((item) => (
+              <div className={localStyles.detailEmptyCard} key={item.key}>
+                <span>{item.label}</span>
+                <strong>{item.title}</strong>
+                <small>{item.body}</small>
               </div>
             ))}
           </div>
@@ -111,12 +115,7 @@ export function TrafficDetailPane({
       {selected ? (
         <section className={localStyles.detailContext}>
           <div className={localStyles.detailContextUrl}>
-            <span
-              className={cx(
-                localStyles.methodBadge,
-                methodBadgeClassMap[selected.method as keyof typeof methodBadgeClassMap],
-              )}
-            >
+            <span className={cx(localStyles.methodBadge, methodBadgeClassMap[selected.method as keyof typeof methodBadgeClassMap])}>
               {selected.method}
             </span>
             <strong title={selected.path}>{selected.path}</strong>
@@ -126,21 +125,18 @@ export function TrafficDetailPane({
               {selected.host}
             </span>
             <span
-              className={cx(
-                localStyles.resolutionBadge,
-                resolutionBadgeClassMap[getRequestResolutionMode(selected)],
-              )}
-              title={getRequestResolutionTooltip(selected, t)}
+              className={cx(localStyles.resolutionBadge, resolutionBadgeClassMap[getRequestResolutionMode(selected)])}
+              title={getRequestResolutionTooltip(selected)}
             >
               <span className={localStyles.resolutionGlyph} aria-hidden="true" />
-              {getRequestResolutionLabel(selected, t)}
+              {getRequestResolutionLabel(selected)}
             </span>
             <div className={localStyles.detailContextActions}>
               <button className={cx(localStyles.button, localStyles.buttonSecondary)} onClick={onCopyCurl} type="button">
-                {t("traffic.action.curl")}
+                {"复制 curl 命令"}
               </button>
               <button className={cx(localStyles.button, localStyles.buttonPrimary)} onClick={onOpenDebug} type="button">
-                {t("traffic.action.debug")}
+                {"带入调试"}
               </button>
             </div>
           </div>
@@ -148,26 +144,10 @@ export function TrafficDetailPane({
       ) : null}
 
       {selected && inspectorTab === "overview" ? (
-        <TrafficOverviewTab
-          inspectorBodyRef={inspectorBodyRef}
-          onCopyText={onCopyText}
-          selected={selected}
-          t={t}
-        />
+        <TrafficOverviewTab inspectorBodyRef={inspectorBodyRef} onCopyText={onCopyText} selected={selected} />
       ) : null}
       {selected && inspectorTab === "timeline" ? (
-        <TrafficTimelineTab inspectorBodyRef={inspectorBodyRef} selected={selected} t={t} />
-      ) : null}
-      {selected && inspectorTab === "composer" ? (
-        <TrafficComposerTab
-          inspectorBodyRef={inspectorBodyRef}
-          onCopyCurl={onCopyCurl}
-          onCreateMock={onCreateMock}
-          onOpenDebug={onOpenDebug}
-          onReplay={onReplay}
-          selected={selected}
-          t={t}
-        />
+        <TrafficTimelineTab inspectorBodyRef={inspectorBodyRef} selected={selected} />
       ) : null}
       {selected && inspectorTab === "tools" ? (
         <TrafficToolsTab
@@ -177,7 +157,6 @@ export function TrafficDetailPane({
           onOpenDebug={onOpenDebug}
           onOpenMockPage={onOpenMockPage}
           selected={selected}
-          t={t}
         />
       ) : null}
     </section>

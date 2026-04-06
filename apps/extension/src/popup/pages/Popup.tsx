@@ -4,7 +4,6 @@ import type {
   ProxyRule,
   ServiceStatus,
 } from "@polaris/shared-types";
-import { useExtensionI18n } from "../i18n/I18nProvider";
 import {
   applyBrowserProxyMode,
   openBrowserCertificateSettings,
@@ -21,30 +20,29 @@ export function Popup() {
   const [host, setHost] = useState("");
   const [rules, setRules] = useState<ProxyRule[]>([]);
   const [message, setMessage] = useState("");
-  const { t } = useExtensionI18n();
   const statusRef = useRef(status);
   statusRef.current = status;
 
   const modes: ModeItem[] = [
     {
       mode: "direct",
-      label: t("popup.mode.direct.label"),
-      description: t("popup.mode.direct.desc"),
+      label: "直连",
+      description: "浏览器请求不经过 Polaris。",
     },
     {
       mode: "global",
-      label: t("popup.mode.global.label"),
-      description: t("popup.mode.global.desc"),
+      label: "全局代理",
+      description: "所有流量都进入本地代理。",
     },
     {
       mode: "rules",
-      label: t("popup.mode.rules.label"),
-      description: t("popup.mode.rules.desc"),
+      label: "规则代理",
+      description: "只代理命中规则的 Host。",
     },
     {
       mode: "system",
-      label: t("popup.mode.system.label"),
-      description: t("popup.mode.system.desc"),
+      label: "跟随系统",
+      description: "恢复系统代理配置。",
     },
   ];
 
@@ -68,7 +66,7 @@ export function Popup() {
     } catch (error) {
       console.error(error);
       invalidateApiCache();
-      setMessage(t("popup.error.core"));
+      setMessage("无法连接 Core 服务");
     }
   };
 
@@ -114,7 +112,7 @@ export function Popup() {
       await chrome.tabs.create({ url: `${baseUrl}${pathname}` });
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : t("popup.error.switch"),
+        error instanceof Error ? error.message : "切换失败",
       );
     }
   };
@@ -125,9 +123,7 @@ export function Popup() {
     await applyBrowserProxyMode(mode, status);
     await load();
     setMessage(
-      t("popup.message.switch", {
-        mode: modes.find((item) => item.mode === mode)?.label ?? mode,
-      }),
+      `已切换为${modes.find((item) => item.mode === mode)?.label ?? mode}`,
     );
   };
 
@@ -135,13 +131,13 @@ export function Popup() {
     if (!host || !status) return;
     if (activeForSite) {
       await Promise.all(sitePatterns.map((pattern) => coreBridge.removeSiteRule(pattern)));
-      setMessage(t("popup.message.removeRule", { host }));
+      setMessage(`已移除站点规则：${host}`);
     } else {
       await Promise.all(sitePatterns.map((pattern) => coreBridge.addSiteRule(pattern)));
       setMessage(
         status.proxyMode === "rules"
-          ? t("popup.message.addRule", { host })
-          : t("popup.message.addRulePending"),
+          ? `已加入站点规则：${host}`
+          : "已添加站点规则，切换到「规则代理」模式后生效",
       );
     }
     await load();
@@ -162,26 +158,26 @@ export function Popup() {
           className={`${styles.statusBadge} ${online ? styles.statusOnline : styles.statusOffline}`}
         >
           <span className={styles.statusDot} />
-          {online ? t("popup.online") : t("popup.offline")}
+          {online ? "在线" : "离线"}
         </span>
       </header>
 
       <section className={styles.card}>
         <div className={styles.cardHeader}>
-          <h2>{t("popup.status")}</h2>
+          <h2>{"服务状态"}</h2>
           <span className={styles.modeChip}>{modeLabel}</span>
         </div>
         <div className={styles.metrics}>
           <article>
-            <span>{t("popup.mode")}</span>
+            <span>{"当前模式"}</span>
             <strong>{modeLabel}</strong>
           </article>
           <article>
-            <span>{t("popup.proxyPort")}</span>
+            <span>{"代理端口"}</span>
             <strong>{status?.proxyPort ?? "-"}</strong>
           </article>
           <article>
-            <span>{t("popup.rules")}</span>
+            <span>{"规则数"}</span>
             <strong>{rules.length}</strong>
           </article>
         </div>
@@ -190,7 +186,7 @@ export function Popup() {
 
       <section className={styles.card}>
         <div className={styles.cardHeader}>
-          <h2>{t("popup.proxyModes")}</h2>
+          <h2>{"代理模式"}</h2>
         </div>
         <div className={styles.modeGrid}>
           {modes.map((item) => (
@@ -205,7 +201,7 @@ export function Popup() {
                   setMessage(
                     error instanceof Error
                       ? error.message
-                      : t("popup.error.switch"),
+                      : "切换失败",
                   ),
                 )
               }
@@ -219,8 +215,8 @@ export function Popup() {
 
       <section className={styles.card}>
         <div className={styles.cardHeader}>
-          <h2>{t("popup.currentSite")}</h2>
-          <span className={styles.hostChip}>{host || t("popup.noHost")}</span>
+          <h2>{"当前站点"}</h2>
+          <span className={styles.hostChip}>{host || "无可识别 Host"}</span>
         </div>
         <button
           type="button"
@@ -232,19 +228,19 @@ export function Popup() {
               setMessage(
                 error instanceof Error
                   ? error.message
-                  : t("popup.error.switch"),
+                  : "切换失败",
               ),
             )
           }
         >
-          {activeForSite ? t("popup.removeSiteRule") : t("popup.proxyThisSite")}
+          {activeForSite ? "移除当前站点规则" : "仅代理当前站点"}
         </button>
-        <p className={styles.helpText}>{t("popup.siteHint")}</p>
+        <p className={styles.helpText}>{"规则模式会使用 Core 生成的 PAC 配置，只让命中站点的流量进入本地代理。"}</p>
       </section>
 
       <section className={styles.card}>
         <div className={styles.cardHeader}>
-          <h2>{t("popup.quickLinks")}</h2>
+          <h2>{"快捷入口"}</h2>
         </div>
         <div className={styles.actionGrid}>
           <button
@@ -253,7 +249,7 @@ export function Popup() {
             className={styles.secondaryButton}
             onClick={() => void openConsole("")}
           >
-            {t("popup.openConsole")}
+            {"打开控制台"}
           </button>
           <button
             type="button"
@@ -261,7 +257,7 @@ export function Popup() {
             className={styles.secondaryButton}
             onClick={() => void openConsole("/settings")}
           >
-            {t("popup.openSettings")}
+            {"打开设置"}
           </button>
           <button
             type="button"
@@ -272,12 +268,12 @@ export function Popup() {
                 setMessage(
                   error instanceof Error
                     ? error.message
-                    : t("popup.error.openCertSettings"),
+                    : "打开证书设置失败",
                 ),
               )
             }
           >
-            {t("popup.openCertSettings")}
+            {"打开证书设置"}
           </button>
         </div>
       </section>

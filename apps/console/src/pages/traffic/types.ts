@@ -10,7 +10,6 @@ export type TrafficFocusMode =
 export type TrafficInspectorTab =
   | "overview"
   | "timeline"
-  | "composer"
   | "tools";
 
 export type CertificatePlatform = "windows" | "mac" | "other";

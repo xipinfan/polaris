@@ -1,5 +1,4 @@
-import { useToast } from "../feedback/ToastProvider";
-import { useConsoleI18n } from "../../i18n/I18nProvider";
+﻿import { useToast } from "../feedback/ToastProvider";
 import { copyTextToClipboard } from "../../utils/clipboard";
 import styles from "./KeyValueBlock.module.css";
 
@@ -26,14 +25,13 @@ export function KeyValueBlock({
   value: KeyValueMap;
   copyMode?: KeyValueCopyMode;
 }) {
-  const { t } = useConsoleI18n();
   const { showToast } = useToast();
   const entries = normalizeEntries(value);
   const copy = async () => {
     const content = entries.map((entry) => `${entry.key}: ${entry.value}`).join("\n");
     try {
       await copyTextToClipboard(content);
-      showToast(t("common.copied"));
+      showToast("已复制到剪贴板");
     } catch {
       showToast("复制失败", "error");
     }
@@ -47,13 +45,13 @@ export function KeyValueBlock({
           <span className={styles.countBadge}>{entries.length}</span>
           {copyMode === "block" ? (
             <button className={`${styles.copyButton} json-copy-button`} onClick={() => void copy()} type="button">
-              {t("json.copy")}
+              {"复制"}
             </button>
           ) : null}
         </div>
       </div>
       {entries.length === 0 ? (
-        <div className={styles.empty}>{t("detail.emptySection")}</div>
+        <div className={styles.empty}>{"当前区块暂无数据"}</div>
       ) : (
         <div className={`${styles.table} kv-table`}>
           {entries.map((entry) => (
@@ -67,7 +65,7 @@ export function KeyValueBlock({
                     onClick={() => {
                       void copyTextToClipboard(entry.value)
                         .then(() => {
-                          showToast(t("common.copied"));
+                          showToast("已复制到剪贴板");
                         })
                         .catch(() => {
                           showToast("复制失败", "error");
@@ -75,7 +73,7 @@ export function KeyValueBlock({
                     }}
                     type="button"
                   >
-                    {t("json.copy")}
+                    {"复制"}
                   </button>
                 </div>
               ) : (
@@ -88,3 +86,4 @@ export function KeyValueBlock({
     </section>
   );
 }
+

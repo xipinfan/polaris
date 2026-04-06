@@ -214,6 +214,7 @@ function buildPortalHtml(lanIp: string | undefined, apiPort: number, proxyPort: 
           radial-gradient(circle at top, rgba(49, 89, 201, 0.14), transparent 36%),
           linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
         color: var(--text);
+        overflow-wrap: anywhere;
       }
       main {
         width: min(100%, 720px);
@@ -227,7 +228,6 @@ function buildPortalHtml(lanIp: string | undefined, apiPort: number, proxyPort: 
         border: 1px solid var(--line);
         border-radius: 24px;
         background: var(--card);
-        box-shadow: 0 20px 48px rgba(15, 23, 42, 0.08);
       }
       .eyebrow {
         display: inline-flex;
@@ -246,6 +246,10 @@ function buildPortalHtml(lanIp: string | undefined, apiPort: number, proxyPort: 
       h2 { font-size: 18px; line-height: 1.2; }
       h3 { font-size: 15px; line-height: 1.4; }
       p, li { color: var(--muted); line-height: 1.65; font-size: 15px; }
+      .sectionLead {
+        font-size: 15px;
+        line-height: 1.7;
+      }
       .metrics {
         display: grid;
         gap: 12px;
@@ -269,6 +273,10 @@ function buildPortalHtml(lanIp: string | undefined, apiPort: number, proxyPort: 
         line-height: 1.3;
         word-break: break-word;
       }
+      .buttonRow {
+        display: grid;
+        gap: 10px;
+      }
       ol {
         margin: 0;
         padding-left: 20px;
@@ -288,6 +296,11 @@ function buildPortalHtml(lanIp: string | undefined, apiPort: number, proxyPort: 
         border: 1px solid var(--line);
         background: rgba(255, 255, 255, 0.88);
       }
+      .platform-card h3,
+      .tips h3 {
+        margin-bottom: 6px;
+        color: var(--text);
+      }
       a.button {
         display: inline-flex;
         align-items: center;
@@ -299,17 +312,110 @@ function buildPortalHtml(lanIp: string | undefined, apiPort: number, proxyPort: 
         background: var(--accent);
         color: #fff;
         font-weight: 700;
+        padding: 12px 16px;
+        text-align: center;
+        word-break: break-word;
+      }
+      .certLink {
+        display: grid;
+        gap: 8px;
+      }
+      .certLink code {
+        display: block;
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: rgba(15, 23, 42, 0.04);
+        border: 1px solid rgba(208, 216, 227, 0.9);
+        font-size: 13px;
+        line-height: 1.6;
       }
       code {
         padding: 2px 6px;
         border-radius: 999px;
         background: rgba(15, 23, 42, 0.06);
         color: #0f172a;
+        white-space: normal;
+        overflow-wrap: anywhere;
       }
       @media (max-width: 560px) {
-        .metrics { grid-template-columns: 1fr; }
-        .platform-grid { grid-template-columns: 1fr; }
-        h1 { font-size: 24px; }
+        body {
+          background:
+            radial-gradient(circle at top, rgba(49, 89, 201, 0.12), transparent 34%),
+            linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+        }
+        main {
+          padding: 14px 12px 28px;
+        }
+        .card {
+          padding: 16px;
+          gap: 14px;
+          border-radius: 18px;
+        }
+        .metrics,
+        .platform-grid {
+          grid-template-columns: 1fr;
+        }
+        .metric,
+        .platform-card,
+        .tips {
+          padding: 12px;
+          border-radius: 14px;
+        }
+        h1 {
+          font-size: 24px;
+        }
+        h2 {
+          font-size: 17px;
+        }
+        h3 {
+          font-size: 15px;
+        }
+        p, li {
+          font-size: 15px;
+          line-height: 1.72;
+        }
+        ol {
+          padding-left: 18px;
+          gap: 10px;
+        }
+        a.button {
+          min-height: 44px;
+          border-radius: 14px;
+          padding: 11px 14px;
+        }
+        code {
+          display: inline;
+          padding: 2px 5px;
+          border-radius: 10px;
+        }
+        .certLink {
+          gap: 6px;
+        }
+        .certLink code {
+          display: block;
+          padding: 10px;
+          font-size: 12px;
+          line-height: 1.55;
+        }
+      }
+      @media (max-width: 380px) {
+        main {
+          padding-inline: 10px;
+        }
+        .card {
+          padding: 14px;
+        }
+        h1 {
+          font-size: 22px;
+        }
+        p, li {
+          font-size: 14px;
+        }
+        .eyebrow {
+          font-size: 11px;
+          letter-spacing: 0.04em;
+        }
       }
     </style>
   </head>
@@ -343,9 +449,12 @@ function buildPortalHtml(lanIp: string | undefined, apiPort: number, proxyPort: 
 
       <section class="card" style="margin-top: 16px;">
         <h2>第 2 步：下载并安装 Polaris 根证书</h2>
-        <p>代理生效后，点击下面的按钮下载根证书。如果按钮无法打开，也可以手动访问文末的证书直链。</p>
+        <p class="sectionLead">代理生效后，点击下面的按钮下载根证书。如果按钮无法打开，也可以手动访问文末的证书直链。</p>
         <a class="button" href="${certificateUrl}">下载 Polaris Root CA</a>
-        <p>证书直链：<br /><code>${certificateUrl}</code></p>
+        <div class="certLink">
+          <p>证书直链：</p>
+          <code>${certificateUrl}</code>
+        </div>
         <div class="platform-grid">
           <section class="platform-card">
             <h3>Android 安装说明</h3>
@@ -373,6 +482,8 @@ function buildPortalHtml(lanIp: string | undefined, apiPort: number, proxyPort: 
             <li>代理 IP 和端口是否填写正确。</li>
             <li>电脑防火墙是否拦截了 Polaris 端口。</li>
             <li>安装证书后是否真的完成了信任步骤，尤其是 iPhone 的“完全信任”。</li>
+            <li>Android 如果开启了“私人 DNS / Private DNS”，建议调试时先临时关闭后再试。</li>
+            <li>部分 Android App 会绕过 Wi-Fi 代理或启用证书校验加固，这种情况下浏览器能抓到，不代表所有 App 都能稳定抓到。</li>
           </ol>
         </div>
       </section>

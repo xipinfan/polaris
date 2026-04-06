@@ -1,44 +1,76 @@
-﻿import {
+import {
   useDeferredValue,
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
 } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useClearTrafficRequestsMutation, useReplayTrafficRequestMutation } from "../../../domains/traffic/mutations";
 import { useTrafficRequestsQuery, useTrafficSettingsQuery } from "../../../domains/traffic/queries";
-import { uiSelectors, workspaceSelectors } from "../../../stores/selectors";
 import { useUiStore } from "../../../stores/uiStore";
 import { useWorkspaceStore } from "../../../stores/workspaceStore";
-import { getRequestResolutionMode } from "../utils/trafficFormatters";
+import {
+  filterVisibleTrafficRequests,
+  findNextSelectedTrafficRequestId,
+  findSelectedTrafficRequest,
+  summarizeTrafficRequests,
+} from "../utils/trafficWorkspace";
+
+const EMPTY_REQUESTS: NonNullable<ReturnType<typeof useTrafficRequestsQuery>["data"]> = [];
 
 export function useTrafficWorkspace() {
-  const emptyRequests = useMemo(
-    () => [] as NonNullable<ReturnType<typeof useTrafficRequestsQuery>["data"]>,
-    [],
+  const {
+    keyword,
+    method,
+    statusCode,
+    hostOnly,
+    focusMode,
+    inspectorTab,
+    autoRefresh,
+    setKeyword,
+    setMethod,
+    setStatusCode,
+    setHostOnly,
+    setFocusMode,
+    setInspectorTab,
+    setAutoRefresh,
+  } = useUiStore(
+    useShallow((state) => ({
+      keyword: state.trafficKeyword,
+      method: state.trafficMethod,
+      statusCode: state.trafficStatusCode,
+      hostOnly: state.trafficHostOnly,
+      focusMode: state.trafficFocusMode,
+      inspectorTab: state.trafficInspectorTab,
+      autoRefresh: state.trafficAutoRefresh,
+      setKeyword: state.setTrafficKeyword,
+      setMethod: state.setTrafficMethod,
+      setStatusCode: state.setTrafficStatusCode,
+      setHostOnly: state.setTrafficHostOnly,
+      setFocusMode: state.setTrafficFocusMode,
+      setInspectorTab: state.setTrafficInspectorTab,
+      setAutoRefresh: state.setTrafficAutoRefresh,
+    })),
   );
-  const keyword = useUiStore(uiSelectors.trafficKeyword);
-  const method = useUiStore(uiSelectors.trafficMethod);
-  const statusCode = useUiStore(uiSelectors.trafficStatusCode);
-  const hostOnly = useUiStore(uiSelectors.trafficHostOnly);
-  const focusMode = useUiStore(uiSelectors.trafficFocusMode);
-  const inspectorTab = useUiStore(uiSelectors.trafficInspectorTab);
-  const autoRefresh = useUiStore(uiSelectors.trafficAutoRefresh);
 
-  const setKeyword = useUiStore((state) => state.setTrafficKeyword);
-  const setMethod = useUiStore((state) => state.setTrafficMethod);
-  const setStatusCode = useUiStore((state) => state.setTrafficStatusCode);
-  const setHostOnly = useUiStore((state) => state.setTrafficHostOnly);
-  const setFocusMode = useUiStore((state) => state.setTrafficFocusMode);
-  const setInspectorTab = useUiStore((state) => state.setTrafficInspectorTab);
-  const setAutoRefresh = useUiStore((state) => state.setTrafficAutoRefresh);
-
-  const selectedId = useWorkspaceStore(workspaceSelectors.trafficSelectedRequestId);
-  const isCertificateModalOpen = useWorkspaceStore(workspaceSelectors.trafficCertificateModalOpen);
-  const trafficSessionStartedAt = useWorkspaceStore(workspaceSelectors.trafficSessionStartedAt);
-  const setSelectedId = useWorkspaceStore((state) => state.setTrafficSelectedRequestId);
-  const setIsCertificateModalOpen = useWorkspaceStore((state) => state.setTrafficCertificateModalOpen);
-  const setTrafficSessionStartedAt = useWorkspaceStore((state) => state.setTrafficSessionStartedAt);
+  const {
+    selectedId,
+    isCertificateModalOpen,
+    trafficSessionStartedAt,
+    setSelectedId,
+    setIsCertificateModalOpen,
+    setTrafficSessionStartedAt,
+  } = useWorkspaceStore(
+    useShallow((state) => ({
+      selectedId: state.trafficSelectedRequestId,
+      isCertificateModalOpen: state.trafficCertificateModalOpen,
+      trafficSessionStartedAt: state.trafficSessionStartedAt,
+      setSelectedId: state.setTrafficSelectedRequestId,
+      setIsCertificateModalOpen: state.setTrafficCertificateModalOpen,
+      setTrafficSessionStartedAt: state.setTrafficSessionStartedAt,
+    })),
+  );
 
   const deferredKeyword = useDeferredValue(keyword);
   const recordBodyRef = useRef<HTMLDivElement | null>(null);
@@ -59,57 +91,27 @@ export function useTrafficWorkspace() {
   const clearRequestsMutation = useClearTrafficRequestsMutation();
   const replayMutation = useReplayTrafficRequestMutation();
 
-  const requests = requestsQuery.data ?? emptyRequests;
+  const requests = requestsQuery.data ?? EMPTY_REQUESTS;
   const isLoading = requestsQuery.isFetching;
   const settings = settingsQuery.data ?? null;
   const lastUpdatedAt = requestsQuery.dataUpdatedAt
     ? new Date(requestsQuery.dataUpdatedAt).toISOString()
     : undefined;
 
-  const visibleRequests = useMemo(() => {
-    const sessionRequests = requests.filter((item) => {
-      const createdAtMs = Date.parse(item.createdAt);
-      return Number.isNaN(createdAtMs) || createdAtMs >= trafficSessionStartedAt;
-    });
-
-    switch (focusMode) {
-      case "errors":
-        return sessionRequests.filter((item) => item.statusCode >= 400);
-      case "https":
-        return sessionRequests.filter((item) => item.secure);
-      case "debug":
-        return sessionRequests.filter((item) => item.source === "debug");
-      case "mock":
-        return sessionRequests.filter((item) => getRequestResolutionMode(item) === "mock");
-      case "proxyForward":
-        return sessionRequests.filter((item) => getRequestResolutionMode(item) === "proxy_forward");
-      case "direct":
-        return sessionRequests.filter((item) => getRequestResolutionMode(item) === "direct");
-      default:
-        return sessionRequests;
-    }
-  }, [focusMode, requests, trafficSessionStartedAt]);
+  const visibleRequests = useMemo(
+    () => filterVisibleTrafficRequests(requests, focusMode, trafficSessionStartedAt),
+    [focusMode, requests, trafficSessionStartedAt],
+  );
 
   useEffect(() => {
-    if (visibleRequests.length === 0) {
-      if (selectedId !== undefined) {
-        setSelectedId(undefined);
-      }
-      return;
-    }
-
-    if (!selectedId || !visibleRequests.some((item) => item.id === selectedId)) {
-      const nextSelectedId = visibleRequests[visibleRequests.length - 1].id;
-      if (nextSelectedId !== selectedId) {
-        setSelectedId(nextSelectedId);
-      }
+    const nextSelectedId = findNextSelectedTrafficRequestId(visibleRequests, selectedId);
+    if (nextSelectedId !== selectedId) {
+      setSelectedId(nextSelectedId);
     }
   }, [selectedId, setSelectedId, visibleRequests]);
 
   const selected = useMemo(
-    () =>
-      visibleRequests.find((item) => item.id === selectedId) ??
-      visibleRequests[visibleRequests.length - 1],
+    () => findSelectedTrafficRequest(visibleRequests, selectedId),
     [visibleRequests, selectedId],
   );
 
@@ -142,33 +144,7 @@ export function useTrafficWorkspace() {
     previousVisibleCountRef.current = nextCount;
   }, [visibleRequests.length]);
 
-  const summary = useMemo(() => {
-    const errorCount = visibleRequests.filter(
-      (item) => item.statusCode >= 400,
-    ).length;
-    const secureCount = visibleRequests.filter((item) => item.secure).length;
-    const avgDuration = visibleRequests.length
-      ? Math.round(
-          visibleRequests.reduce((total, item) => total + item.duration, 0) /
-            visibleRequests.length,
-        )
-      : 0;
-    const mockCount = visibleRequests.filter((item) => getRequestResolutionMode(item) === "mock").length;
-    const proxyForwardCount = visibleRequests.filter(
-      (item) => getRequestResolutionMode(item) === "proxy_forward"
-    ).length;
-    const directCount = visibleRequests.filter((item) => getRequestResolutionMode(item) === "direct").length;
-
-    return {
-      total: visibleRequests.length,
-      errorCount,
-      secureCount,
-      avgDuration,
-      mockCount,
-      proxyForwardCount,
-      directCount,
-    };
-  }, [visibleRequests]);
+  const summary = useMemo(() => summarizeTrafficRequests(visibleRequests), [visibleRequests]);
 
   const selectRequest = (id: string) => {
     userPinnedSelectionRef.current = true;

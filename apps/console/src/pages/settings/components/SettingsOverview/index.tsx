@@ -5,7 +5,6 @@ type SettingsOverviewProps = {
   proxyPort: number | string;
   apiPort: number | string;
   mcpPort: number | string;
-  t: (key: any, params?: Record<string, string | number>) => string;
 };
 
 export function SettingsOverview({
@@ -13,35 +12,35 @@ export function SettingsOverview({
   proxyPort,
   apiPort,
   mcpPort,
-  t,
 }: SettingsOverviewProps) {
   return (
     <section className={localStyles.overview}>
       <div className={localStyles.overviewHeader}>
         <div className={localStyles.overviewCopy}>
           <span className={localStyles.sectionLabel}>本地服务</span>
-          <h3>{t("settings.servicesTitle")}</h3>
+          <h3>{"本地服务"}</h3>
           <p>查看本地代理、接口和 MCP 端口，确认当前运行状态。</p>
         </div>
         <span className={`${localStyles.statusBadge} ${isOnline ? localStyles.statusBadgeSuccess : localStyles.statusBadgeWarning}`}>
-          {isOnline ? t("settings.online") : t("settings.offline")}
+          {isOnline ? "在线" : "离线"}
         </span>
       </div>
 
       <div className={localStyles.metricGrid}>
         <article className={localStyles.metricCard}>
-          <span>{t("settings.proxyPort")}</span>
+          <span>{"代理端口"}</span>
           <strong>{proxyPort}</strong>
         </article>
         <article className={localStyles.metricCard}>
-          <span>{t("settings.apiEndpoint")}</span>
+          <span>{"API 地址"}</span>
           <strong>{`http://127.0.0.1:${apiPort}`}</strong>
         </article>
         <article className={localStyles.metricCard}>
-          <span>{t("settings.mcpEndpoint")}</span>
+          <span>{"MCP 地址"}</span>
           <strong>{`http://127.0.0.1:${mcpPort}`}</strong>
         </article>
       </div>
     </section>
   );
 }
+

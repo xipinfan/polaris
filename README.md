@@ -1,505 +1,299 @@
-﻿# Polaris
+# Polaris
 
-Polaris is a local API workbench for request proxying, capture, replay, mocking, proxy rules, Web Console, browser extension, and MCP integration.
+Polaris 是一个本地接口工作台。
 
-它把请求代理、抓包调试、Mock 管理、规则转发、Web Console、浏览器扩展和 MCP 接入整合成一个本地服务，目标是：
+你可以把它理解成一套放在自己电脑上的调试中枢，用来做这些事：
 
-- 安装一次
-- 启动一个本地服务
-- 让浏览器、手机、AI 工具都连接到同一个 Polaris 工作台
+- 把浏览器或手机流量接到本机
+- 查看真实请求和响应
+- 保存请求，之后重复使用
+- 给接口做固定返回的 Mock
+- 管理代理规则和转发规则
+- 把这些能力通过 MCP 暴露给 AI 工具
 
-进一步阅读：
+如果你只是想“装上就用”，先看下面这段。
 
-- [MCP 接入说明](/E:/code/polaris/docs/mcp.md)
-- [Web Console 使用说明](/E:/code/polaris/docs/console.md)
-- [浏览器扩展使用说明](/E:/code/polaris/docs/extension.md)
-- [开发说明](/E:/code/polaris/docs/development.md)
-- [E2E 与视觉测试](/E:/code/polaris/docs/e2e-testing.md)
+## 3 分钟上手
 
-## 核心能力
-
-- 本地代理服务
-- 实时请求捕获、保存、重放与调试
-- Mock 规则与分组管理
-- 代理规则与转发能力
-- Web Console
-- 浏览器扩展
-- Streamable HTTP MCP
-- stdio MCP 兼容入口
-- 局域网 / 手机代理接入
-
-## 适合谁
-
-如果你正在做下面这些事情，Polaris 会比较适合：
-
-- 本地联调前后端接口
-- 需要快速抓取和重放请求
-- 需要维护自己的 Mock 数据
-- 需要把请求调试能力接给 Cursor、Cline、Gemini CLI 等 MCP 客户端
-- 需要让同一局域网下的手机接入本机代理做调试
-
-## 安装使用
-
-### 1. 全局安装
-
-推荐直接通过 npm 全局安装已发布包：
+### 1. 安装
 
 ```bash
 npm i -g polaris-workbench
 ```
 
-安装后会提供全局命令：
+安装完成后会提供全局命令：
 
 ```bash
 polaris
 ```
 
-### 2. 启动服务
-
-启动 Polaris：
+### 2. 启动
 
 ```bash
 polaris start
 ```
 
-查看运行状态：
+查看当前运行状态：
 
 ```bash
 polaris status
 ```
 
-停止服务：
+如果你只记一个命令，记住 `polaris status` 就够了。  
+它会告诉你当前服务是否在线、用了哪些端口、Console 地址和 MCP 地址是什么。
 
-```bash
-polaris stop
-```
+### 3. 打开 Web Console
 
-查看 Console 地址：
+可以直接运行：
 
 ```bash
 polaris console-url
 ```
 
-查看 MCP 地址：
+或者直接看 `polaris status` 输出的地址。
 
-```bash
-polaris mcp-url
-```
+默认情况下通常会是：
 
-查看浏览器扩展产物目录：
+- Console: `http://127.0.0.1:19601`
 
-```bash
-polaris extension-path
-```
+但请以你机器上的实际输出为准，因为端口被占用时 Polaris 会自动换端口。
 
-### 3. 默认端口
+### 4. 开始抓请求
 
-Polaris 默认优先使用：
+最常见的使用方式是：
 
-- 代理端口：`19600`
-- API / Console 端口：`19601`
-- MCP 端口：`19602`
-- Console 开发端口：`5173`
+1. 启动 Polaris
+2. 加载浏览器扩展
+3. 在扩展里切到 `规则代理` 或 `全局代理`
+4. 打开目标网站
+5. 回到 Console 的“实时请求”页查看流量
 
-如果端口被占用，Polaris 会自动切换到下一个可用端口。
+---
 
-### 4. Web Console
+## Polaris 能做什么
 
-生产态启动后，Console 由 Polaris Core 直接托管。
+### 给浏览器抓包
 
-默认访问地址：
+- 支持 `直连 / 全局代理 / 规则代理 / 跟随系统`
+- 可以把“当前站点”快速加入规则
+- 适合前后端联调、页面请求排查、接口重放
 
-- [http://127.0.0.1:19601](http://127.0.0.1:19601)
+### 给手机抓包
 
-主要页面：
+- 支持同一局域网下的手机接入本机代理
+- 可以通过 `http://polaris.local` 打开手机接入引导页
+- 支持下载根证书并查看 HTTPS 就绪状态
 
-- `/` 首页总览
-- `/traffic` 实时请求
-- `/requests` 已保存请求
-- `/mock` Mock 管理
-- `/debug` 手动调试
-- `/settings` 服务状态与配置
+### 保存和复用请求
 
-详细说明见：
+- 实时请求可以直接保存
+- 保存后可以再次发送
+- 可以带入调试页继续改参数
+- 可以复制成 `curl`
 
-- [Web Console 使用说明](/E:/code/polaris/docs/console.md)
+### 做基础 Mock
 
-### 5. 浏览器扩展
+- 支持固定返回 Mock
+- 支持启用 / 停用
+- 支持分组切换
+- 可以从真实请求一键生成
 
-全局包会同时附带浏览器扩展产物，但浏览器安全模型不允许通过 npm 自动安装扩展。
+### 管理代理和转发规则
 
-你可以先获取扩展目录：
+- 支持站点规则
+- 支持 PAC
+- 支持代理转发工作台
+- 支持改写目标地址、Host、Path
 
-```bash
-polaris extension-path
-```
+### 接给 AI 工具
 
-然后在 Chrome / Edge 中加载该目录。
+- 支持 Streamable HTTP MCP
+- 支持 stdio MCP
+- 支持按能力包暴露工具：`request / mock / proxy / ops`
 
-扩展当前支持：
+---
 
-- 查看 Core 是否在线
-- 切换代理模式
-- 将当前站点加入或移出规则
-- 打开 Console 和设置页
+## 适合谁
 
-详细说明见：
+如果你符合下面任意一种情况，Polaris 基本就能帮上忙：
 
-- [浏览器扩展使用说明](/E:/code/polaris/docs/extension.md)
+- 你想快速抓浏览器请求，但不想先学一套很重的抓包工具
+- 你想把真实请求保存下来，后面反复调试
+- 你经常需要临时做接口 Mock
+- 你想让 Cursor、Cline、Claude Desktop、Gemini CLI 之类的工具接入本地请求能力
+- 你需要让手机走你电脑上的代理做联调
 
-### 6. MCP 接入
+---
 
-Polaris 可以把抓包、Mock、代理规则、运行状态这些能力通过 MCP 暴露给 AI 工具。
+## 常用命令
 
-如果你是第一次接入，可以先记住这条原则：
+### 服务管理
 
-- 支持 HTTP MCP 的工具：优先填写 Polaris 提供的 MCP URL
-- 只支持命令启动 MCP 的工具：使用 `polaris mcp-stdio`
-
-#### 最简单的连接方式
-
-1. 先启动 Polaris：
+启动：
 
 ```bash
 polaris start
 ```
 
-2. 查看当前 MCP 地址：
-
-```bash
-polaris mcp-url
-```
-
-3. 把输出地址填到你的 MCP 客户端里
-
-默认情况下会是：
-
-```text
-http://127.0.0.1:19602/mcp
-```
-
-#### 方式一：Streamable HTTP MCP（推荐）
-
-这是最推荐的方式，适合大多数支持 MCP URL 的工具。
-
-全量能力入口：
-
-- `http://127.0.0.1:19602/mcp`
-
-按能力包访问：
-
-- `http://127.0.0.1:19602/mcp/mock`
-- `http://127.0.0.1:19602/mcp/proxy`
-- `http://127.0.0.1:19602/mcp/request`
-- `http://127.0.0.1:19602/mcp/ops`
-
-建议：
-
-- 只想让 AI 处理请求调试：接 `/mcp/request`
-- 只想让 AI 管理 Mock：接 `/mcp/mock`
-- 想让 AI 看全部能力：接 `/mcp`
-
-#### 方式二：stdio MCP
-
-如果你的工具不支持填 URL，只支持通过命令启动 MCP 服务，就使用 stdio。
-
-直接启动：
-
-```bash
-polaris mcp-stdio
-```
-
-按 pack 启动：
-
-```bash
-polaris mcp-stdio --pack request
-```
-
-`--pack` 可选值：`mock | proxy | request | ops`
-
-#### 手动写配置时怎么连
-
-很多 MCP 客户端都需要手动编辑配置文件。你可以直接参考下面几种模板。
-
-#### 配置示例 1：连接全量 HTTP MCP
-
-适合想一次暴露全部 Polaris 能力的场景。
-
-```json
-{
-  "mcpServers": {
-    "polaris": {
-      "transport": "http",
-      "url": "http://127.0.0.1:19602/mcp"
-    }
-  }
-}
-```
-
-#### 配置示例 2：只连接请求调试能力
-
-适合希望减少工具数量、让模型更聚焦的场景。
-
-```json
-{
-  "mcpServers": {
-    "polaris-request": {
-      "transport": "http",
-      "url": "http://127.0.0.1:19602/mcp/request"
-    }
-  }
-}
-```
-
-#### 配置示例 3：同时拆分多个能力包
-
-适合支持多个 MCP Server 的客户端。
-
-```json
-{
-  "mcpServers": {
-    "polaris-request": {
-      "transport": "http",
-      "url": "http://127.0.0.1:19602/mcp/request"
-    },
-    "polaris-mock": {
-      "transport": "http",
-      "url": "http://127.0.0.1:19602/mcp/mock"
-    },
-    "polaris-ops": {
-      "transport": "http",
-      "url": "http://127.0.0.1:19602/mcp/ops"
-    }
-  }
-}
-```
-
-#### 配置示例 4：stdio 方式
-
-适合只能通过命令启动 MCP 的工具。
-
-```json
-{
-  "mcpServers": {
-    "polaris-workbench": {
-      "command": "polaris",
-      "args": ["mcp-stdio", "--pack", "request"],
-      "env": {
-        "POLARIS_MCP_START_PROXY": "false"
-      }
-    }
-  }
-}
-```
-
-#### 配置示例 5：stdio 全量能力
-
-如果你不想按 pack 限制，也可以直接暴露全部能力。
-
-```json
-{
-  "mcpServers": {
-    "polaris-all": {
-      "command": "polaris",
-      "args": ["mcp-stdio"],
-      "env": {
-        "POLARIS_MCP_START_PROXY": "false"
-      }
-    }
-  }
-}
-```
-
-说明：
-
-- 如果你的客户端不认识 `transport: "http"`，通常只需要保留它要求的 URL 字段即可
-- 如果当前端口不是默认值，请先运行 `polaris mcp-url`，然后把示例里的 URL 替换成你的实际地址
-- 推荐优先接按 pack 的入口，能减少模型可见工具数量
-
-详细说明见：
-
-- [MCP 接入说明](/E:/code/polaris/docs/mcp.md)
-
-### 7. 手机 / 局域网代理
-
-Polaris 支持让同一局域网下的手机连接到本机代理。
-
-大致流程：
-
-1. 启动 Polaris
-2. 在 Console 设置页查看当前 `LAN IP` 和代理端口
-3. 在手机 Wi-Fi 里手动配置 HTTP 代理
-4. 用手机浏览器访问 `http://polaris.local`
-5. 下载并安装 Polaris 根证书
-
-说明：
-
-- 只有代理端口会对局域网开放
-- API / MCP 仍保持回环地址访问，避免控制面暴露到局域网
-
-### 8. 本地数据目录
-
-Polaris 默认把运行数据写到当前用户自己的本地目录，而不是仓库内。
-
-默认位置：
-
-- Windows：`%LOCALAPPDATA%\\Polaris`
-- macOS：`~/Library/Application Support/Polaris`
-- Linux：`~/.local/state/polaris` 或 `$XDG_STATE_HOME/polaris`
-
-这意味着：
-
-- 每个人可以有自己的 Mock 数据
-- 本地证书和私钥不会进入 Git
-- 请求记录和运行状态不会污染仓库
-
-## 开发
-
-### 1. 安装依赖
-
-```bash
-corepack pnpm install
-```
-
-### 2. 常用开发命令
-
-启动 Core + Console：
-
-```bash
-corepack pnpm dev
-```
-
-只启动 Core：
-
-```bash
-corepack pnpm dev:core
-```
-
-只启动 Console：
-
-```bash
-corepack pnpm dev:console
-```
-
-启动 stdio MCP：
-
-```bash
-corepack pnpm dev:mcp
-```
-
-### 3. 构建
-
-构建整个工作区：
-
-```bash
-corepack pnpm build
-```
-
-只构建最终发布包：
-
-```bash
-corepack pnpm --filter polaris-workbench build
-```
-
-这个构建会：
-
-- 打包 CLI
-- 打包 Core runtime
-- 构建 Console
-- 构建浏览器扩展
-- 将最终产物聚合到 `packages/cli/dist`
-
-### 4. 类型检查与测试
-
-类型检查：
-
-```bash
-corepack pnpm typecheck
-```
-
-Smoke 检查：
-
-```bash
-corepack pnpm test:smoke
-```
-
-E2E：
-
-```bash
-corepack pnpm test:e2e
-```
-
-### 5. 本地发布验证
-
-生成发布包：
-
-```bash
-corepack pnpm --dir packages/cli pack --pack-destination ../temp/pack
-```
-
-全局安装本地 tarball：
-
-```bash
-npm i -g .\packages\temp\pack\polaris-workbench-0.1.0.tgz
-```
-
-### 6. 正式发布
-
-进入发布包目录：
-
-```bash
-cd packages/cli
-```
-
-发布前建议确认：
-
-```bash
-npm whoami
-npm config get registry
-npm pkg get name version
-```
-
-正式发布：
-
-```bash
-npm publish
-```
-
-如果账号开启了发布 2FA，需要使用 OTP 或带 bypass 2FA 的 token。
-
-## 常见问题
-
-### 为什么 Polaris 没有使用默认端口
-
-这是正常行为。
-
-如果默认端口被占用，Polaris 会自动切换到新的可用端口。你可以通过下面的命令查看当前实际端口：
+查看状态：
 
 ```bash
 polaris status
 ```
 
-### 为什么 Console 连不上 Core
+停止：
+
+```bash
+polaris stop
+```
+
+### 查看入口地址
+
+Console 地址：
+
+```bash
+polaris console-url
+```
+
+MCP 地址：
+
+```bash
+polaris mcp-url
+```
+
+浏览器扩展目录：
+
+```bash
+polaris extension-path
+```
+
+### 启动 stdio MCP
+
+```bash
+polaris mcp-stdio
+```
+
+只暴露某个能力包：
+
+```bash
+polaris mcp-stdio --pack request
+```
+
+---
+
+## 默认端口
+
+Polaris 默认优先尝试：
+
+- 代理端口：`19600`
+- API / Console 端口：`19601`
+- MCP 端口：`19602`
+
+如果这些端口被占用，Polaris 会自动换到下一个可用端口。  
+所以实际使用时，**不要死记默认端口，优先看 `polaris status` 输出**。
+
+---
+
+## 最常见的使用场景
+
+### 场景 1：只想抓浏览器请求
+
+1. `polaris start`
+2. 运行 `polaris extension-path`
+3. 把扩展加载到 Chrome / Edge
+4. 在扩展里切到 `规则代理`
+5. 把当前站点加入规则
+6. 打开 Console 的 `/traffic`
+
+### 场景 2：只想接 MCP 给 AI
+
+1. `polaris start`
+2. 运行 `polaris mcp-url`
+3. 把输出地址填进你的 MCP 客户端
+
+如果客户端不支持 HTTP MCP，就改用：
+
+```bash
+polaris mcp-stdio
+```
+
+### 场景 3：只想让手机走本机代理
+
+1. `polaris start`
+2. 在 Console 设置页查看局域网地址和代理端口
+3. 手机连到同一个 Wi-Fi
+4. 在手机 Wi-Fi 里手动配置 HTTP 代理
+5. 用手机访问 `http://polaris.local`
+6. 按页面提示安装证书
+
+---
+
+## 文档怎么选
+
+如果你只是来使用 Polaris，优先看这几份：
+
+- [Web Console 使用说明](/E:/code/polaris/docs/console.md)
+- [浏览器扩展使用说明](/E:/code/polaris/docs/extension.md)
+- [MCP 接入说明](/E:/code/polaris/docs/mcp.md)
+
+如果你要参与开发，再看：
+
+- [开发说明](/E:/code/polaris/docs/development.md)
+- [E2E 与视觉测试](/E:/code/polaris/docs/e2e-testing.md)
+
+---
+
+## 常见问题
+
+### 为什么我启动了，但打不开页面
+
+先运行：
+
+```bash
+polaris status
+```
+
+确认：
+
+- 服务是否在线
+- Console 地址是什么
+- 当前端口是否已经自动切换
+
+### 为什么扩展显示离线
 
 优先检查：
 
-- Polaris 服务是否已启动
-- `polaris status` 输出的健康检查地址是否可访问
-- 当前 Console 地址是否来自 `polaris console-url`
+- Polaris 是否已经启动
+- 你加载的是不是最新扩展目录
+- 扩展有没有重新加载
 
-### 为什么扩展显示 Core 离线
+### 为什么接了规则代理却没抓到请求
 
 优先检查：
 
-- Polaris 是否正在运行
-- 扩展是否使用了 `polaris extension-path` 对应的最新构建产物
-- 当前 Core API 地址是否可访问
+- 当前站点是否已经加入规则
+- 浏览器是否真的切到了 `规则代理`
+- 页面是否已经刷新
 
-### 为什么 MCP 客户端连接失败
+### 为什么 MCP 接不上
 
 优先检查：
 
 - 你接的是 HTTP MCP 还是 stdio
-- Polaris 是否已经启动
-- MCP 地址是否来自 `polaris mcp-url` 或 `polaris status`
-- 如果是 stdio，是否正确传入了 `--pack`
+- 地址是否来自 `polaris mcp-url`
+- Polaris 是否仍在运行
+
+---
+
+## 给开发者
+
+如果你是要修改 Polaris 本身，而不是单纯使用它：
+
+```bash
+corepack pnpm install
+corepack pnpm dev
+```
+
+更多内容见：
+
+- [开发说明](/E:/code/polaris/docs/development.md)

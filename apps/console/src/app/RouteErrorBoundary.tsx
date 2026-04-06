@@ -1,5 +1,6 @@
 ﻿import { isRouteErrorResponse, useRouteError } from "react-router-dom";
 import { StatusState } from "../features/common/StatusState";
+import { reloadBrowserWindow } from "../lib/browser/runtime";
 import styles from "./AppLayout.module.css";
 
 function getRouteErrorMessage(error: unknown) {
@@ -22,7 +23,7 @@ export function RouteErrorBoundary() {
         title="页面加载失败"
         description={getRouteErrorMessage(error)}
         actionLabel="重新加载"
-        onAction={() => window.location.reload()}
+        onAction={reloadBrowserWindow}
       />
     </div>
   );

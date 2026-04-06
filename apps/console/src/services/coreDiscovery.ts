@@ -1,3 +1,4 @@
+import { getBrowserHostname, getBrowserPort, getBrowserQueryParam } from "../lib/browser/runtime";
 import { persistenceKeys, readPersistence, writePersistence } from "../lib/persistence";
 
 const API_PORT_QUERY_KEY = "apiPort";
@@ -7,16 +8,15 @@ let cachedApiBaseUrl: string | null = null;
 let apiBaseUrlPromise: Promise<string> | null = null;
 
 function getCurrentHostname(): string {
-  return window.location.hostname || "127.0.0.1";
+  return getBrowserHostname();
 }
 
 function readCurrentPort(): number | null {
-  const currentPort = Number(window.location.port);
-  return Number.isInteger(currentPort) && currentPort > 0 ? currentPort : null;
+  return getBrowserPort();
 }
 
 function readStoredPort(): number | null {
-  const queryPort = new URLSearchParams(window.location.search).get(API_PORT_QUERY_KEY);
+  const queryPort = getBrowserQueryParam(API_PORT_QUERY_KEY);
   if (queryPort && Number.isInteger(Number(queryPort))) {
     return Number(queryPort);
   }

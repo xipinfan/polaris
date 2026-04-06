@@ -1,65 +1,76 @@
-# E2E and Visual Testing
+# E2E 与视觉测试
 
-This project includes Playwright-based end-to-end testing with two layers:
+这份文档是给 Polaris 开发者看的，不是给普通使用者看的。
 
-- Interaction tests: simulate real user clicks and form operations.
-- Visual regression tests: compare screenshots against baseline snapshots.
+如果你只是想安装和使用 Polaris，可以跳过这份文档。
 
-## Scope
+---
 
-- Console (web app)
-  - Route navigation workflow checks
-  - Debug request workflow checks
-  - Full-page visual baselines for key routes
-- Extension (Chrome/Edge MV3 popup)
-  - Popup interaction checks
-  - Popup visual baseline
+## 这份文档讲什么
 
-## Commands
+当前项目使用 Playwright 做两类测试：
 
-Install browser runtime:
+- 交互测试：模拟真实用户点击、输入、切换页面
+- 视觉测试：把页面截图和本地基线图比较
 
-```bash
-pnpm test:e2e:install
-```
+覆盖范围主要包括：
 
-Run all E2E tests (compare against your local baseline):
+- Web Console
+- 浏览器扩展 Popup
+
+---
+
+## 先安装浏览器运行时
 
 ```bash
-pnpm test:e2e
+corepack pnpm test:e2e:install
 ```
 
-Capture/refresh local current-state baseline:
+---
+
+## 最常用命令
+
+运行全部 E2E：
 
 ```bash
-pnpm test:e2e:baseline
+corepack pnpm test:e2e
 ```
 
-Update visual snapshots intentionally (same as baseline command):
+生成或刷新本地视觉基线：
 
 ```bash
-pnpm test:e2e:update
+corepack pnpm test:e2e:baseline
 ```
 
-Run Playwright UI mode:
+更新快照：
 
 ```bash
-pnpm test:e2e:ui
+corepack pnpm test:e2e:update
 ```
 
-Run a single visual page check:
+打开 Playwright UI：
 
 ```bash
-pnpm test:e2e:page -- --page home
+corepack pnpm test:e2e:ui
 ```
 
-Update baseline for a single visual page:
+---
+
+## 单页视觉检查
+
+检查单个页面：
 
 ```bash
-pnpm test:e2e:page:baseline -- --page settings
+corepack pnpm test:e2e:page -- --page home
 ```
 
-Supported page keys:
+更新单个页面的基线：
+
+```bash
+corepack pnpm test:e2e:page:baseline -- --page settings
+```
+
+支持的页面 key：
 
 - `home`
 - `traffic`
@@ -67,21 +78,31 @@ Supported page keys:
 - `mock`
 - `debug`
 - `settings`
-- `popup` (extension popup visual baseline)
+- `popup`
 
-## Snapshot Strategy
+---
 
-- Baselines represent the current UI state, not a design standard.
-- Baselines are stored under `.e2e/visual-baseline/` and are local-only by default.
-- Recommended flow:
-  - first run `pnpm test:e2e:baseline` to capture current state
-  - then run `pnpm test:e2e` to catch unintended pixel regressions
-  - for local fast iteration, prefer single-page commands
+## 推荐使用顺序
 
-## Stability Notes
+如果你刚改完 UI，建议这样跑：
 
-- Tests start Core + Console via `scripts/dev/start.mjs`.
-- API port is detected dynamically in `e2e/support/polaris.ts` (range `19601-19700`).
-- Extension tests load unpacked build output from `apps/extension/dist`.
+1. 先生成当前基线
+2. 再执行 E2E
+3. 如果只是看某一页，优先跑单页命令
 
+也就是：
 
+```bash
+corepack pnpm test:e2e:baseline
+corepack pnpm test:e2e
+```
+
+---
+
+## 当前稳定性说明
+
+- 测试会自动启动 Core 和 Console
+- API 端口是动态探测的，不写死
+- 扩展测试会读取 `apps/extension/dist` 里的构建产物
+
+所以如果你改了扩展相关代码，记得先确保扩展已经正确构建。

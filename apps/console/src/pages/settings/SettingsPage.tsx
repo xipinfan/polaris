@@ -1,8 +1,7 @@
 ﻿import { useMemo } from "react";
-import { useConsoleI18n } from "../../i18n/I18nProvider";
-import type { ConsoleMessageKey } from "../../i18n/messages";
 import { useSettingsOverviewQuery } from "../../domains/settings/queries";
 import { StatusState } from "../../features/common/StatusState";
+import { getBrowserHostname } from "../../lib/browser/runtime";
 import { SettingsExtensionCard } from "./components/SettingsExtensionCard";
 import { SettingsHttpsCard } from "./components/SettingsHttpsCard";
 import { SettingsLanProxyCard } from "./components/SettingsLanProxyCard";
@@ -19,10 +18,10 @@ const proxyModeLabels: Record<string, string> = {
 };
 
 const proxyModeDescriptions = [
-  { key: "direct", title: "直连模式", descriptionKey: "settings.proxy.direct" as ConsoleMessageKey },
-  { key: "global", title: "全局代理", descriptionKey: "settings.proxy.global" as ConsoleMessageKey },
-  { key: "rules", title: "规则代理", descriptionKey: "settings.proxy.rules" as ConsoleMessageKey },
-  { key: "system", title: "跟随系统", descriptionKey: "settings.proxy.system" as ConsoleMessageKey },
+  { key: "direct", title: "直连模式", description: "浏览器请求不会经过 Polaris，本地代理完全旁路。" },
+  { key: "global", title: "全局代理", description: "所有浏览器流量都进入 Polaris，适合统一抓包和调试。" },
+  { key: "rules", title: "规则代理", description: "只有命中规则的请求会进入代理，适合按域名精确控制。" },
+  { key: "system", title: "跟随系统", description: "恢复或沿用系统代理设置，由系统环境决定最终流量走向。" },
 ];
 
 const mcpTools = [
@@ -37,16 +36,17 @@ const mcpTools = [
   "get_proxy_rule_detail",
 ];
 
+const EMPTY_RULES: Array<{ enabled: boolean }> = [];
+
 export function SettingsPage() {
-  const { t } = useConsoleI18n();
   const overviewQuery = useSettingsOverviewQuery();
 
   const status = overviewQuery.data?.health ?? null;
   const settings = overviewQuery.data?.settings ?? null;
-  const rules = overviewQuery.data?.proxyRules ?? [];
+  const rules = overviewQuery.data?.proxyRules ?? EMPTY_RULES;
 
   const activeRules = useMemo(() => rules.filter((rule) => rule.enabled), [rules]);
-  const browserHostname = window.location.hostname || "127.0.0.1";
+  const browserHostname = getBrowserHostname();
   const rootCertificateUrl = settings ? `http://${browserHostname}:${settings.localApiPort}/api/certificates/root-ca` : "#";
   const currentModeLabel = proxyModeLabels[settings?.currentProxyMode ?? "system"] ?? "-";
 
@@ -79,8 +79,8 @@ export function SettingsPage() {
       <header className={styles.header}>
         <div className={styles.headerCopy}>
           <span className={styles.pageEyebrow}>管理与基础配置</span>
-          <h2>{t("settings.title")}</h2>
-          <p>{t("settings.subtitle")}</p>
+          <h2>{"设置"}</h2>
+          <p>{"集中查看本地服务、代理模式、HTTPS 说明、MCP 接入和扩展预留能力。"}</p>
         </div>
       </header>
 
@@ -90,7 +90,6 @@ export function SettingsPage() {
           isOnline={Boolean(status.online)}
           mcpPort={settings.mcpPort}
           proxyPort={settings.localProxyPort}
-          t={t}
         />
         <SettingsLanProxyCard settings={settings} />
 
@@ -102,18 +101,16 @@ export function SettingsPage() {
               currentModeLabel={currentModeLabel}
               enabledRuleCount={activeRules.length}
               modeItems={proxyModeDescriptions}
-              t={t}
             />
             <SettingsHttpsCard
               certificateInstalled={Boolean(settings.certificateInstalled)}
               rootCertificateUrl={rootCertificateUrl}
-              t={t}
             />
-            <SettingsExtensionCard t={t} />
+            <SettingsExtensionCard />
           </div>
 
           <div className={styles.sideColumn}>
-            <SettingsMcpCard enabled={Boolean(settings.mcpEnabled)} t={t} tools={mcpTools} />
+            <SettingsMcpCard enabled={Boolean(settings.mcpEnabled)} tools={mcpTools} />
           </div>
         </section>
       </div>

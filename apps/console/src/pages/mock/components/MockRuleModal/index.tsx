@@ -1,7 +1,8 @@
-import Editor, { type Monaco, type OnMount } from "@monaco-editor/react";
+import type { Monaco, OnMount } from "@monaco-editor/react";
 import { Select } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { editor as MonacoEditor } from "monaco-editor";
+import { LazyMonacoEditor } from "../../../../features/editor/LazyMonacoEditor";
 import type { MockFormState } from "../../types";
 import { classNames } from "../../utils/mockHelpers";
 import localStyles from "./index.module.less";
@@ -17,7 +18,6 @@ type MockRuleModalProps = {
   isOpen: boolean;
   setForm: (updater: (current: MockFormState) => MockFormState) => void;
   setIsOpen: (value: boolean) => void;
-  t: (key: any, params?: Record<string, string | number>) => string;
   onSave: () => Promise<void>;
   showToast: (message: string, type?: "success" | "error" | "info") => void;
 };
@@ -77,18 +77,9 @@ export function MockRuleModal({
   isOpen,
   setForm,
   setIsOpen,
-  t,
   onSave,
   showToast,
 }: MockRuleModalProps) {
-  const [activePane, setActivePane] = useState<EditorPane>("body");
-  const [activeTab, setActiveTab] = useState<ModalTab>("basic");
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [editorError, setEditorError] = useState<string | null>(null);
-
-  const headersEditorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
-  const bodyEditorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
-
   useEffect(() => {
     if (!isOpen) return;
     const previousBodyOverflow = document.body.style.overflow;
@@ -101,12 +92,42 @@ export function MockRuleModal({
     };
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    setEditorError(null);
-    setActivePane("body");
-    setActiveTab("basic");
-  }, [isOpen, editingId]);
+  if (!isOpen) return null;
+
+  return (
+    <MockRuleModalContent
+      key={editingId ?? "create"}
+      defaultGroup={defaultGroup}
+      editingId={editingId}
+      form={form}
+      groups={groups}
+      onSave={onSave}
+      setForm={setForm}
+      setIsOpen={setIsOpen}
+      showToast={showToast}
+    />
+  );
+}
+
+type MockRuleModalContentProps = Omit<MockRuleModalProps, "isOpen">;
+
+function MockRuleModalContent({
+  defaultGroup,
+  editingId,
+  form,
+  groups,
+  setForm,
+  setIsOpen,
+  onSave,
+  showToast,
+}: MockRuleModalContentProps) {
+  const [activePane, setActivePane] = useState<EditorPane>("body");
+  const [activeTab, setActiveTab] = useState<ModalTab>("basic");
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [editorError, setEditorError] = useState<string | null>(null);
+
+  const headersEditorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
+  const bodyEditorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
 
   const exactMatchError = useMemo(
     () => validateExactBodyMatch(form.requestBodyExactMatch),
@@ -184,8 +205,6 @@ export function MockRuleModal({
     }
   };
 
-  if (!isOpen) return null;
-
   const groupOptions = [defaultGroup, ...groups.filter((group) => group !== defaultGroup)].map((group) => ({
     label: group,
     value: group,
@@ -204,11 +223,11 @@ export function MockRuleModal({
       >
         <header className={localStyles.modalHeader}>
           <div className={localStyles.modalHeaderCopy}>
-            <h3>{editingId ? t("mock.modalEditTitle") : t("mock.modalCreateTitle")}</h3>
-            <p>{t("mock.modalBody")}</p>
+            <h3>{editingId ? "编辑请求规则" : "新建请求规则"}</h3>
+            <p>编辑当前规则的请求与返回配置。</p>
           </div>
           <button
-            aria-label={t("mock.form.cancel")}
+            aria-label="取消"
             className={localStyles.modalClose}
             onClick={() => setIsOpen(false)}
             type="button"
@@ -217,14 +236,20 @@ export function MockRuleModal({
 
         <div className={localStyles.modalTabs}>
           <button
-            className={classNames(localStyles.modalTabButton, activeTab === "basic" && localStyles.modalTabButtonActive)}
+            className={classNames(
+              localStyles.modalTabButton,
+              activeTab === "basic" && localStyles.modalTabButtonActive,
+            )}
             onClick={() => setActiveTab("basic")}
             type="button"
           >
             基本信息
           </button>
           <button
-            className={classNames(localStyles.modalTabButton, activeTab === "response" && localStyles.modalTabButtonActive)}
+            className={classNames(
+              localStyles.modalTabButton,
+              activeTab === "response" && localStyles.modalTabButtonActive,
+            )}
             onClick={() => setActiveTab("response")}
             type="button"
           >
@@ -237,22 +262,28 @@ export function MockRuleModal({
             <section className={localStyles.modalSection}>
               <div className={localStyles.modalSectionHeader}>
                 <div>
-                  <strong>{t("mock.modalBasic")}</strong>
-                  <p>{t("mock.form.basicHint")}</p>
+                  <strong>基本信息</strong>
+                  <p>配置规则基本属性与所属分组。</p>
                 </div>
               </div>
               <div className={localStyles.modalGrid}>
                 <label className={classNames(localStyles.field, localStyles.fieldFull)}>
-                  <span>{t("mock.form.ruleStatus")}</span>
+                  <span>规则状态</span>
                   <div className={localStyles.modalStatusCard}>
                     <div className={localStyles.modalStatusCopy}>
                       <strong>{form.enabled ? "已启用" : "未启用"}</strong>
-                      <span>{form.enabled ? t("mock.form.ruleEnabledHint") : t("mock.form.ruleDisabledHint")}</span>
+                      <span>
+                        {form.enabled
+                          ? "在所属分组生效时参与命中。"
+                          : "保留在所属分组中，但不参与命中。"}
+                      </span>
                     </div>
                     <label className={localStyles.switch}>
                       <input
                         checked={form.enabled}
-                        onChange={(event) => setForm((current) => ({ ...current, enabled: event.target.checked }))}
+                        onChange={(event) =>
+                          setForm((current) => ({ ...current, enabled: event.target.checked }))
+                        }
                         type="checkbox"
                       />
                       <span className={localStyles.switchTrack} />
@@ -261,7 +292,7 @@ export function MockRuleModal({
                 </label>
 
                 <label className={localStyles.field}>
-                  <span>{t("mock.form.nameLabel")}</span>
+                  <span>规则名称</span>
                   <input
                     className={localStyles.control}
                     onChange={(event) => setForm((current) => ({ ...current, variant: event.target.value }))}
@@ -269,7 +300,7 @@ export function MockRuleModal({
                   />
                 </label>
                 <label className={localStyles.field}>
-                  <span>{t("mock.form.groupLabel")}</span>
+                  <span>所属分组</span>
                   <Select
                     className={localStyles.antSelect}
                     onChange={(value) => setForm((current) => ({ ...current, group: value }))}
@@ -279,7 +310,7 @@ export function MockRuleModal({
                   />
                 </label>
                 <label className={localStyles.field}>
-                  <span>{t("mock.form.methodLabel")}</span>
+                  <span>请求方法</span>
                   <Select
                     className={localStyles.antSelect}
                     onChange={(value) => setForm((current) => ({ ...current, method: value }))}
@@ -289,7 +320,7 @@ export function MockRuleModal({
                   />
                 </label>
                 <label className={classNames(localStyles.field, localStyles.fieldFull)}>
-                  <span>{t("mock.form.urlLabel")}</span>
+                  <span>完整地址</span>
                   <input
                     className={localStyles.control}
                     onChange={(event) => setForm((current) => ({ ...current, url: event.target.value }))}
@@ -312,13 +343,13 @@ export function MockRuleModal({
                   {exactMatchError ? <div className={localStyles.editorError}>{exactMatchError}</div> : null}
                 </label>
                 <label className={classNames(localStyles.field, localStyles.fieldFull)}>
-                  <span>{t("mock.form.requestBodyKeyMatchLabel")}</span>
+                  <span>请求 Body 属性匹配（可选）</span>
                   <input
                     className={localStyles.control}
                     onChange={(event) =>
                       setForm((current) => ({ ...current, requestBodyKeyMatch: event.target.value }))
                     }
-                    placeholder={t("mock.form.requestBodyKeyMatchPlaceholder")}
+                    placeholder="例如 user.id 或 payload.token"
                     value={form.requestBodyKeyMatch}
                   />
                 </label>
@@ -328,65 +359,67 @@ export function MockRuleModal({
             <section className={localStyles.modalSection}>
               <div className={localStyles.editorSection}>
                 <div className={localStyles.editorShell}>
-                    <div className={localStyles.editorToolbar}>
-                      <div className={localStyles.editorTabs}>
-                        <button
-                          className={classNames(
-                            localStyles.editorTab,
-                            activePane === "headers" && localStyles.editorTabActive,
-                          )}
-                          onClick={() => setActivePane("headers")}
-                          type="button"
-                        >
-                          {t("mock.form.headersLabel")}
-                        </button>
-                        <button
-                          className={classNames(
-                            localStyles.editorTab,
-                            activePane === "body" && localStyles.editorTabActive,
-                          )}
-                          onClick={() => setActivePane("body")}
-                          type="button"
-                        >
-                          {t("mock.form.bodyContentLabel")}
-                        </button>
-                      </div>
-                      <div className={localStyles.editorActions}>
-                        <button className={localStyles.secondaryButton} onClick={formatActiveJson} type="button">
-                          格式化
-                        </button>
-                        <button
-                          className={localStyles.secondaryButton}
-                          onClick={() => setIsExpanded((value) => !value)}
-                          type="button"
-                        >
-                          {isExpanded ? "还原编辑区" : "放大编辑区"}
-                        </button>
-                      </div>
+                  <div className={localStyles.editorToolbar}>
+                    <div className={localStyles.editorTabs}>
+                      <button
+                        className={classNames(
+                          localStyles.editorTab,
+                          activePane === "headers" && localStyles.editorTabActive,
+                        )}
+                        onClick={() => setActivePane("headers")}
+                        type="button"
+                      >
+                        响应头
+                      </button>
+                      <button
+                        className={classNames(
+                          localStyles.editorTab,
+                          activePane === "body" && localStyles.editorTabActive,
+                        )}
+                        onClick={() => setActivePane("body")}
+                        type="button"
+                      >
+                        响应体
+                      </button>
                     </div>
-                    <div className={localStyles.editorFrame}>
-                      {activePane === "headers" ? (
-                        <Editor
-                          defaultLanguage="json"
-                          height="100%"
-                          onChange={(value) => setForm((current) => ({ ...current, responseHeaders: value ?? "{}" }))}
-                          onMount={handleHeadersMount}
-                          options={editorOptions}
-                          saveViewState={false}
-                          value={form.responseHeaders}
-                        />
-                      ) : (
-                        <Editor
-                          defaultLanguage="json"
-                          height="100%"
-                          onChange={(value) => setForm((current) => ({ ...current, responseBody: value ?? "{}" }))}
-                          onMount={handleBodyMount}
-                          options={editorOptions}
-                          saveViewState={false}
-                          value={form.responseBody}
-                        />
-                      )}
+                    <div className={localStyles.editorActions}>
+                      <button className={localStyles.secondaryButton} onClick={formatActiveJson} type="button">
+                        格式化
+                      </button>
+                      <button
+                        className={localStyles.secondaryButton}
+                        onClick={() => setIsExpanded((value) => !value)}
+                        type="button"
+                      >
+                        {isExpanded ? "还原编辑区" : "放大编辑区"}
+                      </button>
                     </div>
+                  </div>
+                  <div className={localStyles.editorFrame}>
+                    {activePane === "headers" ? (
+                      <LazyMonacoEditor
+                        height="100%"
+                        language="json"
+                        onChange={(value) =>
+                          setForm((current) => ({ ...current, responseHeaders: value ?? "{}" }))
+                        }
+                        onMount={handleHeadersMount}
+                        options={editorOptions}
+                        value={form.responseHeaders}
+                      />
+                    ) : (
+                      <LazyMonacoEditor
+                        height="100%"
+                        language="json"
+                        onChange={(value) =>
+                          setForm((current) => ({ ...current, responseBody: value ?? "{}" }))
+                        }
+                        onMount={handleBodyMount}
+                        options={editorOptions}
+                        value={form.responseBody}
+                      />
+                    )}
+                  </div>
                 </div>
                 {editorError ? <div className={localStyles.editorError}>{editorError}</div> : null}
               </div>
@@ -396,7 +429,7 @@ export function MockRuleModal({
 
         <div className={localStyles.modalActions}>
           <button className={localStyles.secondaryButton} onClick={() => setIsOpen(false)} type="button">
-            {t("mock.form.cancel")}
+            取消
           </button>
           <button
             className={localStyles.primaryButton}
@@ -404,7 +437,7 @@ export function MockRuleModal({
             onClick={() => void saveWithValidation()}
             type="button"
           >
-            {editingId ? t("mock.form.saveChanges") : t("mock.form.save")}
+            {editingId ? "保存修改" : "保存模拟"}
           </button>
         </div>
       </section>

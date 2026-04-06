@@ -1,3 +1,4 @@
+import { memo } from "react";
 import localStyles from "./index.module.less";
 import type { StoredGroup } from "../../types";
 import { classNames } from "../../utils/proxyForwardHelpers";
@@ -7,7 +8,7 @@ type OverviewHeaderProps = {
   overview: { total: number; enabled: number; hits: number; errors: number };
 };
 
-export function OverviewHeader({ activeGroup, overview }: OverviewHeaderProps) {
+export const OverviewHeader = memo(function OverviewHeader({ activeGroup, overview }: OverviewHeaderProps) {
   return (
     <div className={classNames(localStyles.overview, localStyles.root)}>
       <div className={localStyles.overviewCopy}>
@@ -51,4 +52,4 @@ export function OverviewHeader({ activeGroup, overview }: OverviewHeaderProps) {
       </div>
     </div>
   );
-}
+});

@@ -1,8 +1,7 @@
-import { UiSlotPlaceholder } from "../../../../features/slots/UiSlotPlaceholder";
+﻿import { UiSlotPlaceholder } from "../../../../features/slots/UiSlotPlaceholder";
 import localStyles from "./index.module.less";
 
 type SettingsExtensionCardProps = {
-  t: (key: any, params?: Record<string, string | number>) => string;
 };
 
 const capabilityItems = [
@@ -29,13 +28,13 @@ const workflowItems = [
   { step: "03", title: "在控制台观测", description: "通过 UI Slot 查看状态与扩展面板，统一完成调试与排障。" },
 ];
 
-export function SettingsExtensionCard({ t }: SettingsExtensionCardProps) {
+export function SettingsExtensionCard(_props: SettingsExtensionCardProps) {
   return (
     <section className={localStyles.card}>
       <header className={localStyles.hero}>
         <div className={localStyles.heroMain}>
           <span className={localStyles.sectionLabel}>浏览器插件模块</span>
-          <h3>{t("settings.extensionTitle")}</h3>
+          <h3>{"扩展边界"}</h3>
           <p>
             将插件定位为浏览器侧控制层，把复杂业务能力继续留在 Core，确保职责清晰且易于扩展。
           </p>
@@ -46,9 +45,9 @@ export function SettingsExtensionCard({ t }: SettingsExtensionCardProps) {
           </div>
         </div>
         <aside className={localStyles.heroAside}>
-          <span>{t("settings.extensionShort")}</span>
+          <span>{"说明扩展和核心服务的职责分工。"}</span>
           <strong>Extension + Core 协同</strong>
-          <p>{t("settings.extensionBody")}</p>
+          <p>{"V1 保持扩展轻量，浏览器控制交给扩展，业务逻辑仍由 Core 承担。"}</p>
         </aside>
       </header>
 
@@ -93,9 +92,9 @@ export function SettingsExtensionCard({ t }: SettingsExtensionCardProps) {
       <div className={localStyles.slotSection}>
         <div className={localStyles.slotHeader}>
           <span>插件扩展区</span>
-          <strong>{t("settings.uiSlots")}</strong>
+          <strong>{"UI 扩展位"}</strong>
         </div>
-        <p>{t("settings.uiSlotsBody")}</p>
+        <p>{"请求详情、模拟工具区、调试页头部、设置页扩展区。"}</p>
         <div className={localStyles.slotWrap}>
           <UiSlotPlaceholder slot="settings-extension-panel" />
         </div>
@@ -103,3 +102,4 @@ export function SettingsExtensionCard({ t }: SettingsExtensionCardProps) {
     </section>
   );
 }
+

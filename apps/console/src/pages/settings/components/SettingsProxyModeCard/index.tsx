@@ -1,10 +1,9 @@
-import type { ConsoleMessageKey } from "../../../../i18n/messages";
-import localStyles from "./index.module.less";
+﻿import localStyles from "./index.module.less";
 
 type ProxyModeItem = {
   key: string;
   title: string;
-  descriptionKey: ConsoleMessageKey;
+  description: string;
 };
 
 type SettingsProxyModeCardProps = {
@@ -13,7 +12,6 @@ type SettingsProxyModeCardProps = {
   allRuleCount: number;
   enabledRuleCount: number;
   modeItems: ProxyModeItem[];
-  t: (key: any, params?: Record<string, string | number>) => string;
 };
 
 export function SettingsProxyModeCard({
@@ -22,14 +20,13 @@ export function SettingsProxyModeCard({
   allRuleCount,
   enabledRuleCount,
   modeItems,
-  t,
 }: SettingsProxyModeCardProps) {
   return (
     <section className={localStyles.card}>
       <div className={localStyles.cardHeader}>
         <div>
-          <span className={localStyles.sectionLabel}>{t("settings.proxyModesTitle")}</span>
-          <h3>{t("settings.proxyModesTitle")}</h3>
+          <span className={localStyles.sectionLabel}>{"代理模式说明"}</span>
+          <h3>{"代理模式说明"}</h3>
         </div>
         <span className={localStyles.sectionBadge}>{currentModeLabel}</span>
       </div>
@@ -41,15 +38,15 @@ export function SettingsProxyModeCard({
             className={`${localStyles.modeCard} ${currentMode === mode.key ? localStyles.modeCardActive : ""}`}
           >
             <strong>{mode.title}</strong>
-            <p>{t(mode.descriptionKey)}</p>
+            <p>{mode.description}</p>
           </article>
         ))}
       </div>
 
       <div className={localStyles.badgeRow}>
-        <span className={localStyles.statusBadge}>{t("settings.currentMode", { mode: currentModeLabel })}</span>
-        <span className={localStyles.statusBadge}>{t("settings.allRules", { count: allRuleCount })}</span>
-        <span className={localStyles.statusBadge}>{t("settings.enabledRules", { count: enabledRuleCount })}</span>
+        <span className={localStyles.statusBadge}>{`当前模式：${currentModeLabel}`}</span>
+        <span className={localStyles.statusBadge}>{`全部规则：${allRuleCount}`}</span>
+        <span className={localStyles.statusBadge}>{`启用中：${enabledRuleCount}`}</span>
       </div>
     </section>
   );

@@ -21,7 +21,6 @@ type MockSidebarProps = {
   groups: string[];
   setCustomGroups: (updater: (current: string[]) => string[]) => void;
   showToast: (message: string, type?: "success" | "error" | "info") => void;
-  t: (key: any, params?: Record<string, string | number>) => string;
   onActivateGroup: (group: string) => Promise<void>;
   onCopyGroup: (group: string) => Promise<void>;
   onDeleteGroup: (group: string) => Promise<void>;
@@ -38,7 +37,6 @@ export function MockSidebar({
   groups,
   setCustomGroups,
   showToast,
-  t,
   onActivateGroup,
   onCopyGroup,
   onDeleteGroup,
@@ -58,12 +56,22 @@ export function MockSidebar({
 
   const nextCreateName = useMemo(() => createName.trim(), [createName]);
   const nextRenameName = useMemo(() => renameName.trim(), [renameName]);
+  const summaryByGroup = useMemo(
+    () =>
+      new Map(
+        groupSummaries.map((summary) => [
+          summary.group,
+          summary,
+        ]),
+      ),
+    [groupSummaries],
+  );
 
   const submitCreateGroup = async () => {
     if (!nextCreateName) return;
     const uniqueName = buildUniqueGroupName(nextCreateName, groups);
     setCustomGroups((current) => (current.includes(uniqueName) ? current : [...current, uniqueName]));
-    showToast(t("mock.groupCreated", { name: uniqueName }));
+    showToast(`已创建分组：${uniqueName}`);
     await onActivateGroup(uniqueName);
     setCreateName("");
     setIsCreateOpen(false);
@@ -80,11 +88,37 @@ export function MockSidebar({
     setRenameName("");
   };
 
+  const openCreateModal = () => {
+    setCreateName("");
+    setIsCreateOpen(true);
+  };
+
+  const openRenameModal = (group: string) => {
+    setRenamingGroup(group);
+    setRenameName(group);
+  };
+
+  const openDeleteGroupConfirm = (group: string) => {
+    void modal.confirm({
+      cancelText: "取消",
+      content: `确认删除分组 ${group} 及其下所有规则？`,
+      icon: null,
+      mask: { closable: false },
+      okButtonProps: { danger: true },
+      okText: "删除分组",
+      onOk: async () => {
+        await onDeleteGroup(group);
+        return undefined;
+      },
+      title: "删除分组",
+    });
+  };
+
   return (
     <aside className={classNames(localStyles.sidebar, localStyles.root)}>
       {contextHolder}
       <Modal
-        cancelText={t("mock.form.cancel")}
+        cancelText={"取消"}
         mask={{ closable: false }}
         okButtonProps={{ disabled: !nextCreateName }}
         okText="确定"
@@ -94,18 +128,18 @@ export function MockSidebar({
         }}
         onOk={() => void submitCreateGroup()}
         open={isCreateOpen}
-        title={t("mock.groupNew")}
+        title={"新建分组"}
       >
         <Input
           autoFocus
           onChange={(event) => setCreateName(event.target.value)}
           onPressEnter={() => void submitCreateGroup()}
-          placeholder={t("mock.groupCreatePrompt")}
+          placeholder={"输入分组名称"}
           value={createName}
         />
       </Modal>
       <Modal
-        cancelText={t("mock.form.cancel")}
+        cancelText={"取消"}
         mask={{ closable: false }}
         okButtonProps={{ disabled: !nextRenameName }}
         okText="确定"
@@ -115,19 +149,19 @@ export function MockSidebar({
         }}
         onOk={() => void submitRenameGroup()}
         open={Boolean(renamingGroup)}
-        title={t("mock.groupRename")}
+        title={"重命名"}
       >
         <Input
           autoFocus
           onChange={(event) => setRenameName(event.target.value)}
           onPressEnter={() => void submitRenameGroup()}
-          placeholder={t("mock.groupRenamePrompt")}
+          placeholder={"输入新的分组名称"}
           value={renameName}
         />
       </Modal>
       <div className={localStyles.sidebarHeader}>
         <div className={localStyles.sidebarTitle}>
-          <strong>{t("mock.groupsTitle")}</strong>
+          <strong>{"分组"}</strong>
         </div>
         <div className={localStyles.headerActions}>
           <button className={classNames(localStyles.secondaryButton, localStyles.compactButton)} onClick={onImportGroups} type="button">
@@ -135,13 +169,10 @@ export function MockSidebar({
           </button>
           <button
             className={classNames(localStyles.secondaryButton, localStyles.compactButton)}
-            onClick={() => {
-              setCreateName("");
-              setIsCreateOpen(true);
-            }}
+            onClick={openCreateModal}
             type="button"
           >
-            {t("mock.groupNew")}
+            {"新建分组"}
           </button>
         </div>
       </div>
@@ -149,13 +180,13 @@ export function MockSidebar({
       <input
         className={localStyles.searchInput}
         onChange={(event) => setGroupSearch(event.target.value)}
-        placeholder={t("mock.groupSearch")}
+        placeholder={"搜索分组"}
         value={groupSearch}
       />
 
       <div className={localStyles.groupList}>
         {filteredGroups.map((group) => {
-          const summary = groupSummaries.find((item) => item.group === group) ?? {
+          const summary = summaryByGroup.get(group) ?? {
             group,
             count: 0,
             enabledCount: 0,
@@ -182,7 +213,7 @@ export function MockSidebar({
                     <strong>{group}</strong>
                   </div>
                   <div className={localStyles.groupMetaRow}>
-                    <span className={localStyles.groupMeta}>{t("mock.groupRuleCount", { count: summary.count })}</span>
+                    <span className={localStyles.groupMeta}>{`${summary.count} 条规则`}</span>
                     {summary.enabledCount > 0 ? (
                       <span className={localStyles.groupMetaAccent}>{summary.enabledCount} 启用</span>
                     ) : null}
@@ -200,7 +231,7 @@ export function MockSidebar({
 
               <div className={localStyles.menuRoot} onClick={(event) => event.stopPropagation()}>
                 <button
-                  aria-label={t("mock.ruleMore")}
+                  aria-label={"更多"}
                   className={classNames(localStyles.iconButton, localStyles.moreButton)}
                   onClick={() => setGroupMenuName(groupMenuName === group ? null : group)}
                   type="button"
@@ -213,38 +244,21 @@ export function MockSidebar({
                       导出分组
                     </button>
                     <button
-                      onClick={() => {
-                        setRenamingGroup(group);
-                        setRenameName(group);
-                      }}
+                      onClick={() => openRenameModal(group)}
                       type="button"
                     >
-                      {t("mock.groupRename")}
+                      {"重命名"}
                     </button>
                     <button onClick={() => void onCopyGroup(group)} type="button">
-                      {t("mock.groupCopy")}
+                      {"复制分组"}
                     </button>
                     {group !== defaultGroup ? (
                       <button
                         className={localStyles.menuDanger}
-                        onClick={() => {
-                          void modal.confirm({
-                            cancelText: t("mock.form.cancel"),
-                            content: t("mock.groupDeleteConfirm", { name: group }),
-                            icon: null,
-                            mask: { closable: false },
-                            okButtonProps: { danger: true },
-                            okText: t("mock.groupDelete"),
-                            onOk: async () => {
-                              await onDeleteGroup(group);
-                              return undefined;
-                            },
-                            title: t("mock.groupDelete"),
-                          });
-                        }}
+                        onClick={() => openDeleteGroupConfirm(group)}
                         type="button"
                       >
-                        {t("mock.groupDelete")}
+                        {"删除分组"}
                       </button>
                     ) : null}
                   </div>
@@ -257,3 +271,4 @@ export function MockSidebar({
     </aside>
   );
 }
+

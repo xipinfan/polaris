@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { buildCurl } from "../../features/common/curl";
 import { useToast } from "../../features/feedback/ToastProvider";
-import { useConsoleI18n } from "../../i18n/I18nProvider";
+import { getBrowserHostname } from "../../lib/browser/runtime";
 import { toastQueryError } from "../../lib/query/queryOptions";
 import { copyTextToClipboard } from "../../utils/clipboard";
 import { MockRuleModal } from "../mock/components/MockRuleModal";
@@ -20,21 +20,19 @@ import { getCertificatePlatform } from "./utils/trafficFormatters";
 export function TrafficPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useConsoleI18n();
   const { showToast } = useToast();
   const workspace = useTrafficWorkspace();
-  const defaultGroup = t("mock.defaultGroup");
+  const defaultGroup = "默认组";
   const mockWorkspace = useMockWorkspace({
     defaultGroup,
     locationState: null,
     pathname: location.pathname,
     showToast,
-    t,
   });
   const [isProxyGuideOpen, setIsProxyGuideOpen] = useState(false);
 
   const certificatePlatform = useMemo(() => getCertificatePlatform(), []);
-  const browserHostname = window.location.hostname || "127.0.0.1";
+  const browserHostname = getBrowserHostname();
   const rootCertificateUrl = workspace.settings
     ? `http://${browserHostname}:${workspace.settings.localApiPort}/api/certificates/root-ca`
     : "#";
@@ -42,7 +40,7 @@ export function TrafficPage() {
   const copyText = async (value: string) => {
     try {
       await copyTextToClipboard(value);
-      showToast(t("common.copied"));
+      showToast("已复制到剪贴板");
     } catch {
       showToast("复制失败", "error");
     }
@@ -54,7 +52,7 @@ export function TrafficPage() {
     }
     try {
       const replayed = await workspace.replaySelectedRequest(workspace.selected.id);
-      showToast(t("common.replayedRequest", { status: replayed.statusCode }));
+      showToast(`已重放请求，状态码 ${replayed.statusCode}`);
     } catch (error) {
       toastQueryError(showToast, error, "操作失败");
     }
@@ -85,7 +83,7 @@ export function TrafficPage() {
   const clearRequests = async () => {
     try {
       await workspace.clearRequests();
-      showToast(t("common.cleared"));
+      showToast("已清空实时请求");
     } catch (error) {
       toastQueryError(showToast, error, "操作失败");
     }
@@ -97,7 +95,7 @@ export function TrafficPage() {
     }
     try {
       await copyTextToClipboard(buildCurl(workspace.selected));
-      showToast(t("common.curlCopied"));
+      showToast("已复制 curl 命令");
     } catch {
       showToast("复制失败", "error");
     }
@@ -136,7 +134,6 @@ export function TrafficPage() {
         requests={workspace.requests}
         selected={workspace.selected}
         settings={workspace.settings}
-        t={t}
       />
 
       <TrafficCertificateModal
@@ -146,7 +143,7 @@ export function TrafficPage() {
         onCopyUrl={() => {
           void copyTextToClipboard(rootCertificateUrl)
             .then(() => {
-              showToast(t("traffic.certificate.copied"));
+              showToast("根证书下载链接已复制");
             })
             .catch(() => {
               showToast("复制失败", "error");
@@ -154,7 +151,6 @@ export function TrafficPage() {
         }}
         rootCertificateUrl={rootCertificateUrl}
         settings={workspace.settings}
-        t={t}
       />
 
       <TrafficProxyGuideModal
@@ -169,7 +165,6 @@ export function TrafficPage() {
           recordBodyRef={workspace.recordBodyRef}
           requests={workspace.requests}
           selected={workspace.selected}
-          t={t}
           visibleRequests={workspace.visibleRequests}
         />
 
@@ -182,7 +177,6 @@ export function TrafficPage() {
           onOpenMockPage={() => navigate("/mock")}
           onReplay={() => void replaySelected()}
           selected={workspace.selected}
-          t={t}
         />
       </section>
 
@@ -195,9 +189,10 @@ export function TrafficPage() {
         setForm={mockWorkspace.setForm}
         setIsOpen={mockWorkspace.setIsModalOpen}
         showToast={showToast}
-        t={t}
         onSave={mockWorkspace.saveRule}
       />
     </div>
   );
 }
+
+

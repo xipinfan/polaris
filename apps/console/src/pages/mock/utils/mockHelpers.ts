@@ -1,5 +1,4 @@
-import type { MockRule } from "@polaris/shared-types";
-import type { TranslateFn } from "../../../i18n/I18nProvider";
+﻿import type { MockRule } from "@polaris/shared-types";
 import { persistenceKeys } from "../../../lib/persistence";
 import type { MockFormState } from "../types";
 
@@ -113,19 +112,21 @@ export function getUrlSummary(url: string) {
   }
 }
 
-export function getResponseKind(rule: MockRule, t: TranslateFn) {
+export function getResponseKind(rule: MockRule) {
   const contentType = rule.responseHeaders["content-type"] ?? rule.responseHeaders["Content-Type"] ?? "";
-  if (typeof rule.responseBody === "object" && rule.responseBody !== null) return t("mock.ruleResponseStaticJson");
-  if (String(contentType).toLowerCase().includes("json")) return t("mock.ruleResponseStaticJson");
-  if (typeof rule.responseBody === "string") return t("mock.ruleResponseStaticText");
-  return t("mock.ruleResponseFixed");
+  if (typeof rule.responseBody === "object" && rule.responseBody !== null) return "静态数据";
+  if (String(contentType).toLowerCase().includes("json")) return "静态数据";
+  if (typeof rule.responseBody === "string") return "静态文本";
+  return "固定返回";
 }
 
-export function getMatchSummary(queryCount: number, t: TranslateFn) {
+export function getMatchSummary(queryCount: number) {
   return [
-    t("mock.ruleMatchMode"),
-    t("mock.ruleMatchQueryCount", { count: queryCount }),
-    t("mock.ruleMatchHeaderCount", { count: 0 }),
-    t("mock.ruleMatchBodyCount", { count: 0 }),
+    "精确匹配",
+    `查询 ${queryCount}`,
+    `请求头 ${0}`,
+    `请求体 ${0}`,
   ].join(" · ");
 }
+
+

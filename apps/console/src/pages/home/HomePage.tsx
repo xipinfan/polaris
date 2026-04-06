@@ -5,7 +5,6 @@ import { useSetProxyForwardModeMutation } from "../../domains/proxy-forward/muta
 import { useHomeOverviewQuery } from "../../domains/home/queries";
 import { StatusState } from "../../features/common/StatusState";
 import { useToast } from "../../features/feedback/ToastProvider";
-import { useConsoleI18n } from "../../i18n/I18nProvider";
 import { toastQueryError } from "../../lib/query/queryOptions";
 import { HomeContent } from "./components/HomeContent";
 import { HomeHero } from "./components/HomeHero";
@@ -17,7 +16,6 @@ const { Paragraph, Title } = Typography;
 
 export function HomePage() {
   const navigate = useNavigate();
-  const { t } = useConsoleI18n();
   const { showToast } = useToast();
   const overviewQuery = useHomeOverviewQuery();
   const setProxyModeMutation = useSetProxyForwardModeMutation();
@@ -28,8 +26,8 @@ export function HomePage() {
       await setProxyModeMutation.mutateAsync(mode);
       showToast(
         mode === "direct"
-          ? t("common.switchedDirect")
-          : t("common.switchedRules"),
+          ? "已切换为直连模式"
+          : "已切换为规则代理模式",
       );
       await overviewQuery.refetch();
     } catch (error) {
@@ -41,8 +39,8 @@ export function HomePage() {
     snapshot?.status.proxyMode === "rules" ? "direct" : "rules";
   const primaryProxyLabel =
     primaryProxyAction === "rules"
-      ? t("home.enableRules")
-      : t("home.backDirect");
+      ? "开启规则代理"
+      : "切回直连";
 
   const recentMocks: HomeRecentMock[] = useMemo(
     () =>
@@ -64,51 +62,49 @@ export function HomePage() {
         {
           key: "traffic",
           index: "01",
-          label: t("home.flow.capture"),
-          title: t("home.quick.traffic"),
+          label: "查看实时流量",
+          title: "查看实时请求",
           points: [
-            t("home.metric.recentRequests"),
-            t("home.activeRequests", {
-              count: snapshot.status.activeRequestCount,
-            }),
+            "最近请求",
+            `活跃请求 ${snapshot.status.activeRequestCount}`,
           ],
-          action: t("home.viewAll"),
+          action: "查看全部",
           primary: true,
           onClick: () => navigate("/traffic"),
         },
         {
           key: "debug",
           index: "02",
-          label: t("home.flow.debug"),
-          title: t("home.quick.debug"),
-          points: [t("home.workspaceLabel"), "Adjust headers and body quickly"],
-          action: t("home.openDebug"),
+          label: "带入调试",
+          title: "新建调试请求",
+          points: ["当前工作台", "Adjust headers and body quickly"],
+          action: "带入调试",
           primary: false,
           onClick: () => navigate("/debug"),
         },
         {
           key: "mock",
           index: "03",
-          label: t("home.flow.mock"),
-          title: t("home.quick.mock"),
+          label: "转成模拟",
+          title: "管理模拟",
           points: [
-            t("home.metric.mockVariants"),
+            "模拟方案",
             `当前模式 · ${getProxyModeLabel(snapshot.status.proxyMode)}`,
           ],
-          action: t("home.quick.mock"),
+          action: "管理模拟",
           primary: false,
           onClick: () => navigate("/mock"),
         },
         {
           key: "settings",
           index: "04",
-          label: t("home.flow.save"),
-          title: t("home.quick.settings"),
+          label: "保存为资产",
+          title: "打开设置",
           points: [
             "Manage local service and certificate",
             "Review proxy mode and port",
           ],
-          action: t("home.quick.settings"),
+          action: "打开设置",
           primary: false,
           onClick: () => navigate("/settings"),
         },
@@ -119,8 +115,8 @@ export function HomePage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerCopy}>
-          <Title level={2}>{t("home.title")}</Title>
-          <Paragraph>{t("home.subtitle")}</Paragraph>
+          <Title level={2}>{"首页"}</Title>
+          <Paragraph>{"把服务状态、最近流量、沉淀资产和下一步操作集中在一个现代化入口里。"}</Paragraph>
         </div>
       </header>
 
@@ -154,7 +150,6 @@ export function HomePage() {
             primaryProxyAction={primaryProxyAction}
             primaryProxyLabel={primaryProxyLabel}
             snapshot={snapshot}
-            t={t}
           />
           <HomeContent
             enabledMockCount={enabledMockCount}
@@ -163,7 +158,6 @@ export function HomePage() {
             onGoTraffic={() => navigate("/traffic")}
             quickEntries={quickEntries}
             recentMocks={recentMocks}
-            t={t}
           />
         </>
       )}

@@ -1,6 +1,5 @@
 ﻿import type { RequestRecord } from "@polaris/shared-types";
 import type { RefObject } from "react";
-import type { TranslateFn } from "../../../../i18n/I18nProvider";
 import { uiSelectors } from "../../../../stores/selectors";
 import { useUiStore } from "../../../../stores/uiStore";
 import localStyles from "./index.module.less";
@@ -45,7 +44,6 @@ type TrafficRequestPaneProps = {
   visibleRequests: RequestRecord[];
   recordBodyRef: RefObject<HTMLDivElement | null>;
   onSelectRequest: (id: string) => void;
-  t: TranslateFn;
 };
 
 export function TrafficRequestPane({
@@ -54,7 +52,6 @@ export function TrafficRequestPane({
   visibleRequests,
   recordBodyRef,
   onSelectRequest,
-  t,
 }: TrafficRequestPaneProps) {
   const keyword = useUiStore(uiSelectors.trafficKeyword);
   const hostOnly = useUiStore(uiSelectors.trafficHostOnly);
@@ -75,19 +72,19 @@ export function TrafficRequestPane({
           <input
             className={localStyles.filterInput}
             onChange={(event) => setKeyword(event.target.value)}
-            placeholder={t("traffic.searchPlaceholder")}
+            placeholder={"搜索 URL 或请求体"}
             value={keyword}
           />
           <input
             className={localStyles.filterInput}
             onChange={(event) => setHostOnly(event.target.value)}
-            placeholder={t("traffic.hostPlaceholder")}
+            placeholder={"主机过滤"}
             value={hostOnly}
           />
           <input
             className={localStyles.filterInput}
             onChange={(event) => setStatusCode(event.target.value)}
-            placeholder={t("traffic.statusPlaceholder")}
+            placeholder={"状态码"}
             value={statusCode}
           />
           <select
@@ -95,7 +92,7 @@ export function TrafficRequestPane({
             onChange={(event) => setMethod(event.target.value)}
             value={method}
           >
-            <option value="">{t("traffic.allMethods")}</option>
+            <option value="">{"全部方法"}</option>
             <option value="GET">GET</option>
             <option value="POST">POST</option>
             <option value="PUT">PUT</option>
@@ -107,13 +104,13 @@ export function TrafficRequestPane({
           <div className={localStyles.segmentedControl}>
             {(
               [
-                ["all", t("traffic.focus.all")],
-                ["errors", t("traffic.focus.errors")],
-                ["https", t("traffic.focus.https")],
-                ["debug", t("traffic.focus.debug")],
-                ["mock", t("traffic.focus.mock")],
-                ["proxyForward", t("traffic.focus.proxyForward")],
-                ["direct", t("traffic.focus.direct")],
+                ["all", "全部"],
+                ["errors", "仅错误"],
+                ["https", "仅 HTTPS"],
+                ["debug", "调试来源"],
+                ["mock", "仅模拟"],
+                ["proxyForward", "仅转发"],
+                ["direct", "仅直连"],
               ] as const
             ).map(([value, label]) => (
               <button
@@ -136,14 +133,14 @@ export function TrafficRequestPane({
         <div className={localStyles.requestScroll} ref={recordBodyRef}>
           <div className={localStyles.requestHeader}>
             <span>#</span>
-            <span>{t("traffic.column.status")}</span>
-            <span>{t("traffic.column.method")}</span>
-            <span>{t("traffic.column.protocol")}</span>
-            <span>{t("traffic.column.route")}</span>
-            <span>{t("traffic.column.host")}</span>
-            <span>{t("traffic.column.path")}</span>
-            <span>{t("traffic.column.type")}</span>
-            <span>{t("traffic.column.time")}</span>
+            <span>{"状态"}</span>
+            <span>{"方法"}</span>
+            <span>{"协议"}</span>
+            <span>{"处理结果"}</span>
+            <span>{"主机"}</span>
+            <span>{"请求路径"}</span>
+            <span>{"类型"}</span>
+            <span>{"时间"}</span>
           </div>
           <div className={localStyles.requestList}>
             {visibleRequests.map((item, index) => (
@@ -169,10 +166,10 @@ export function TrafficRequestPane({
                     localStyles.resolutionBadge,
                     resolutionBadgeToneClassMap[getRequestResolutionMode(item)],
                   )}
-                  title={getRequestResolutionTooltip(item, t)}
+                  title={getRequestResolutionTooltip(item)}
                 >
                   <span className={localStyles.resolutionGlyph} aria-hidden="true" />
-                  {getRequestResolutionLabel(item, t)}
+                  {getRequestResolutionLabel(item)}
                 </span>
                 <span title={item.host}>{item.host}</span>
                 <strong title={item.path}>{item.path}</strong>
@@ -183,15 +180,15 @@ export function TrafficRequestPane({
 
             {visibleRequests.length === 0 && requests.length > 0 ? (
               <div className={cx(localStyles.emptyCard, localStyles.compactEmpty)}>
-                <h3>{t("traffic.emptyFilteredTitle")}</h3>
-                <p>{t("traffic.emptyFilteredBody")}</p>
+                <h3>{"当前筛选条件下暂无结果"}</h3>
+                <p>{"试试清空关键词或切换查看范围，请求列表会立即更新。"}</p>
               </div>
             ) : null}
 
             {requests.length === 0 ? (
               <div className={localStyles.emptyCard}>
-                <h3>{t("traffic.noTrafficTitle")}</h3>
-                <p>{t("traffic.noTrafficBody")}</p>
+                <h3>{"还没有抓到请求"}</h3>
+                <p>{"先打开代理，再刷新目标页面，请求会自动出现在这里。"}</p>
               </div>
             ) : null}
           </div>
@@ -200,3 +197,5 @@ export function TrafficRequestPane({
     </section>
   );
 }
+
+

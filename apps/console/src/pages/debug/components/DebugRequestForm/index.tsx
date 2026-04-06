@@ -15,7 +15,6 @@ type DebugRequestFormProps = {
     body: unknown;
     tags: string[];
   };
-  t: (key: any, params?: Record<string, string | number>) => string;
   setName: (value: string) => void;
   setMethod: (value: string) => void;
   setUrl: (value: string) => void;
@@ -32,7 +31,6 @@ export function DebugRequestForm({
   url,
   body,
   currentDraft,
-  t,
   setName,
   setMethod,
   setUrl,
@@ -53,13 +51,13 @@ export function DebugRequestForm({
     >
       <div className={localStyles.panelHeading}>
         <div>
-          <h3>{t("debug.formTitle")}</h3>
+          <h3>{"请求草稿"}</h3>
         </div>
       </div>
       <input
         data-testid="debug-name-input"
         onChange={(event) => setName(event.target.value)}
-        placeholder={t("debug.namePlaceholder")}
+        placeholder={"请求名称（可选）"}
         value={name}
       />
       <select data-testid="debug-method-select" onChange={(event) => setMethod(event.target.value)} value={method}>
@@ -71,25 +69,25 @@ export function DebugRequestForm({
       <input
         data-testid="debug-url-input"
         onChange={(event) => setUrl(event.target.value)}
-        placeholder={t("debug.urlPlaceholder")}
+        placeholder={"完整 URL"}
         value={url}
       />
       <textarea
         data-testid="debug-body-input"
         onChange={(event) => setBody(event.target.value)}
-        placeholder={t("debug.bodyPlaceholder")}
+        placeholder={"请求体 JSON"}
         rows={12}
         value={body}
       />
       <div className={localStyles.buttonGrid}>
         <button className={localStyles.primaryAction} data-testid="debug-send-button" type="submit">
-          {t("debug.send")}
+          {"发送请求"}
         </button>
         <button className={localStyles.ghostButton} data-testid="debug-save-button" onClick={onSave} type="button">
-          {t("debug.save")}
+          {"保存请求"}
         </button>
         <button className={localStyles.ghostButton} data-testid="debug-clear-button" onClick={onReset} type="button">
-          {t("debug.clear")}
+          {"清空"}
         </button>
         <button
           className={localStyles.ghostButton}
@@ -97,7 +95,7 @@ export function DebugRequestForm({
           onClick={() => onCopyCurl(buildCurl(currentDraft))}
           type="button"
         >
-          {t("debug.copyCurl")}
+          {"复制 curl"}
         </button>
       </div>
     </form>

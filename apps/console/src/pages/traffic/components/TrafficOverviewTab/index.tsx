@@ -1,6 +1,5 @@
 ﻿import type { RequestRecord } from "@polaris/shared-types";
 import type { RefObject } from "react";
-import type { TranslateFn } from "../../../../i18n/I18nProvider";
 import { JsonBlock } from "../../../../features/common/JsonBlock";
 import { KeyValueBlock } from "../../../../features/common/KeyValueBlock";
 import localStyles from "./index.module.less";
@@ -17,21 +16,20 @@ type TrafficOverviewTabProps = {
   inspectorBodyRef: RefObject<HTMLDivElement | null>;
   onCopyText: (value: string) => Promise<void>;
   selected: RequestRecord;
-  t: TranslateFn;
 };
 
-const buildFacts = (selected: RequestRecord, t: TranslateFn) => {
+const buildFacts = (selected: RequestRecord) => {
   const facts: Array<[string, string]> = [
     ["URL", selected.url],
-    [t("traffic.column.method"), selected.method],
-    [t("traffic.column.protocol"), getProtocolLabel(selected)],
-    [t("traffic.column.status"), String(selected.statusCode)],
-    [t("traffic.column.host"), selected.host],
-    [t("traffic.column.path"), selected.path],
-    [t("traffic.column.type"), getContentType(selected)],
-    [t("detail.source"), selected.source.toUpperCase()],
-    [t("detail.duration"), `${selected.duration} ms`],
-    [t("detail.capturedAt"), new Date(selected.createdAt).toLocaleString()],
+    ["方法", selected.method],
+    ["协议", getProtocolLabel(selected)],
+    ["状态", String(selected.statusCode)],
+    ["主机", selected.host],
+    ["请求路径", selected.path],
+    ["类型", getContentType(selected)],
+    ["来源", selected.source.toUpperCase()],
+    ["耗时", `${selected.duration} ms`],
+    ["捕获时间", new Date(selected.createdAt).toLocaleString()],
   ];
 
   const resolutionTarget = selected.resolution?.target;
@@ -39,7 +37,7 @@ const buildFacts = (selected: RequestRecord, t: TranslateFn) => {
     const originalAddress = `${selected.host}${selected.path}`;
     const targetAddress = resolutionTarget.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "");
     if (targetAddress !== originalAddress) {
-      facts.splice(1, 0, [t("detail.resolution.target"), resolutionTarget]);
+      facts.splice(1, 0, ["转发目标", resolutionTarget]);
     }
   }
 
@@ -55,31 +53,22 @@ const decisionCardClassMap = {
   unknown: localStyles.decisionCardUnknown,
 };
 
-export function TrafficOverviewTab({
-  inspectorBodyRef,
-  onCopyText,
-  selected,
-  t,
-}: TrafficOverviewTabProps) {
+export function TrafficOverviewTab({ inspectorBodyRef, onCopyText, selected }: TrafficOverviewTabProps) {
   return (
     <div className={cx(localStyles.detailScroll, localStyles.root)} ref={inspectorBodyRef}>
       <section className={localStyles.detailSummary}>
         <div className={localStyles.detailSummaryHead}>
-          <strong>{t("detail.title")}</strong>
+          <strong>{"请求详情"}</strong>
           <span>{selected.method} {selected.path}</span>
         </div>
         <div className={localStyles.detailFacts}>
-          {buildFacts(selected, t).map(([label, value]) => (
+          {buildFacts(selected).map(([label, value]) => (
             <div className={localStyles.detailFactRow} key={label}>
               <span>{label}</span>
               <div className={localStyles.detailFactValue}>
                 <strong>{value}</strong>
-                <button
-                  className={localStyles.inlineCopyButton}
-                  onClick={() => void onCopyText(value)}
-                  type="button"
-                >
-                  {t("json.copy")}
+                <button className={localStyles.inlineCopyButton} onClick={() => void onCopyText(value)} type="button">
+                  {"复制"}
                 </button>
               </div>
             </div>
@@ -88,54 +77,48 @@ export function TrafficOverviewTab({
       </section>
 
       <section className={cx(localStyles.decisionCard, decisionCardClassMap[getRequestResolutionMode(selected)])}>
-        <strong>{t("detail.resolution.title")}</strong>
+        <strong>{"处理决策"}</strong>
         <div className={localStyles.decisionRows}>
           <div className={localStyles.decisionRow}>
-            <span>{t("detail.resolution.mode")}</span>
-            <strong>{getRequestResolutionLabel(selected, t)}</strong>
+            <span>{"处理模式"}</span>
+            <strong>{getRequestResolutionLabel(selected)}</strong>
           </div>
           <div className={localStyles.decisionRow}>
-            <span>{t("detail.resolution.source")}</span>
-            <strong>{getRequestResolutionSourceLabel(selected, t)}</strong>
+            <span>{"决策来源"}</span>
+            <strong>{getRequestResolutionSourceLabel(selected)}</strong>
           </div>
           <div className={localStyles.decisionRow}>
-            <span>{t("detail.resolution.rule")}</span>
+            <span>{"命中规则"}</span>
             <strong>{selected.resolution?.matchedRuleName ?? selected.resolution?.matchedRuleId ?? "-"}</strong>
           </div>
           <div className={localStyles.decisionRow}>
-            <span>{t("detail.resolution.target")}</span>
+            <span>{"转发目标"}</span>
             <strong>{selected.resolution?.target ?? "-"}</strong>
           </div>
           <div className={localStyles.decisionRow}>
-            <span>{t("detail.resolution.reason")}</span>
-            <strong>{selected.resolution?.reason ?? t("detail.resolution.none")}</strong>
+            <span>{"命中说明"}</span>
+            <strong>{selected.resolution?.reason ?? "无规则命中"}</strong>
           </div>
         </div>
       </section>
 
       <section className={localStyles.detailSection}>
-        <KeyValueBlock title={t("detail.queryParams")} value={selected.requestQuery} />
+        <KeyValueBlock title={"查询参数"} value={selected.requestQuery} />
       </section>
       <section className={localStyles.detailSection}>
-        <KeyValueBlock title={t("detail.requestHeaders")} value={selected.requestHeaders} />
+        <KeyValueBlock title={"请求头"} value={selected.requestHeaders} />
       </section>
       <section className={localStyles.detailSection}>
-        <KeyValueBlock
-          copyMode="row"
-          title={t("detail.responseHeaders")}
-          value={selected.responseHeaders}
-        />
+        <KeyValueBlock copyMode="row" title={"响应头"} value={selected.responseHeaders} />
       </section>
       <div className={localStyles.detailBodyGrid}>
         <section className={localStyles.detailSection}>
-          <JsonBlock title={t("detail.requestBody")} value={selected.requestBody} />
+          <JsonBlock title={"请求体"} value={selected.requestBody} />
         </section>
         <section className={localStyles.detailSection}>
-          <JsonBlock title={t("detail.responseBody")} value={selected.responseBody} />
+          <JsonBlock title={"响应体"} value={selected.responseBody} />
         </section>
       </div>
     </div>
   );
 }
-
-

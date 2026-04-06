@@ -1,31 +1,30 @@
-import localStyles from "./index.module.less";
+﻿import localStyles from "./index.module.less";
 
 type SettingsMcpCardProps = {
   enabled: boolean;
   tools: string[];
-  t: (key: any, params?: Record<string, string | number>) => string;
 };
 
-export function SettingsMcpCard({ enabled, tools, t }: SettingsMcpCardProps) {
+export function SettingsMcpCard({ enabled, tools }: SettingsMcpCardProps) {
   return (
     <section className={localStyles.card}>
       <div className={localStyles.cardHeader}>
         <div>
-          <span className={localStyles.sectionLabel}>{t("settings.mcpTitle")}</span>
-          <h3>{t("settings.mcpTitle")}</h3>
+          <span className={localStyles.sectionLabel}>{"MCP 接入"}</span>
+          <h3>{"MCP 接入"}</h3>
         </div>
         <span className={`${localStyles.statusBadge} ${enabled ? localStyles.statusBadgeSuccess : localStyles.statusBadgeMuted}`}>
-          {enabled ? t("settings.mcpEnabledState") : t("settings.mcpDisabledState")}
+          {enabled ? "已启用" : "未启用"}
         </span>
       </div>
 
       <div className={localStyles.infoGrid}>
         <div className={localStyles.infoItem}>
-          <span>{t("settings.mcpStatus")}</span>
-          <strong>{enabled ? t("settings.mcpEnabledState") : t("settings.mcpDisabledState")}</strong>
+          <span>{"状态"}</span>
+          <strong>{enabled ? "已启用" : "未启用"}</strong>
         </div>
         <div className={`${localStyles.infoItem} ${localStyles.infoItemFull}`}>
-          <span>{t("settings.baseTools")}</span>
+          <span>{"基础工具"}</span>
           <div className={localStyles.toolList}>
             {tools.map((tool) => (
               <code key={tool} className={localStyles.toolChip}>
@@ -38,3 +37,4 @@ export function SettingsMcpCard({ enabled, tools, t }: SettingsMcpCardProps) {
     </section>
   );
 }
+

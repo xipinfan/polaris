@@ -2,7 +2,6 @@
 import { useLocation } from "react-router-dom";
 import { asRecord, buildExportEnvelope, downloadJson, pickJsonFile } from "../../features/common/importExport";
 import { useToast } from "../../features/feedback/ToastProvider";
-import { useConsoleI18n } from "../../i18n/I18nProvider";
 import { MockRuleModal } from "./components/MockRuleModal";
 import { MockRulesWorkspace } from "./components/MockRulesWorkspace";
 import { MockSidebar } from "./components/MockSidebar";
@@ -26,18 +25,16 @@ function getMethodClass(method: string) {
 }
 
 export function MockPage() {
-  const { t } = useConsoleI18n();
   const { showToast } = useToast();
   const location = useLocation();
   const locationState = location.state as MockPageLocationState | null;
-  const defaultGroup = t("mock.defaultGroup");
+  const defaultGroup = "默认组";
 
   const workspace = useMockWorkspace({
     defaultGroup,
     locationState,
     pathname: location.pathname,
     showToast,
-    t,
   });
 
   const exportGroup = (groupName: string) => {
@@ -99,8 +96,8 @@ export function MockPage() {
     <div className={styles.page}>
       <section className={styles.header}>
         <div className={styles.headerCopy}>
-          <h2>{t("mock.title")}</h2>
-          <p>{t("mock.currentGroupBody")}</p>
+          <h2>{"模拟规则"}</h2>
+          <p>{"仅当前分组生效，切换分组即切换整组规则。"}</p>
         </div>
       </section>
       <section className={styles.workspace}>
@@ -112,7 +109,6 @@ export function MockPage() {
           groups={workspace.groups}
           setCustomGroups={workspace.setCustomGroups}
           showToast={showToast}
-          t={t}
           onActivateGroup={workspace.activateGroup}
           onCopyGroup={workspace.copyGroup}
           onDeleteGroup={workspace.deleteGroup}
@@ -153,7 +149,6 @@ export function MockPage() {
           onToggleCurrentGroup={workspace.toggleCurrentGroup}
           onToggleRule={workspace.toggleRule}
           ruleBlocks={workspace.currentGroupRuleBlocks}
-          t={t}
         />
       </section>
       <MockRuleModal
@@ -166,8 +161,9 @@ export function MockPage() {
         setForm={workspace.setForm}
         setIsOpen={workspace.setIsModalOpen}
         showToast={showToast}
-        t={t}
       />
     </div>
   );
 }
+
+
