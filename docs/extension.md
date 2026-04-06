@@ -48,7 +48,7 @@ polaris extension-path
 
 如果你是从源码仓库自己构建的，也可以直接加载：
 
-- [apps/extension/dist](/E:/code/polaris/apps/extension/dist)
+- [apps/extension/dist](../apps/extension/dist)
 
 但对普通使用者来说，更推荐直接用 `polaris extension-path`。
 
@@ -197,4 +197,4 @@ polaris extension-path
 
 对应文档：
 
-- [Web Console 使用说明](/E:/code/polaris/docs/console.md)
+- [Web Console 使用说明](./console.md)

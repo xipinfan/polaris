@@ -5,10 +5,10 @@
 如果你只是想安装并使用 Polaris，不需要先看这份文档。  
 更适合先看：
 
-- [README](/E:/code/polaris/README.md)
-- [Web Console 使用说明](/E:/code/polaris/docs/console.md)
-- [浏览器扩展使用说明](/E:/code/polaris/docs/extension.md)
-- [MCP 接入说明](/E:/code/polaris/docs/mcp.md)
+- [README](../README.md)
+- [Web Console 使用说明](./console.md)
+- [浏览器扩展使用说明](./extension.md)
+- [MCP 接入说明](./mcp.md)
 
 ---
 
@@ -197,8 +197,8 @@ POLARIS_HOME
 
 如果你在做这些事，建议对应看：
 
-- 改产品使用说明：先看 [README](/E:/code/polaris/README.md)
-- 改 Console 交互：看 [Web Console 使用说明](/E:/code/polaris/docs/console.md)
-- 改浏览器入口：看 [浏览器扩展使用说明](/E:/code/polaris/docs/extension.md)
-- 改 AI 接入：看 [MCP 接入说明](/E:/code/polaris/docs/mcp.md)
-- 改测试：看 [E2E 与视觉测试](/E:/code/polaris/docs/e2e-testing.md)
+- 改产品使用说明：先看 [README](../README.md)
+- 改 Console 交互：看 [Web Console 使用说明](./console.md)
+- 改浏览器入口：看 [浏览器扩展使用说明](./extension.md)
+- 改 AI 接入：看 [MCP 接入说明](./mcp.md)
+- 改测试：看 [E2E 与视觉测试](./e2e-testing.md)

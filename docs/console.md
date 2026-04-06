@@ -278,6 +278,6 @@ Console 很适合看请求、调试请求、做 Mock、看设置。
 
 对应文档：
 
-- [浏览器扩展使用说明](/E:/code/polaris/docs/extension.md)
-- [MCP 接入说明](/E:/code/polaris/docs/mcp.md)
-- [开发说明](/E:/code/polaris/docs/development.md)
+- [浏览器扩展使用说明](./extension.md)
+- [MCP 接入说明](./mcp.md)
+- [开发说明](./development.md)

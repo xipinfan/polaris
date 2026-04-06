@@ -269,6 +269,6 @@ polaris mcp-url
 
 ## 还想看别的文档
 
-- [README](/E:/code/polaris/README.md)
-- [Web Console 使用说明](/E:/code/polaris/docs/console.md)
-- [浏览器扩展使用说明](/E:/code/polaris/docs/extension.md)
+- [README](../README.md)
+- [Web Console 使用说明](./console.md)
+- [浏览器扩展使用说明](./extension.md)

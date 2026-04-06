@@ -232,14 +232,14 @@ polaris mcp-stdio
 
 如果你只是来使用 Polaris，优先看这几份：
 
-- [Web Console 使用说明](/E:/code/polaris/docs/console.md)
-- [浏览器扩展使用说明](/E:/code/polaris/docs/extension.md)
-- [MCP 接入说明](/E:/code/polaris/docs/mcp.md)
+- [Web Console 使用说明](./docs/console.md)
+- [浏览器扩展使用说明](./docs/extension.md)
+- [MCP 接入说明](./docs/mcp.md)
 
 如果你要参与开发，再看：
 
-- [开发说明](/E:/code/polaris/docs/development.md)
-- [E2E 与视觉测试](/E:/code/polaris/docs/e2e-testing.md)
+- [开发说明](./docs/development.md)
+- [E2E 与视觉测试](./docs/e2e-testing.md)
 
 ---
 
@@ -296,4 +296,4 @@ corepack pnpm dev
 
 更多内容见：
 
-- [开发说明](/E:/code/polaris/docs/development.md)
+- [开发说明](./docs/development.md)

@@ -53,7 +53,7 @@
 
 当前 `apps/console` 的 ESLint 配置非常薄弱：
 
-- [`apps/console/eslint.config.js`](/E:/code/polaris/apps/console/eslint.config.js)
+- [`apps/console/eslint.config.js`](../../apps/console/eslint.config.js)
 
 目前通用规则基本为空，只保留了一条页面层禁止直接依赖 `services/*` 的导入限制。  
 这意味着：
@@ -68,9 +68,9 @@
 
 以下文件已经明显超过“页面编排层”应有复杂度：
 
-- [`apps/console/src/pages/proxy-forward/ProxyForwardPage.tsx`](/E:/code/polaris/apps/console/src/pages/proxy-forward/ProxyForwardPage.tsx)
-- [`apps/console/src/pages/mock/hooks/useMockWorkspace.ts`](/E:/code/polaris/apps/console/src/pages/mock/hooks/useMockWorkspace.ts)
-- [`apps/console/src/pages/mock/components/MockRulesWorkspace/index.tsx`](/E:/code/polaris/apps/console/src/pages/mock/components/MockRulesWorkspace/index.tsx)
+- [`apps/console/src/pages/proxy-forward/ProxyForwardPage.tsx`](../../apps/console/src/pages/proxy-forward/ProxyForwardPage.tsx)
+- [`apps/console/src/pages/mock/hooks/useMockWorkspace.ts`](../../apps/console/src/pages/mock/hooks/useMockWorkspace.ts)
+- [`apps/console/src/pages/mock/components/MockRulesWorkspace/index.tsx`](../../apps/console/src/pages/mock/components/MockRulesWorkspace/index.tsx)
 
 这些文件同时承担了：
 
@@ -94,7 +94,7 @@
 
 以代理转发页面为例：
 
-- [`apps/console/src/pages/proxy-forward/ProxyForwardPage.tsx`](/E:/code/polaris/apps/console/src/pages/proxy-forward/ProxyForwardPage.tsx)
+- [`apps/console/src/pages/proxy-forward/ProxyForwardPage.tsx`](../../apps/console/src/pages/proxy-forward/ProxyForwardPage.tsx)
 
 其中 `commitGroups` 会同时写：
 
@@ -113,9 +113,9 @@
 
 当前直接访问浏览器 API 的代码分散在多个页面和组件里，例如：
 
-- [`apps/console/src/app/router.tsx`](/E:/code/polaris/apps/console/src/app/router.tsx)
-- [`apps/console/src/pages/settings/SettingsPage.tsx`](/E:/code/polaris/apps/console/src/pages/settings/SettingsPage.tsx)
-- [`apps/console/src/pages/mock/hooks/useMockWorkspace.ts`](/E:/code/polaris/apps/console/src/pages/mock/hooks/useMockWorkspace.ts)
+- [`apps/console/src/app/router.tsx`](../../apps/console/src/app/router.tsx)
+- [`apps/console/src/pages/settings/SettingsPage.tsx`](../../apps/console/src/pages/settings/SettingsPage.tsx)
+- [`apps/console/src/pages/mock/hooks/useMockWorkspace.ts`](../../apps/console/src/pages/mock/hooks/useMockWorkspace.ts)
 
 包括：
 
@@ -148,15 +148,15 @@
 
 重点关注：
 
-- [`apps/console/src/pages/traffic/hooks/useTrafficWorkspace.ts`](/E:/code/polaris/apps/console/src/pages/traffic/hooks/useTrafficWorkspace.ts)
-- [`apps/console/src/pages/proxy-forward/ProxyForwardPage.tsx`](/E:/code/polaris/apps/console/src/pages/proxy-forward/ProxyForwardPage.tsx)
-- [`apps/console/src/pages/mock/hooks/useMockWorkspace.ts`](/E:/code/polaris/apps/console/src/pages/mock/hooks/useMockWorkspace.ts)
+- [`apps/console/src/pages/traffic/hooks/useTrafficWorkspace.ts`](../../apps/console/src/pages/traffic/hooks/useTrafficWorkspace.ts)
+- [`apps/console/src/pages/proxy-forward/ProxyForwardPage.tsx`](../../apps/console/src/pages/proxy-forward/ProxyForwardPage.tsx)
+- [`apps/console/src/pages/mock/hooks/useMockWorkspace.ts`](../../apps/console/src/pages/mock/hooks/useMockWorkspace.ts)
 
 ### 3.6 Effect 和 Memo 有部分“能跑但不够克制”的用法
 
 例如：
 
-- [`apps/console/src/pages/traffic/hooks/useTrafficWorkspace.ts`](/E:/code/polaris/apps/console/src/pages/traffic/hooks/useTrafficWorkspace.ts)
+- [`apps/console/src/pages/traffic/hooks/useTrafficWorkspace.ts`](../../apps/console/src/pages/traffic/hooks/useTrafficWorkspace.ts)
 
 里面存在一些典型信号：
 
@@ -275,8 +275,8 @@
 
 优先目标：
 
-1. [`apps/console/src/pages/proxy-forward/ProxyForwardPage.tsx`](/E:/code/polaris/apps/console/src/pages/proxy-forward/ProxyForwardPage.tsx)
-2. [`apps/console/src/pages/mock/hooks/useMockWorkspace.ts`](/E:/code/polaris/apps/console/src/pages/mock/hooks/useMockWorkspace.ts)
+1. [`apps/console/src/pages/proxy-forward/ProxyForwardPage.tsx`](../../apps/console/src/pages/proxy-forward/ProxyForwardPage.tsx)
+2. [`apps/console/src/pages/mock/hooks/useMockWorkspace.ts`](../../apps/console/src/pages/mock/hooks/useMockWorkspace.ts)
 
 建议拆法：
 
@@ -332,21 +332,21 @@
 
 建议优先修改这些位置：
 
-- [`apps/console/eslint.config.js`](/E:/code/polaris/apps/console/eslint.config.js)
+- [`apps/console/eslint.config.js`](../../apps/console/eslint.config.js)
   - 升级 lint 规则
-- [`apps/console/src/pages/proxy-forward/ProxyForwardPage.tsx`](/E:/code/polaris/apps/console/src/pages/proxy-forward/ProxyForwardPage.tsx)
+- [`apps/console/src/pages/proxy-forward/ProxyForwardPage.tsx`](../../apps/console/src/pages/proxy-forward/ProxyForwardPage.tsx)
   - 拆分页面逻辑
-- [`apps/console/src/pages/mock/hooks/useMockWorkspace.ts`](/E:/code/polaris/apps/console/src/pages/mock/hooks/useMockWorkspace.ts)
+- [`apps/console/src/pages/mock/hooks/useMockWorkspace.ts`](../../apps/console/src/pages/mock/hooks/useMockWorkspace.ts)
   - 拆分为多个专用 hook / service
-- [`apps/console/src/pages/traffic/hooks/useTrafficWorkspace.ts`](/E:/code/polaris/apps/console/src/pages/traffic/hooks/useTrafficWorkspace.ts)
+- [`apps/console/src/pages/traffic/hooks/useTrafficWorkspace.ts`](../../apps/console/src/pages/traffic/hooks/useTrafficWorkspace.ts)
   - 继续压缩职责
-- [`apps/console/src/app/router.tsx`](/E:/code/polaris/apps/console/src/app/router.tsx)
+- [`apps/console/src/app/router.tsx`](../../apps/console/src/app/router.tsx)
   - 将 sidebar 持久化抽到 `lib/persistence` 或单独 hook
-- [`apps/console/src/pages/settings/SettingsPage.tsx`](/E:/code/polaris/apps/console/src/pages/settings/SettingsPage.tsx)
+- [`apps/console/src/pages/settings/SettingsPage.tsx`](../../apps/console/src/pages/settings/SettingsPage.tsx)
   - 运行时环境读取下沉
-- [`apps/console/src/stores/*.ts`](/E:/code/polaris/apps/console/src/stores)
+- [`apps/console/src/stores/*.ts`](../../apps/console/src/stores)
   - 增加 selector 规范与 reset 规范
-- [`docs/development.md`](/E:/code/polaris/docs/development.md)
+- [`docs/development.md`](../development.md)
   - 后续可补充团队工程约定
 
 ## 7. 本项目不建议盲目照搬的部分
