@@ -10,6 +10,10 @@ import {
 } from "../../bridge/browserProxyBridge";
 import { getConsoleBaseUrl, invalidateApiCache } from "../../bridge/coreDiscovery";
 import { coreBridge } from "../../bridge/coreBridge";
+import {
+  readPopupSnapshot,
+  writePopupSnapshot,
+} from "../utils/popupSnapshot";
 import { buildSitePatterns, matchesPattern } from "../utils/sitePatterns";
 import styles from "./Popup.module.less";
 
@@ -20,6 +24,8 @@ export function Popup() {
   const [host, setHost] = useState("");
   const [rules, setRules] = useState<ProxyRule[]>([]);
   const [message, setMessage] = useState("");
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
+  const [hasConnectionError, setHasConnectionError] = useState(false);
   const statusRef = useRef(status);
   statusRef.current = status;
 
@@ -54,23 +60,46 @@ export function Popup() {
     [modes, status?.proxyMode],
   );
 
+  const hydrateSnapshot = async () => {
+    const snapshot = await readPopupSnapshot();
+    if (!snapshot) {
+      return false;
+    }
+
+    setStatus(snapshot.status);
+    setRules(snapshot.rules);
+    setLastUpdatedAt(snapshot.updatedAt);
+    setHasConnectionError(false);
+    return true;
+  };
+
   const load = async () => {
     try {
       const [nextStatus, nextRules] = await Promise.all([
         coreBridge.health(),
         coreBridge.listRules(),
       ]);
+      const updatedAt = new Date().toISOString();
+      setHasConnectionError(false);
       setMessage("");
       setStatus(nextStatus);
       setRules(nextRules);
+      setLastUpdatedAt(updatedAt);
+      await writePopupSnapshot({
+        status: nextStatus,
+        rules: nextRules,
+        updatedAt,
+      });
     } catch (error) {
       console.error(error);
       invalidateApiCache();
-      setMessage("无法连接 Core 服务");
+      setHasConnectionError(true);
+      setMessage(statusRef.current ? "连接失败，当前显示的是上次缓存" : "无法连接 Core 服务");
     }
   };
 
   useEffect(() => {
+    void hydrateSnapshot();
     void load();
     const retryTimer = setInterval(() => {
       if (!statusRef.current?.online) {
@@ -104,7 +133,18 @@ export function Popup() {
       ),
     [host, rules, sitePatterns],
   );
-  const online = Boolean(status?.online);
+  const online = Boolean(status?.online) && !hasConnectionError;
+  const lastUpdatedLabel = useMemo(() => {
+    if (!lastUpdatedAt) {
+      return null;
+    }
+
+    return new Date(lastUpdatedAt).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  }, [lastUpdatedAt]);
 
   const openConsole = async (pathname = "") => {
     try {
@@ -181,6 +221,7 @@ export function Popup() {
             <strong>{rules.length}</strong>
           </article>
         </div>
+        {lastUpdatedLabel ? <p className={styles.snapshotMeta}>上次同步于 {lastUpdatedLabel}</p> : null}
         {message ? <p className={styles.message} data-testid="popup-message">{message}</p> : null}
       </section>
 
