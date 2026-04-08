@@ -44,6 +44,19 @@ import {
   updateMockRuleTool,
   updateSavedRequestTool
 } from "@polaris/mcp-contracts";
+import {
+  buildMockRuleDetailPayload,
+  buildMockRuleSummary,
+  buildProxyRuleSummary,
+  buildRequestDetailPayload,
+  buildRequestSummary,
+  buildResourceResult,
+  buildSavedRequestDetailPayload,
+  buildSavedRequestSummary,
+  buildToolResult,
+  buildWriteReceipt,
+  detailViewValues
+} from "./payloads";
 import { CertificateManager } from "../proxy/certificateManager";
 import { MockService } from "../mock/mockService";
 import { ProxyService } from "../proxy/proxyService";
@@ -128,6 +141,14 @@ const listSavedRequestsInputSchema = z.object({
   offset: z.number().int().min(0).optional()
 });
 
+const detailInputSchema = z.object({
+  id: z.string().min(1),
+  view: z.enum(detailViewValues).optional(),
+  requestId: z.string().min(1).optional(),
+  scenario: z.string().min(1).optional(),
+  bodyPreviewChars: z.number().int().positive().max(8000).optional()
+});
+
 const mockRuleIdInputSchema = z.object({
   id: z.string().min(1)
 });
@@ -178,39 +199,6 @@ const proxyDecisionInputSchema = z
     message: "Either host or url is required"
   });
 
-function asJsonText(data: unknown): string {
-  return JSON.stringify(data, null, 2);
-}
-
-function jsonToolResult(data: unknown) {
-  return {
-    structuredContent: {
-      result: data
-    },
-    content: [
-      {
-        type: "text" as const,
-        text: asJsonText(data)
-      }
-    ]
-  };
-}
-
-function jsonResourceResult(uri: string, data: unknown) {
-  return {
-    contents: [
-      {
-        uri,
-        mimeType: "application/json",
-        text: asJsonText(data)
-      }
-    ],
-    _meta: {
-      "polaris/resultCount": Array.isArray(data) ? data.length : 1
-    }
-  };
-}
-
 function getRuleGroupName(name: string): string | null {
   const match = name.match(/^\[(.+?)\]\s*(.+)$/);
   return match?.[1]?.trim() || null;
@@ -222,80 +210,6 @@ async function syncActiveMockGroupFromRuleName(mockService: MockService, ruleNam
     return;
   }
   await mockService.setActiveGroup(nextGroup);
-}
-
-function buildMockRuleSummary(rule: ReturnType<MockService["list"]>[number]) {
-  return {
-    id: rule.id,
-    title: rule.name,
-    name: rule.name,
-    group: getRuleGroupName(rule.name),
-    method: rule.method,
-    url: rule.url,
-    enabled: rule.enabled,
-    updatedAt: rule.updatedAt,
-    detail: {
-      tool: getMockRuleDetailTool.name,
-      id: rule.id,
-      omittedFields: ["requestBodyExactMatch", "requestBodyKeyMatch", "responseHeaders", "responseBody"]
-    }
-  };
-}
-
-function buildProxyRuleSummary(rule: ReturnType<ProxyService["listRules"]>[number]) {
-  return {
-    ruleId: rule.id,
-    title: `${rule.action.toUpperCase()} ${rule.pattern}`,
-    pattern: rule.pattern,
-    action: rule.action,
-    enabled: rule.enabled,
-    updatedAt: rule.updatedAt,
-    detail: {
-      tool: getProxyRuleDetailTool.name,
-      ruleId: rule.id,
-      omittedFields: ["matchType", "createdAt"]
-    }
-  };
-}
-
-function buildRequestSummary(record: ReturnType<RequestService["list"]>[number]) {
-  return {
-    id: record.id,
-    title: `${record.method} ${record.path}`,
-    method: record.method,
-    host: record.host,
-    path: record.path,
-    url: record.url,
-    statusCode: record.statusCode,
-    duration: record.duration,
-    createdAt: record.createdAt,
-    source: record.source,
-    secure: record.secure,
-    resolutionMode: record.resolution?.mode ?? null,
-    detail: {
-      tool: getRequestDetailTool.name,
-      id: record.id,
-      omittedFields: ["requestHeaders", "requestQuery", "requestBody", "responseHeaders", "responseBody", "resolution"]
-    }
-  };
-}
-
-function buildSavedRequestSummary(savedRequest: ReturnType<RequestService["listSaved"]>[number]) {
-  return {
-    id: savedRequest.id,
-    title: savedRequest.name,
-    name: savedRequest.name,
-    method: savedRequest.method,
-    url: savedRequest.url,
-    sourceType: savedRequest.sourceType,
-    tags: savedRequest.tags,
-    updatedAt: savedRequest.updatedAt,
-    detail: {
-      tool: getSavedRequestDetailTool.name,
-      id: savedRequest.id,
-      omittedFields: ["headers", "query", "body"]
-    }
-  };
 }
 
 function getInstallGuideForPlatform(certificatePath?: string) {
@@ -390,7 +304,7 @@ export function createPolarisMcpSdkServer(
         const start = offset ?? 0;
         const sliced = records.slice(start);
         const paged = typeof limit === "number" ? sliced.slice(0, limit) : sliced;
-        return jsonToolResult(paged.map(buildRequestSummary));
+        return buildToolResult(paged.map(buildRequestSummary), `Loaded ${paged.length} request summaries`);
       });
     }
   );
@@ -399,20 +313,21 @@ export function createPolarisMcpSdkServer(
     getRequestDetailTool.name,
     {
       description: getRequestDetailTool.description,
-      inputSchema: z.object({
-        id: z.string().min(1)
-      }),
+      inputSchema: detailInputSchema.omit({ requestId: true, scenario: true }),
       annotations: {
         readOnlyHint: true
       }
     },
-    async ({ id }) => {
+    async ({ id, view, bodyPreviewChars }) => {
       return safe(() => {
         const record = requestService.getById(id);
         if (!record) {
           throw new Error("Request not found");
         }
-        return jsonToolResult(record);
+        return buildToolResult(
+          buildRequestDetailPayload(record, { view, bodyPreviewChars }),
+          `Loaded request ${record.method} ${record.path} (${view ?? "summary"})`
+        );
       });
     }
   );
@@ -432,7 +347,7 @@ export function createPolarisMcpSdkServer(
         const start = args.offset ?? 0;
         const sliced = saved.slice(start);
         const paged = typeof args.limit === "number" ? sliced.slice(0, args.limit) : sliced;
-        return jsonToolResult(paged.map(buildSavedRequestSummary));
+        return buildToolResult(paged.map(buildSavedRequestSummary), `Loaded ${paged.length} saved request summaries`);
       })
   );
 
@@ -440,20 +355,21 @@ export function createPolarisMcpSdkServer(
     getSavedRequestDetailTool.name,
     {
       description: getSavedRequestDetailTool.description,
-      inputSchema: z.object({
-        id: z.string().min(1)
-      }),
+      inputSchema: detailInputSchema.omit({ requestId: true, scenario: true }),
       annotations: {
         readOnlyHint: true
       }
     },
-    async ({ id }) => {
+    async ({ id, view, bodyPreviewChars }) => {
       return safe(() => {
         const savedRequest = requestService.getSavedById(id);
         if (!savedRequest) {
           throw new Error("Saved request not found");
         }
-        return jsonToolResult(savedRequest);
+        return buildToolResult(
+          buildSavedRequestDetailPayload(savedRequest, { view, bodyPreviewChars }),
+          `Loaded saved request ${savedRequest.name} (${view ?? "summary"})`
+        );
       });
     }
   );
@@ -464,7 +380,11 @@ export function createPolarisMcpSdkServer(
       description: saveRequestTool.description,
       inputSchema: saveRequestInputSchema
     },
-    async (args) => safe(() => requestService.save(args as SaveRequestInput).then((data) => jsonToolResult(data)))
+    async (args) =>
+      safe(async () => {
+        const data = await requestService.save(args as SaveRequestInput);
+        return buildToolResult(buildWriteReceipt(null, data, `Saved request ${data.name}`), `Saved request ${data.name}`);
+      })
   );
 
   server.registerTool(
@@ -474,7 +394,17 @@ export function createPolarisMcpSdkServer(
       inputSchema: updateSavedRequestInputSchema
     },
     async ({ id, ...input }) =>
-      safe(() => requestService.updateSaved(id, input as SaveRequestInput).then((data) => jsonToolResult(data)))
+      safe(async () => {
+        const before = requestService.getSavedById(id);
+        if (!before) {
+          throw new Error("Saved request not found");
+        }
+        const data = await requestService.updateSaved(id, input as SaveRequestInput);
+        return buildToolResult(
+          buildWriteReceipt(before, data, `Updated saved request ${data.name}`),
+          `Updated saved request ${data.name}`
+        );
+      })
   );
 
   server.registerTool(
@@ -491,7 +421,7 @@ export function createPolarisMcpSdkServer(
     async ({ id }) => {
       return safe(async () => {
         await requestService.removeSaved(id);
-        return jsonToolResult({ id });
+        return buildToolResult({ id }, `Deleted saved request ${id}`);
       });
     }
   );
@@ -504,7 +434,14 @@ export function createPolarisMcpSdkServer(
         id: z.string().min(1)
       })
     },
-    async ({ id }) => safe(() => requestService.replayRequest(id).then((data) => jsonToolResult(data)))
+    async ({ id }) =>
+      safe(async () => {
+        const data = await requestService.replayRequest(id);
+        return buildToolResult(
+          buildWriteReceipt(null, data, `Replayed request ${data.method} ${data.path}`),
+          `Replayed request ${data.method} ${data.path}`
+        );
+      })
   );
 
   server.registerTool(
@@ -518,7 +455,7 @@ export function createPolarisMcpSdkServer(
     async () => {
       return safe(async () => {
         await requestService.clear();
-        return jsonToolResult({ cleared: true });
+        return buildToolResult({ cleared: true }, "Cleared captured requests");
       });
     }
   );
@@ -545,7 +482,7 @@ export function createPolarisMcpSdkServer(
         const start = args.offset ?? 0;
         const sliced = rules.slice(start);
         const paged = typeof args.limit === "number" ? sliced.slice(0, args.limit) : sliced;
-        return jsonToolResult(paged.map(buildMockRuleSummary));
+        return buildToolResult(paged.map(buildMockRuleSummary), `Loaded ${paged.length} mock rule summaries`);
       });
     }
   );
@@ -554,18 +491,34 @@ export function createPolarisMcpSdkServer(
     getMockRuleDetailTool.name,
     {
       description: getMockRuleDetailTool.description,
-      inputSchema: mockRuleIdInputSchema,
+      inputSchema: detailInputSchema,
       annotations: {
         readOnlyHint: true
       }
     },
-    async ({ id }) => {
+    async ({ id, view, requestId, scenario, bodyPreviewChars }) => {
       return safe(() => {
         const rule = mockService.list().find((item) => item.id === id);
         if (!rule) {
           throw new Error("Mock rule not found");
         }
-        return jsonToolResult(rule);
+        const requestRecord = requestId ? requestService.getById(requestId) : undefined;
+        return buildToolResult(
+          buildMockRuleDetailPayload(
+            rule,
+            {
+              view,
+              requestId,
+              scenario,
+              bodyPreviewChars
+            },
+            {
+              activeGroup: mockService.getActiveGroup(),
+              requestRecord
+            }
+          ),
+          `Loaded mock rule ${rule.name} (${view ?? "summary"})`
+        );
       });
     }
   );
@@ -580,7 +533,10 @@ export function createPolarisMcpSdkServer(
       safe(async () => {
         const data = await mockService.create(args);
         await syncActiveMockGroupFromRuleName(mockService, data.name);
-        return jsonToolResult(data);
+        return buildToolResult(
+          buildWriteReceipt(null, data, `Created mock rule ${data.name}`),
+          `Created mock rule ${data.name}`
+        );
       })
   );
 
@@ -592,9 +548,16 @@ export function createPolarisMcpSdkServer(
     },
     async ({ id, ...input }) =>
       safe(async () => {
+        const before = mockService.list().find((item) => item.id === id);
+        if (!before) {
+          throw new Error("Mock rule not found");
+        }
         const data = await mockService.update(id, input as UpdateMockRuleInput);
         await syncActiveMockGroupFromRuleName(mockService, data.name);
-        return jsonToolResult(data);
+        return buildToolResult(
+          buildWriteReceipt(before, data, `Updated mock rule ${data.name}`),
+          `Updated mock rule ${data.name}`
+        );
       })
   );
 
@@ -610,7 +573,7 @@ export function createPolarisMcpSdkServer(
     async ({ id }) => {
       return safe(async () => {
         await mockService.remove(id);
-        return jsonToolResult({ id });
+        return buildToolResult({ id }, `Deleted mock rule ${id}`);
       });
     }
   );
@@ -632,7 +595,8 @@ export function createPolarisMcpSdkServer(
     async ({ id, name, enabled }) =>
       safe(async () => {
         if (id) {
-          return jsonToolResult(await mockService.toggle(id, enabled));
+          const data = await mockService.toggle(id, enabled);
+          return buildToolResult(data, `Set mock rule ${data.name} enabled=${enabled}`);
         }
 
         const matched = mockService.list().filter((rule) => rule.name === name);
@@ -642,7 +606,8 @@ export function createPolarisMcpSdkServer(
         if (matched.length > 1) {
           throw new Error("Multiple mock rules matched this name, please use id");
         }
-        return jsonToolResult(await mockService.toggle(matched[0].id, enabled));
+        const data = await mockService.toggle(matched[0].id, enabled);
+        return buildToolResult(data, `Set mock rule ${data.name} enabled=${enabled}`);
       })
   );
 
@@ -654,7 +619,7 @@ export function createPolarisMcpSdkServer(
         readOnlyHint: true
       }
     },
-    async () => safe(() => jsonToolResult({ group: mockService.getActiveGroup() }))
+    async () => safe(() => buildToolResult({ group: mockService.getActiveGroup() }, "Loaded active mock group"))
   );
 
   server.registerTool(
@@ -665,9 +630,12 @@ export function createPolarisMcpSdkServer(
     },
     async ({ group }) =>
       safe(async () =>
-        jsonToolResult({
-          group: await mockService.setActiveGroup(group as SetActiveMockGroupInput["group"])
-        })
+        buildToolResult(
+          {
+            group: await mockService.setActiveGroup(group as SetActiveMockGroupInput["group"])
+          },
+          `Set active mock group to ${group ?? "null"}`
+        )
       )
   );
 
@@ -677,7 +645,14 @@ export function createPolarisMcpSdkServer(
       description: runRequestTool.description,
       inputSchema: runRequestInputSchema
     },
-    async (args) => safe(() => requestService.run(args as RunRequestInput).then((data) => jsonToolResult(data)))
+    async (args) =>
+      safe(async () => {
+        const data = await requestService.run(args as RunRequestInput);
+        return buildToolResult(
+          buildWriteReceipt(null, data, `Ran request ${data.method} ${data.path}`),
+          `Ran request ${data.method} ${data.path}`
+        );
+      })
   );
 
   server.registerTool(
@@ -700,7 +675,7 @@ export function createPolarisMcpSdkServer(
         const start = args.offset ?? 0;
         const sliced = filtered.slice(start);
         const paged = typeof args.limit === "number" ? sliced.slice(0, args.limit) : sliced;
-        return jsonToolResult(paged.map(buildProxyRuleSummary));
+        return buildToolResult(paged.map(buildProxyRuleSummary), `Loaded ${paged.length} proxy rule summaries`);
       })
   );
 
@@ -719,7 +694,7 @@ export function createPolarisMcpSdkServer(
         if (!rule) {
           throw new Error("Proxy rule not found");
         }
-        return jsonToolResult(rule);
+        return buildToolResult(rule, `Loaded proxy rule ${rule.pattern}`);
       })
   );
 
@@ -731,7 +706,7 @@ export function createPolarisMcpSdkServer(
         readOnlyHint: true
       }
     },
-    async () => safe(() => jsonToolResult({ mode: proxyService.getMode() }))
+    async () => safe(() => buildToolResult({ mode: proxyService.getMode() }, "Loaded proxy mode"))
   );
 
   server.registerTool(
@@ -740,7 +715,7 @@ export function createPolarisMcpSdkServer(
       description: setProxyModeTool.description,
       inputSchema: proxyModeInputSchema
     },
-    async ({ mode }) => safe(async () => jsonToolResult({ mode: await proxyService.setMode(mode) }))
+    async ({ mode }) => safe(async () => buildToolResult({ mode: await proxyService.setMode(mode) }, `Set proxy mode to ${mode}`))
   );
 
   server.registerTool(
@@ -750,7 +725,10 @@ export function createPolarisMcpSdkServer(
       inputSchema: upsertProxyRuleInputSchema
     },
     async (args) =>
-      safe(() => proxyService.upsertSiteRule(args).then((data) => jsonToolResult(data)))
+      safe(async () => {
+        const data = await proxyService.upsertSiteRule(args);
+        return buildToolResult(data, `Upserted proxy rule ${data.pattern}`);
+      })
   );
 
   server.registerTool(
@@ -765,7 +743,7 @@ export function createPolarisMcpSdkServer(
     async ({ host }) => {
       return safe(async () => {
         await proxyService.removeSiteRule(host);
-        return jsonToolResult({ host });
+        return buildToolResult({ host }, `Removed proxy rule ${host}`);
       });
     }
   );
@@ -783,16 +761,19 @@ export function createPolarisMcpSdkServer(
       safe(() => {
         const resolvedHost = host ?? new URL(url!).host;
         const forwardDecision = proxyService.getForwardDecision(resolvedHost);
-        return jsonToolResult({
-          host: resolvedHost,
-          mode: proxyService.getMode(),
-          decision: forwardDecision.mode === "proxy_forward" ? "proxy" : "direct",
-          routeMode: forwardDecision.mode,
-          source: forwardDecision.source,
-          matchedRuleId: forwardDecision.matchedRuleId ?? null,
-          matchedRuleName: forwardDecision.matchedRuleName ?? null,
-          reason: forwardDecision.reason
-        });
+        return buildToolResult(
+          {
+            host: resolvedHost,
+            mode: proxyService.getMode(),
+            decision: forwardDecision.mode === "proxy_forward" ? "proxy" : "direct",
+            routeMode: forwardDecision.mode,
+            source: forwardDecision.source,
+            matchedRuleId: forwardDecision.matchedRuleId ?? null,
+            matchedRuleName: forwardDecision.matchedRuleName ?? null,
+            reason: forwardDecision.reason
+          },
+          `Loaded proxy decision for ${resolvedHost}`
+        );
       })
   );
 
@@ -806,11 +787,14 @@ export function createPolarisMcpSdkServer(
     },
     async () =>
       safe(() =>
-        jsonToolResult({
-          online: true,
-          activeRequestCount: requestService.list().length,
-          settings: proxyService.getSettings()
-        })
+        buildToolResult(
+          {
+            online: true,
+            activeRequestCount: requestService.list().length,
+            settings: proxyService.getSettings()
+          },
+          "Loaded service health"
+        )
       )
   );
 
@@ -822,7 +806,7 @@ export function createPolarisMcpSdkServer(
         readOnlyHint: true
       }
     },
-    async () => safe(() => jsonToolResult(proxyService.getSettings()))
+    async () => safe(() => buildToolResult(proxyService.getSettings(), "Loaded runtime settings"))
   );
 
   server.registerTool(
@@ -836,10 +820,13 @@ export function createPolarisMcpSdkServer(
     async () =>
       safe(async () => {
         const trusted = certificateManager ? await certificateManager.isRootCertificateTrusted() : undefined;
-        return jsonToolResult({
-          trusted,
-          available: Boolean(certificateManager)
-        });
+        return buildToolResult(
+          {
+            trusted,
+            available: Boolean(certificateManager)
+          },
+          "Loaded certificate status"
+        );
       })
   );
 
@@ -854,10 +841,13 @@ export function createPolarisMcpSdkServer(
     async () =>
       safe(() => {
         const certificatePath = certificateManager?.getRootCertificatePath();
-        return jsonToolResult({
-          ...getInstallGuideForPlatform(certificatePath),
-          certificatePath: certificatePath ?? null
-        });
+        return buildToolResult(
+          {
+            ...getInstallGuideForPlatform(certificatePath),
+            certificatePath: certificatePath ?? null
+          },
+          "Loaded certificate install guide"
+        );
       })
   );
 
@@ -882,10 +872,13 @@ export function createPolarisMcpSdkServer(
           proxyModeReady,
           localProxyPortValid: Number.isInteger(settings.localProxyPort) && settings.localProxyPort > 0
         };
-        return jsonToolResult({
-          ready: Object.values(checks).every(Boolean),
-          checks
-        });
+        return buildToolResult(
+          {
+            ready: Object.values(checks).every(Boolean),
+            checks
+          },
+          "Loaded HTTPS interception readiness"
+        );
       })
   );
 
@@ -898,7 +891,7 @@ export function createPolarisMcpSdkServer(
         description: "The 20 most recent captured requests.",
         mimeType: "application/json"
       },
-      async () => jsonResourceResult(requestListResource.uri, requestService.list({ limit: 20 }))
+      async () => buildResourceResult(requestListResource.uri, requestService.list({ limit: 20 }).map(buildRequestSummary))
     );
   }
 
@@ -911,7 +904,7 @@ export function createPolarisMcpSdkServer(
         description: "Saved request assets that can be replayed later.",
         mimeType: "application/json"
       },
-      async () => jsonResourceResult(savedRequestListResource.uri, requestService.listSaved())
+      async () => buildResourceResult(savedRequestListResource.uri, requestService.listSaved().map(buildSavedRequestSummary))
     );
   }
 
@@ -924,7 +917,7 @@ export function createPolarisMcpSdkServer(
         description: "All configured mock rules.",
         mimeType: "application/json"
       },
-      async () => jsonResourceResult(mockRuleListResource.uri, mockService.list())
+      async () => buildResourceResult(mockRuleListResource.uri, mockService.list().map(buildMockRuleSummary))
     );
   }
 
@@ -937,7 +930,7 @@ export function createPolarisMcpSdkServer(
         description: "The current Polaris proxy mode.",
         mimeType: "application/json"
       },
-      async () => jsonResourceResult(proxyModeResource.uri, proxyService.getMode())
+      async () => buildResourceResult(proxyModeResource.uri, proxyService.getMode())
     );
   }
 
@@ -950,7 +943,7 @@ export function createPolarisMcpSdkServer(
         description: "Current host-based proxy rules.",
         mimeType: "application/json"
       },
-      async () => jsonResourceResult(proxyRuleListResource.uri, proxyService.listRules())
+      async () => buildResourceResult(proxyRuleListResource.uri, proxyService.listRules().map(buildProxyRuleSummary))
     );
   }
 
