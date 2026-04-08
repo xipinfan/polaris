@@ -119,6 +119,44 @@ test("mock diagnostic view reports intrinsic state and request-based matching", 
   assert.equal(detail.diagnostic.requestBodyKeyMatches, true);
 });
 
+test("mock diagnostic reports active group mismatch for ungrouped rule", () => {
+  const detail = buildMockRuleDetailPayload(
+    {
+      ...mockRule,
+      name: "ungrouped rule"
+    },
+    { view: "diagnostic", requestId: "req-1" },
+    {
+      activeGroup: "demo",
+      requestRecord
+    }
+  );
+
+  if (!("diagnostic" in detail)) {
+    assert.fail("Expected diagnostic mock rule payload");
+  }
+  assert.equal(detail.diagnostic.activeGroupMatches, false);
+});
+
+test("mock diagnostic reports active group mismatch for different grouped rule", () => {
+  const detail = buildMockRuleDetailPayload(
+    {
+      ...mockRule,
+      name: "[other] rule"
+    },
+    { view: "diagnostic", requestId: "req-1" },
+    {
+      activeGroup: "demo",
+      requestRecord
+    }
+  );
+
+  if (!("diagnostic" in detail)) {
+    assert.fail("Expected diagnostic mock rule payload");
+  }
+  assert.equal(detail.diagnostic.activeGroupMatches, false);
+});
+
 test("buildWriteReceipt reports changed fields only", () => {
   const receipt = buildWriteReceipt(
     { id: "mock-1", enabled: false, method: "GET" },

@@ -236,7 +236,7 @@ export function buildMockRuleDetailPayload(
     const diagnostic = {
       enabled: rule.enabled,
       activeGroup,
-      activeGroupMatches: !activeGroup || !ruleGroup ? true : ruleGroup === activeGroup,
+      activeGroupMatches: !activeGroup ? true : ruleGroup === activeGroup,
       requestId: options.requestId ?? null,
       methodMatches: requestRecord ? rule.method === requestRecord.method : null,
       urlMatches: requestRecord ? requestRecord.url.includes(rule.url) : null,
