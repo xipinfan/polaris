@@ -1,8 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { type Express, type Request, type Response } from "express";
+import express, { type Express, type Request, type Response } from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
 import {
   getMcpPackById,
   getMcpResourceRegistryByPackId,
@@ -35,7 +34,7 @@ export class PolarisMcpStreamableHttpServer {
   ) {}
 
   async createApp(): Promise<Express> {
-    const app = createMcpExpressApp();
+    const app = express();
     const handler = async (req: Request, res: Response, pack?: McpPackDefinition) => {
       const requestSessionId = this.getSessionId(req);
       const requestedPackId = pack?.id;

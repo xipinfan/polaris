@@ -1,4 +1,5 @@
 export const listMockRulesTool = {
   name: "list_mock_rules",
-  description: "List mock rule summaries. Heavy matcher and response payload fields are omitted; use get_mock_rule_detail with the returned id for full detail."
+  description:
+    "Start here first for mock troubleshooting. Lists lightweight mock summaries only; use get_mock_rule_detail with the returned id, and prefer view='summary' or view='diagnostic' before view='full'."
 };

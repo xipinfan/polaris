@@ -1,4 +1,5 @@
 export const getRequestDetailTool = {
   name: "get_request_detail",
-  description: "Return full request and response detail for one request id."
+  description:
+    "Get one captured request by id. Defaults to view='summary'. Use view='preview' before view='full' unless you truly need complete request and response bodies."
 };

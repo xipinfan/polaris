@@ -4,6 +4,11 @@
 
 - 怎么把 Polaris 接到常见 AI / 代码工具里
 
+如果你希望模型默认按低上下文方式使用 Polaris，再看：
+
+- `docs/mcp-efficient-usage.md`
+- `docs/skills/polaris-efficient-mcp/SKILL.md`
+
 如果你只想最快接上，先看前两节。
 
 ## 第一步：启动 Polaris

@@ -93,6 +93,7 @@ export async function startServers() {
     if (currentSettings.mcpEnabled) {
       const mcpApp = express();
       mcpApp.use(cors());
+      mcpApp.use(express.json({ limit: "2mb" }));
       mcpApp.use(await streamableMcpServer.createApp());
       mcpApp.use(await sseMcpServer.createApp());
       mcpApp.use(legacyMcpServer.createApp());

@@ -88,6 +88,15 @@ function getToolResult(callResult) {
   return callResult?.structuredContent?.result;
 }
 
+function parseResourceJson(resource) {
+  return JSON.parse(resource.contents[0].text);
+}
+
+function assertShortText(callResult, maxChars = 160) {
+  const text = callResult?.content?.[0]?.text ?? "";
+  assert(text.length > 0 && text.length <= maxChars, `Expected short summary text, got length ${text.length}`);
+}
+
 async function postLegacy(baseUrl, tool, body) {
   const response = await fetch(`${baseUrl}/invoke/${tool}`, {
     method: "POST",
@@ -120,7 +129,7 @@ async function main() {
 
   const coreProcess = spawn(process.execPath, [tsxCli, "src/app/bootstrap.ts"], {
     cwd: path.join(rootDir, "apps/core"),
-    stdio: "inherit",
+    stdio: ["pipe", "inherit", "inherit"],
     env: coreEnv
   });
 
@@ -208,6 +217,12 @@ async function main() {
       const resource = await client.readResource({ uri });
       assert(Array.isArray(resource.contents), `Resource ${uri} has invalid contents`);
     }
+    const recentRequestsResource = await client.readResource({ uri: "polaris://requests/recent" });
+    const recentRequestsJson = parseResourceJson(recentRequestsResource);
+    assert(Array.isArray(recentRequestsJson), "recent_requests resource should be an array");
+    if (recentRequestsJson[0]) {
+      assert(!("requestBody" in recentRequestsJson[0]), "recent_requests resource must not return full request bodies");
+    }
     checks.push("resources/list + resources/read passed");
 
     await client.callTool({ name: "clear_requests", arguments: {} });
@@ -223,25 +238,25 @@ async function main() {
       enabled: true
     };
 
-    const mockA = getToolResult(
-      await client.callTool({
-        name: "create_mock_rule",
-        arguments: mockBase
-      })
-    );
-    assert(mockA?.id, "create_mock_rule failed to return id");
+    const createMockACall = await client.callTool({
+      name: "create_mock_rule",
+      arguments: mockBase
+    });
+    assertShortText(createMockACall);
+    const mockA = getToolResult(createMockACall);
+    assert(mockA?.ok === true && mockA?.id, "create_mock_rule should return a receipt");
     checks.push("create_mock_rule passed");
 
-    const runResult = getToolResult(
-      await client.callTool({
-        name: "run_request",
-        arguments: {
-          method: "GET",
-          url: "https://polaris.local/selftest"
-        }
-      })
-    );
-    assert(runResult?.statusCode === 200, "run_request expected statusCode 200 from mock");
+    const runCall = await client.callTool({
+      name: "run_request",
+      arguments: {
+        method: "GET",
+        url: "https://polaris.local/selftest"
+      }
+    });
+    assertShortText(runCall);
+    const runResult = getToolResult(runCall);
+    assert(runResult?.ok === true && runResult?.id, "run_request should return a receipt");
     checks.push("run_request passed");
 
     const listRequestsResult = getToolResult(
@@ -254,43 +269,60 @@ async function main() {
     const requestId = listRequestsResult[0].id;
     checks.push("list_requests passed");
 
-    const requestDetail = getToolResult(
+    const requestDetailSummary = getToolResult(
       await client.callTool({
         name: "get_request_detail",
         arguments: { id: requestId }
       })
     );
-    assert(requestDetail?.id === requestId, "get_request_detail mismatch");
+    assert(requestDetailSummary?.id === requestId, "get_request_detail summary mismatch");
+    assert(!("requestBody" in requestDetailSummary), "default request detail should be summary-only");
+
+    const requestDetailPreview = getToolResult(
+      await client.callTool({
+        name: "get_request_detail",
+        arguments: { id: requestId, view: "preview", bodyPreviewChars: 32 }
+      })
+    );
+    assert(typeof requestDetailPreview?.requestBodyPreview === "string", "preview should expose requestBodyPreview");
+
+    const requestDetailFull = getToolResult(
+      await client.callTool({
+        name: "get_request_detail",
+        arguments: { id: requestId, view: "full" }
+      })
+    );
+    assert(requestDetailFull?.requestBody !== undefined, "full request detail should expose requestBody");
     checks.push("get_request_detail passed");
 
-    const saved = getToolResult(
-      await client.callTool({
-        name: "save_request",
-        arguments: {
-          name: "selftest-saved",
-          requestId
-        }
-      })
-    );
-    assert(saved?.id, "save_request failed");
+    const saveCall = await client.callTool({
+      name: "save_request",
+      arguments: {
+        name: "selftest-saved",
+        requestId
+      }
+    });
+    assertShortText(saveCall);
+    const saved = getToolResult(saveCall);
+    assert(saved?.ok === true && saved?.id, "save_request failed");
 
     const savedId = saved.id;
-    const updatedSaved = getToolResult(
-      await client.callTool({
-        name: "update_saved_request",
-        arguments: {
-          id: savedId,
-          name: "selftest-saved-updated",
-          method: "GET",
-          url: "https://polaris.local/selftest",
-          headers: {},
-          query: {},
-          body: null,
-          tags: ["selftest"]
-        }
-      })
-    );
-    assert(updatedSaved?.name === "selftest-saved-updated", "update_saved_request failed");
+    const updateSavedCall = await client.callTool({
+      name: "update_saved_request",
+      arguments: {
+        id: savedId,
+        name: "selftest-saved-updated",
+        method: "GET",
+        url: "https://polaris.local/selftest",
+        headers: {},
+        query: {},
+        body: null,
+        tags: ["selftest"]
+      }
+    });
+    assertShortText(updateSavedCall);
+    const updatedSaved = getToolResult(updateSavedCall);
+    assert(updatedSaved?.ok === true && updatedSaved.changedFields.includes("name"), "update_saved_request failed");
 
     const savedList = getToolResult(await client.callTool({ name: "list_saved_requests", arguments: {} }));
     assert(Array.isArray(savedList) && savedList.some((item) => item.id === savedId), "list_saved_requests missing saved item");
@@ -302,9 +334,12 @@ async function main() {
       })
     );
     assert(savedDetail?.id === savedId, "get_saved_request_detail mismatch");
+    assert(!("body" in savedDetail), "default saved request detail should be summary-only");
 
-    const replay = getToolResult(await client.callTool({ name: "replay_request", arguments: { id: savedId } }));
-    assert(replay?.statusCode === 200, "replay_request expected statusCode 200");
+    const replayCall = await client.callTool({ name: "replay_request", arguments: { id: savedId } });
+    assertShortText(replayCall);
+    const replay = getToolResult(replayCall);
+    assert(replay?.ok === true && replay?.id, "replay_request should return a receipt");
 
     await client.callTool({ name: "delete_saved_request", arguments: { id: savedId } });
     checks.push("save/update/list/detail/replay/delete saved request flow passed");
@@ -324,21 +359,49 @@ async function main() {
       })
     );
     assert(mockDetail?.id === mockA.id, "get_mock_rule_detail mismatch");
+    assert(!("responseBody" in mockDetail), "default mock detail should be summary-only");
 
-    const mockB = getToolResult(
+    const createFromRequestReceipt = getToolResult(
       await client.callTool({
         name: "create_mock_rule",
         arguments: {
-          ...mockBase,
-          name: "[selftest] mock-B",
-          enabled: false,
-          responseStatus: 201,
-          responseBody: { from: "mock-b" }
+          name: "[selftest] mock-from-request",
+          requestId: runResult.id,
+          patch: {
+            enabled: true
+          }
         }
       })
     );
+    assert(createFromRequestReceipt?.ok === true, "create_mock_rule requestId mode failed");
 
-    assert(mockB?.id, "second create_mock_rule failed");
+    const createFromTemplateReceipt = getToolResult(
+      await client.callTool({
+        name: "create_mock_rule",
+        arguments: {
+          name: "[selftest] mock-from-template",
+          template: "json_ok",
+          patch: {
+            url: "https://polaris.local/template"
+          }
+        }
+      })
+    );
+    assert(createFromTemplateReceipt?.ok === true, "create_mock_rule template mode failed");
+
+    const createMockBCall = await client.callTool({
+      name: "create_mock_rule",
+      arguments: {
+        ...mockBase,
+        name: "[selftest] mock-B",
+        enabled: false,
+        responseStatus: 201,
+        responseBody: { from: "mock-b" }
+      }
+    });
+    assertShortText(createMockBCall);
+    const mockB = getToolResult(createMockBCall);
+    assert(mockB?.ok === true && mockB?.id, "second create_mock_rule failed");
     await client.callTool({ name: "enable_mock_rule", arguments: { id: mockB.id, enabled: true } });
     const sameEndpointRules = getToolResult(
       await client.callTool({
@@ -346,25 +409,66 @@ async function main() {
         arguments: { url: "https://polaris.local/selftest", method: "GET" }
       })
     );
-    const enabledRules = sameEndpointRules.filter((rule) => rule.enabled);
-    assert(enabledRules.length === 1 && enabledRules[0].id === mockB.id, "enable_mock_rule exclusivity failed");
+    const enabledRuleIds = sameEndpointRules.filter((rule) => rule.enabled).map((rule) => rule.id);
+    assert(enabledRuleIds.includes(mockB.id), "enable_mock_rule should enable the target rule");
 
-    const updatedMock = getToolResult(
+    const updateMockCall = await client.callTool({
+      name: "update_mock_rule",
+      arguments: {
+        id: mockB.id,
+        name: "[selftest] mock-B2",
+        method: "GET",
+        url: "https://polaris.local/selftest",
+        responseStatus: 202,
+        responseHeaders: { "content-type": "application/json" },
+        responseBody: { from: "mock-b2" },
+        enabled: true
+      }
+    });
+    assertShortText(updateMockCall);
+    const updatedMock = getToolResult(updateMockCall);
+    assert(updatedMock?.ok === true && updatedMock.changedFields.includes("responseStatus"), "update_mock_rule failed");
+
+    const patchUpdateReceipt = getToolResult(
       await client.callTool({
         name: "update_mock_rule",
         arguments: {
           id: mockB.id,
-          name: "[selftest] mock-B2",
-          method: "GET",
-          url: "https://polaris.local/selftest",
-          responseStatus: 202,
-          responseHeaders: { "content-type": "application/json" },
-          responseBody: { from: "mock-b2" },
-          enabled: true
+          patch: {
+            enabled: true,
+            method: "POST"
+          }
         }
       })
     );
-    assert(updatedMock?.responseStatus === 202, "update_mock_rule failed");
+    assert(patchUpdateReceipt?.ok === true, "update_mock_rule patch mode failed");
+    assert(patchUpdateReceipt.changedFields.includes("method"), "patch update should report method change");
+
+    const operationsUpdateReceipt = getToolResult(
+      await client.callTool({
+        name: "update_mock_rule",
+        arguments: {
+          id: mockB.id,
+          operations: [
+            { op: "replace", path: "responseStatus", value: 204 },
+            { op: "remove", path: "requestBodyExactMatch" }
+          ]
+        }
+      })
+    );
+    assert(operationsUpdateReceipt?.ok === true, "update_mock_rule operations mode failed");
+
+    const diagnosticDetail = getToolResult(
+      await client.callTool({
+        name: "get_mock_rule_detail",
+        arguments: {
+          id: mockB.id,
+          view: "diagnostic",
+          requestId: runResult.id
+        }
+      })
+    );
+    assert(diagnosticDetail?.diagnostic, "diagnostic detail should be returned");
 
     const activeGroup = getToolResult(await client.callTool({ name: "get_active_mock_group", arguments: {} }));
     assert(Object.prototype.hasOwnProperty.call(activeGroup, "group"), "get_active_mock_group missing group");
@@ -376,6 +480,8 @@ async function main() {
     await client.callTool({ name: "set_active_mock_group", arguments: { group: null } });
 
     await client.callTool({ name: "delete_mock_rule", arguments: { id: mockA.id } });
+    await client.callTool({ name: "delete_mock_rule", arguments: { id: createFromRequestReceipt.id } });
+    await client.callTool({ name: "delete_mock_rule", arguments: { id: createFromTemplateReceipt.id } });
     await client.callTool({ name: "delete_mock_rule", arguments: { id: mockB.id } });
     checks.push("mock list/detail/create/enable/update/group/delete flow passed");
 
