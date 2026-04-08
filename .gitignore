@@ -6,3 +6,4 @@ apps/core/data/
 e2e/__screenshots__/
 playwright-report/
 test-results/
+.worktrees/
