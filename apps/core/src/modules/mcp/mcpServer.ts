@@ -12,6 +12,17 @@ import {
   mcpPackRegistry,
   resolveMcpPackId
 } from "@polaris/mcp-contracts";
+import {
+  buildMockRuleDetailPayload,
+  buildMockRuleSummary,
+  buildProxyRuleSummary,
+  buildRequestDetailPayload,
+  buildRequestSummary,
+  buildSavedRequestDetailPayload,
+  buildSavedRequestSummary,
+  buildWriteReceipt
+} from "./payloads";
+import { buildCreateMockRuleInput, buildUpdateMockRuleInput } from "./mockRuleMutations";
 import { MockService } from "../mock/mockService";
 import { CertificateManager } from "../proxy/certificateManager";
 import { ProxyService } from "../proxy/proxyService";
@@ -68,80 +79,6 @@ async function syncActiveMockGroupFromRuleName(mockService: MockService, ruleNam
   await mockService.setActiveGroup(nextGroup);
 }
 
-function buildMockRuleSummary(rule: ReturnType<MockService["list"]>[number]) {
-  return {
-    id: rule.id,
-    title: rule.name,
-    name: rule.name,
-    group: getRuleGroupName(rule.name),
-    method: rule.method,
-    url: rule.url,
-    enabled: rule.enabled,
-    updatedAt: rule.updatedAt,
-    detail: {
-      tool: "get_mock_rule_detail",
-      id: rule.id,
-      omittedFields: ["requestBodyExactMatch", "requestBodyKeyMatch", "responseHeaders", "responseBody"]
-    }
-  };
-}
-
-function buildProxyRuleSummary(rule: ReturnType<ProxyService["listRules"]>[number]) {
-  return {
-    ruleId: rule.id,
-    title: `${rule.action.toUpperCase()} ${rule.pattern}`,
-    pattern: rule.pattern,
-    action: rule.action,
-    enabled: rule.enabled,
-    updatedAt: rule.updatedAt,
-    detail: {
-      tool: "get_proxy_rule_detail",
-      ruleId: rule.id,
-      omittedFields: ["matchType", "createdAt"]
-    }
-  };
-}
-
-function buildRequestSummary(record: ReturnType<RequestService["list"]>[number]) {
-  return {
-    id: record.id,
-    title: `${record.method} ${record.path}`,
-    method: record.method,
-    host: record.host,
-    path: record.path,
-    url: record.url,
-    statusCode: record.statusCode,
-    duration: record.duration,
-    createdAt: record.createdAt,
-    source: record.source,
-    secure: record.secure,
-    resolutionMode: record.resolution?.mode ?? null,
-    detail: {
-      tool: "get_request_detail",
-      id: record.id,
-      omittedFields: ["requestHeaders", "requestQuery", "requestBody", "responseHeaders", "responseBody", "resolution"]
-    }
-  };
-}
-
-function buildSavedRequestSummary(savedRequest: ReturnType<RequestService["listSaved"]>[number]) {
-  return {
-    id: savedRequest.id,
-    title: savedRequest.name,
-    name: savedRequest.name,
-    method: savedRequest.method,
-    url: savedRequest.url,
-    sourceType: savedRequest.sourceType,
-    tags: savedRequest.tags,
-    updatedAt: savedRequest.updatedAt,
-    detail: {
-      tool: "get_saved_request_detail",
-      id: savedRequest.id,
-      omittedFields: ["headers", "query", "body"]
-    }
-  };
-}
-
 export class MpcServer {
   constructor(
     private readonly requestService: RequestService,
@@ -168,7 +105,6 @@ export class MpcServer {
 
   createApp(): Express {
     const app = express();
-    app.use(express.json({ limit: "2mb" }));
 
     app.get("/packs", (_req, res) => {
       res.json({
@@ -233,7 +169,12 @@ export class MpcServer {
               if (!request) {
                 throw new Error("Request not found");
               }
-              res.json({ data: request });
+              res.json({
+                data: buildRequestDetailPayload(request, {
+                  view: req.body.view,
+                  bodyPreviewChars: req.body.bodyPreviewChars
+                })
+              });
             }
             return;
           case "list_saved_requests":
@@ -251,21 +192,39 @@ export class MpcServer {
               if (!savedRequest) {
                 throw new Error("Saved request not found");
               }
-              res.json({ data: savedRequest });
+              res.json({
+                data: buildSavedRequestDetailPayload(savedRequest, {
+                  view: req.body.view,
+                  bodyPreviewChars: req.body.bodyPreviewChars
+                })
+              });
             }
             return;
           case "save_request":
-            res.json({ data: await this.requestService.save(req.body as SaveRequestInput) });
+            {
+              const saved = await this.requestService.save(req.body as SaveRequestInput);
+              res.json({ data: buildWriteReceipt(null, saved, `Saved request ${saved.name}`) });
+            }
             return;
           case "update_saved_request":
-            res.json({ data: await this.requestService.updateSaved(req.body.id, req.body as SaveRequestInput) });
+            {
+              const before = this.requestService.getSavedById(req.body.id);
+              if (!before) {
+                throw new Error("Saved request not found");
+              }
+              const saved = await this.requestService.updateSaved(req.body.id, req.body as SaveRequestInput);
+              res.json({ data: buildWriteReceipt(before, saved, `Updated saved request ${saved.name}`) });
+            }
             return;
           case "delete_saved_request":
             await this.requestService.removeSaved(req.body.id);
             res.json({ data: { id: req.body.id } });
             return;
           case "replay_request":
-            res.json({ data: await this.requestService.replayRequest(req.body.id) });
+            {
+              const replayed = await this.requestService.replayRequest(req.body.id);
+              res.json({ data: buildWriteReceipt(null, replayed, `Replayed request ${replayed.method} ${replayed.path}`) });
+            }
             return;
           case "clear_requests":
             await this.requestService.clear();
@@ -294,21 +253,44 @@ export class MpcServer {
               if (!mockRule) {
                 throw new Error("Mock rule not found");
               }
-              res.json({ data: mockRule });
+              const requestRecord = req.body.requestId ? this.requestService.getById(req.body.requestId) : undefined;
+              res.json({
+                data: buildMockRuleDetailPayload(
+                  mockRule,
+                  {
+                    view: req.body.view,
+                    requestId: req.body.requestId,
+                    scenario: req.body.scenario,
+                    bodyPreviewChars: req.body.bodyPreviewChars
+                  },
+                  {
+                    activeGroup: this.mockService.getActiveGroup(),
+                    requestRecord
+                  }
+                )
+              });
             }
             return;
           case "create_mock_rule":
             {
-              const rule = await this.mockService.create(req.body);
+              const nextInput = buildCreateMockRuleInput(req.body, {
+                requestRecord: req.body.requestId ? this.requestService.getById(req.body.requestId) : undefined
+              });
+              const rule = await this.mockService.create(nextInput);
               await syncActiveMockGroupFromRuleName(this.mockService, rule.name);
-              res.json({ data: rule });
+              res.json({ data: buildWriteReceipt(null, rule, `Created mock rule ${rule.name}`) });
             }
             return;
           case "update_mock_rule":
             {
-              const rule = await this.mockService.update(req.body.id, req.body as UpdateMockRuleInput);
+              const before = this.mockService.list().find((item) => item.id === req.body.id);
+              if (!before) {
+                throw new Error("Mock rule not found");
+              }
+              const nextInput = buildUpdateMockRuleInput(before, req.body);
+              const rule = await this.mockService.update(req.body.id, nextInput as UpdateMockRuleInput);
               await syncActiveMockGroupFromRuleName(this.mockService, rule.name);
-              res.json({ data: rule });
+              res.json({ data: buildWriteReceipt(before, rule, `Updated mock rule ${rule.name}`) });
             }
             return;
           case "delete_mock_rule":
@@ -338,7 +320,10 @@ export class MpcServer {
             res.json({ data: { group: await this.mockService.setActiveGroup((req.body as SetActiveMockGroupInput).group) } });
             return;
           case "run_request":
-            res.json({ data: await this.requestService.run(req.body as RunRequestInput) });
+            {
+              const ran = await this.requestService.run(req.body as RunRequestInput);
+              res.json({ data: buildWriteReceipt(null, ran, `Ran request ${ran.method} ${ran.path}`) });
+            }
             return;
           case "list_proxy_rules":
             {
@@ -466,19 +451,19 @@ export class MpcServer {
         }
         switch (name) {
           case "recent_requests":
-            res.json({ data: this.requestService.list().slice(0, 20) });
+            res.json({ data: this.requestService.list().slice(0, 20).map(buildRequestSummary) });
             return;
           case "saved_requests":
-            res.json({ data: this.requestService.listSaved() });
+            res.json({ data: this.requestService.listSaved().map(buildSavedRequestSummary) });
             return;
           case "mock_rules":
-            res.json({ data: this.mockService.list() });
+            res.json({ data: this.mockService.list().map(buildMockRuleSummary) });
             return;
           case "proxy_mode":
             res.json({ data: this.proxyService.getMode() });
             return;
           case "proxy_rules":
-            res.json({ data: this.proxyService.listRules() });
+            res.json({ data: this.proxyService.listRules().map(buildProxyRuleSummary) });
             return;
           default:
             throw unknownResourceError(name);

@@ -117,6 +117,7 @@ test("mock diagnostic view reports intrinsic state and request-based matching", 
   assert.equal(detail.diagnostic.urlMatches, true);
   assert.equal(detail.diagnostic.requestBodyExactMatches, true);
   assert.equal(detail.diagnostic.requestBodyKeyMatches, true);
+  assert.deepEqual(detail.diagnostic.scenarioChecks, []);
 });
 
 test("mock diagnostic reports active group mismatch for ungrouped rule", () => {
@@ -155,6 +156,26 @@ test("mock diagnostic reports active group mismatch for different grouped rule",
     assert.fail("Expected diagnostic mock rule payload");
   }
   assert.equal(detail.diagnostic.activeGroupMatches, false);
+});
+
+test("mock diagnostic reports scenario checks when scenario conditions are missing", () => {
+  const detail = buildMockRuleDetailPayload(
+    mockRule,
+    { view: "diagnostic", requestId: "req-1", scenario: "popType=7;nested.missing=yes" },
+    {
+      activeGroup: "demo",
+      requestRecord
+    }
+  );
+
+  if (!("diagnostic" in detail)) {
+    assert.fail("Expected diagnostic mock rule payload");
+  }
+
+  assert.deepEqual(detail.diagnostic.scenarioChecks, [
+    "期望 popType=7，实际为 6",
+    "缺少 nested.missing=yes"
+  ]);
 });
 
 test("buildWriteReceipt reports changed fields only", () => {

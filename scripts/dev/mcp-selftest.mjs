@@ -361,6 +361,34 @@ async function main() {
     assert(mockDetail?.id === mockA.id, "get_mock_rule_detail mismatch");
     assert(!("responseBody" in mockDetail), "default mock detail should be summary-only");
 
+    const createFromRequestReceipt = getToolResult(
+      await client.callTool({
+        name: "create_mock_rule",
+        arguments: {
+          name: "[selftest] mock-from-request",
+          requestId: runResult.id,
+          patch: {
+            enabled: true
+          }
+        }
+      })
+    );
+    assert(createFromRequestReceipt?.ok === true, "create_mock_rule requestId mode failed");
+
+    const createFromTemplateReceipt = getToolResult(
+      await client.callTool({
+        name: "create_mock_rule",
+        arguments: {
+          name: "[selftest] mock-from-template",
+          template: "json_ok",
+          patch: {
+            url: "https://polaris.local/template"
+          }
+        }
+      })
+    );
+    assert(createFromTemplateReceipt?.ok === true, "create_mock_rule template mode failed");
+
     const createMockBCall = await client.callTool({
       name: "create_mock_rule",
       arguments: {
@@ -401,6 +429,47 @@ async function main() {
     const updatedMock = getToolResult(updateMockCall);
     assert(updatedMock?.ok === true && updatedMock.changedFields.includes("responseStatus"), "update_mock_rule failed");
 
+    const patchUpdateReceipt = getToolResult(
+      await client.callTool({
+        name: "update_mock_rule",
+        arguments: {
+          id: mockB.id,
+          patch: {
+            enabled: true,
+            method: "POST"
+          }
+        }
+      })
+    );
+    assert(patchUpdateReceipt?.ok === true, "update_mock_rule patch mode failed");
+    assert(patchUpdateReceipt.changedFields.includes("method"), "patch update should report method change");
+
+    const operationsUpdateReceipt = getToolResult(
+      await client.callTool({
+        name: "update_mock_rule",
+        arguments: {
+          id: mockB.id,
+          operations: [
+            { op: "replace", path: "responseStatus", value: 204 },
+            { op: "remove", path: "requestBodyExactMatch" }
+          ]
+        }
+      })
+    );
+    assert(operationsUpdateReceipt?.ok === true, "update_mock_rule operations mode failed");
+
+    const diagnosticDetail = getToolResult(
+      await client.callTool({
+        name: "get_mock_rule_detail",
+        arguments: {
+          id: mockB.id,
+          view: "diagnostic",
+          requestId: runResult.id
+        }
+      })
+    );
+    assert(diagnosticDetail?.diagnostic, "diagnostic detail should be returned");
+
     const activeGroup = getToolResult(await client.callTool({ name: "get_active_mock_group", arguments: {} }));
     assert(Object.prototype.hasOwnProperty.call(activeGroup, "group"), "get_active_mock_group missing group");
 
@@ -411,6 +480,8 @@ async function main() {
     await client.callTool({ name: "set_active_mock_group", arguments: { group: null } });
 
     await client.callTool({ name: "delete_mock_rule", arguments: { id: mockA.id } });
+    await client.callTool({ name: "delete_mock_rule", arguments: { id: createFromRequestReceipt.id } });
+    await client.callTool({ name: "delete_mock_rule", arguments: { id: createFromTemplateReceipt.id } });
     await client.callTool({ name: "delete_mock_rule", arguments: { id: mockB.id } });
     checks.push("mock list/detail/create/enable/update/group/delete flow passed");
 

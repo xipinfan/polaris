@@ -1,6 +1,5 @@
-import { type Express, type Request, type Response } from "express";
+import express, { type Express, type Request, type Response } from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import {
   getMcpPackById,
@@ -34,7 +33,7 @@ export class PolarisMcpSseServer {
   ) {}
 
   async createApp(): Promise<Express> {
-    const app = createMcpExpressApp();
+    const app = express();
 
     app.get("/sse", async (req, res) => {
       await this.startSession(req, res);

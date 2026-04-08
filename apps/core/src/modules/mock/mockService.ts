@@ -66,7 +66,10 @@ export class MockService {
   async create(input: CreateMockRuleInput): Promise<MockRule> {
     const now = new Date().toISOString();
     const groupFromInput = (input as CreateMockRuleInput & GroupAwareInput).group;
-    const nextName = normalizeRuleNameForGroup(input.name, groupFromInput ?? this.getActiveGroup());
+    const nextName = normalizeRuleNameForGroup(
+      input.name,
+      groupFromInput === undefined ? this.getActiveGroup() : groupFromInput
+    );
     const rule: MockRule = {
       id: randomUUID(),
       name: nextName,
@@ -101,7 +104,7 @@ export class MockService {
       ...input,
       name: normalizeRuleNameForGroup(
         input.name,
-        groupFromInput ?? getRuleGroup(target),
+        groupFromInput === undefined ? getRuleGroup(target) : groupFromInput
       ),
       method: input.method.toUpperCase(),
       requestBodyExactMatch: normalizeBodyExactMatch(input.requestBodyExactMatch),

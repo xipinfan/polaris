@@ -57,6 +57,7 @@ import {
   buildWriteReceipt,
   detailViewValues
 } from "./payloads";
+import { buildCreateMockRuleInput, buildUpdateMockRuleInput } from "./mockRuleMutations";
 import { CertificateManager } from "../proxy/certificateManager";
 import { MockService } from "../mock/mockService";
 import { ProxyService } from "../proxy/proxyService";
@@ -99,7 +100,7 @@ const runRequestInputSchema = z.object({
   body: z.unknown().nullable().optional()
 });
 
-const createMockRuleInputSchema = z.object({
+const baseCreateMockRuleInputSchema = z.object({
   name: z.string().min(1).describe("Rule name. Use '[Group] Name' format for grouping."),
   group: z.string().min(1).optional(),
   method: z.string().min(1).describe("HTTP method, e.g. GET, POST."),
@@ -121,6 +122,50 @@ const createMockRuleInputSchema = z.object({
   responseBody: z.unknown().nullable().optional(),
   enabled: z.boolean()
 });
+
+const mockRulePatchSchema = z.object({
+  name: z.string().min(1).optional(),
+  group: z.string().min(1).nullable().optional(),
+  method: z.string().min(1).optional(),
+  url: z.string().min(1).optional(),
+  requestBodyExactMatch: z.string().min(1).nullable().optional(),
+  requestBodyKeyMatch: z.string().min(1).nullable().optional(),
+  responseStatus: z.number().int().optional(),
+  responseHeaders: stringMapSchema.optional(),
+  responseBody: z.unknown().nullable().optional(),
+  enabled: z.boolean().optional()
+});
+
+const mockRuleOperationSchema = z.object({
+  op: z.enum(["replace", "remove"]),
+  path: z.enum([
+    "name",
+    "group",
+    "method",
+    "url",
+    "requestBodyExactMatch",
+    "requestBodyKeyMatch",
+    "responseStatus",
+    "responseHeaders",
+    "responseBody",
+    "enabled"
+  ]),
+  value: z.unknown().optional()
+});
+
+const createMockRuleInputSchema = z.union([
+  baseCreateMockRuleInputSchema,
+  z.object({
+    name: z.string().min(1),
+    requestId: z.string().min(1),
+    patch: mockRulePatchSchema.optional()
+  }),
+  z.object({
+    name: z.string().min(1),
+    template: z.string().min(1),
+    patch: mockRulePatchSchema.optional()
+  })
+]);
 
 const updateSavedRequestInputSchema = saveRequestInputSchema.extend({
   id: z.string().min(1)
@@ -157,9 +202,19 @@ const proxyRuleIdInputSchema = z.object({
   ruleId: z.string().min(1)
 });
 
-const updateMockRuleToolInputSchema = createMockRuleInputSchema.extend({
-  id: z.string().min(1)
-});
+const updateMockRuleToolInputSchema = z.union([
+  baseCreateMockRuleInputSchema.extend({
+    id: z.string().min(1)
+  }),
+  z.object({
+    id: z.string().min(1),
+    patch: mockRulePatchSchema
+  }),
+  z.object({
+    id: z.string().min(1),
+    operations: z.array(mockRuleOperationSchema).min(1)
+  })
+]);
 
 const setActiveMockGroupInputSchema = z.object({
   group: z.string().min(1).nullable()
@@ -531,7 +586,10 @@ export function createPolarisMcpSdkServer(
     },
     async (args) =>
       safe(async () => {
-        const data = await mockService.create(args);
+        const nextInput = buildCreateMockRuleInput(args, {
+          requestRecord: "requestId" in args ? requestService.getById(args.requestId) : undefined
+        });
+        const data = await mockService.create(nextInput);
         await syncActiveMockGroupFromRuleName(mockService, data.name);
         return buildToolResult(
           buildWriteReceipt(null, data, `Created mock rule ${data.name}`),
@@ -546,13 +604,15 @@ export function createPolarisMcpSdkServer(
       description: updateMockRuleTool.description,
       inputSchema: updateMockRuleToolInputSchema
     },
-    async ({ id, ...input }) =>
+    async (input) =>
       safe(async () => {
+        const { id } = input;
         const before = mockService.list().find((item) => item.id === id);
         if (!before) {
           throw new Error("Mock rule not found");
         }
-        const data = await mockService.update(id, input as UpdateMockRuleInput);
+        const nextInput = buildUpdateMockRuleInput(before, input);
+        const data = await mockService.update(id, nextInput as UpdateMockRuleInput);
         await syncActiveMockGroupFromRuleName(mockService, data.name);
         return buildToolResult(
           buildWriteReceipt(before, data, `Updated mock rule ${data.name}`),

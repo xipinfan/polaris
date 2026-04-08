@@ -1,5 +1,5 @@
 import type { MockRule, ProxyRule, RequestRecord, SavedRequest } from "@polaris/shared-types";
-import { getRuleGroupName, hasBodyKeyPath, matchesExactBodyExpression } from "../mock/mockMatchers";
+import { getBodyPathValue, getRuleGroupName, hasBodyKeyPath, matchesExactBodyExpression } from "../mock/mockMatchers";
 
 export const detailViewValues = ["summary", "diagnostic", "preview", "full"] as const;
 export type DetailView = (typeof detailViewValues)[number];
@@ -17,6 +17,11 @@ type MockDiagnosticContext = {
   requestRecord?: RequestRecord;
 };
 
+type ScenarioCondition = {
+  path: string;
+  expected: string;
+};
+
 function truncateText(value: unknown, maxChars: number): string {
   const serialized = typeof value === "string" ? value : JSON.stringify(value, null, 2);
   if (serialized.length <= maxChars) {
@@ -28,6 +33,46 @@ function truncateText(value: unknown, maxChars: number): string {
 function changedFields(before: Record<string, unknown>, after: Record<string, unknown>): string[] {
   const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
   return [...keys].filter((key) => JSON.stringify(before[key]) !== JSON.stringify(after[key]));
+}
+
+function parseScenarioConditions(scenario?: string): ScenarioCondition[] {
+  if (!scenario) {
+    return [];
+  }
+
+  return scenario
+    .split(/[\n;,]+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .flatMap((entry) => {
+      const separatorIndex = entry.indexOf("=");
+      if (separatorIndex <= 0) {
+        return [];
+      }
+
+      const path = entry.slice(0, separatorIndex).trim();
+      const expected = entry.slice(separatorIndex + 1).trim();
+      if (!path || !expected) {
+        return [];
+      }
+
+      return [{ path, expected }];
+    });
+}
+
+function buildScenarioChecks(requestBody: unknown, scenario?: string): string[] {
+  return parseScenarioConditions(scenario).flatMap(({ path, expected }) => {
+    const resolved = getBodyPathValue(requestBody, path);
+    if (!resolved.found) {
+      return [`缺少 ${path}=${expected}`];
+    }
+
+    if (String(resolved.value) !== expected) {
+      return [`期望 ${path}=${expected}，实际为 ${String(resolved.value)}`];
+    }
+
+    return [];
+  });
 }
 
 export function buildToolResult(result: unknown, summary: string) {
@@ -232,6 +277,11 @@ export function buildMockRuleDetailPayload(
     const requestRecord = context.requestRecord;
     const activeGroup = context.activeGroup;
     const ruleGroup = getRuleGroupName(rule.name);
+    const scenarioChecks = requestRecord
+      ? buildScenarioChecks(requestRecord.requestBody, options.scenario)
+      : options.scenario
+        ? ["未提供 requestId，无法校验场景条件"]
+        : [];
 
     const diagnostic = {
       enabled: rule.enabled,
@@ -248,7 +298,8 @@ export function buildMockRuleDetailPayload(
         : rule.requestBodyKeyMatch
           ? null
           : true,
-      scenario: options.scenario ?? null
+      scenario: options.scenario ?? null,
+      scenarioChecks
     };
 
     return {
@@ -260,7 +311,8 @@ export function buildMockRuleDetailPayload(
         diagnostic.methodMatches === false ? "方法不匹配" : null,
         diagnostic.urlMatches === false ? "URL 不匹配" : null,
         diagnostic.requestBodyExactMatches === false ? "精确 body 条件不匹配" : null,
-        diagnostic.requestBodyKeyMatches === false ? "body key 条件不匹配" : null
+        diagnostic.requestBodyKeyMatches === false ? "body key 条件不匹配" : null,
+        diagnostic.scenarioChecks.length > 0 ? "场景条件不满足" : null
       ]
         .filter(Boolean)
         .join("，")

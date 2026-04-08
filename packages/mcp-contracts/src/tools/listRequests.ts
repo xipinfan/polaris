@@ -1,4 +1,5 @@
 export const listRequestsTool = {
   name: "list_requests",
-  description: "List recent captured request summaries. Large request/response payloads are omitted; use get_request_detail with the returned id for full detail."
+  description:
+    "Start here first for captured traffic. Lists recent request summaries only; use get_request_detail with the returned id, and prefer view='summary' or view='preview' before view='full'."
 };

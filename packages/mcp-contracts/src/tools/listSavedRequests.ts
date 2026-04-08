@@ -1,4 +1,5 @@
 export const listSavedRequestsTool = {
   name: "list_saved_requests",
-  description: "List saved request summaries. Large headers/query/body fields are omitted; use get_saved_request_detail with the returned id for full detail."
+  description:
+    "Start here first for saved requests. Lists lightweight summaries only; use get_saved_request_detail with the returned id, and prefer view='summary' or view='preview' before view='full'."
 };
