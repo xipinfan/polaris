@@ -82,6 +82,9 @@ test("request summary view omits heavy payload fields", () => {
 
 test("request preview view truncates bodies instead of returning full payloads", () => {
   const detail = buildRequestDetailPayload(requestRecord, { view: "preview", bodyPreviewChars: 12 });
+  if (!("bodyPreviewChars" in detail && "requestBodyPreview" in detail && "responseBodyPreview" in detail)) {
+    assert.fail("Expected preview request payload");
+  }
   assert.equal(detail.bodyPreviewChars, 12);
   assert.match(detail.requestBodyPreview, /truncated/i);
   assert.match(detail.responseBodyPreview, /truncated/i);
@@ -89,6 +92,9 @@ test("request preview view truncates bodies instead of returning full payloads",
 
 test("saved request full view keeps full body", () => {
   const detail = buildSavedRequestDetailPayload(savedRequest, { view: "full" });
+  if (!("body" in detail)) {
+    assert.fail("Expected full saved request payload");
+  }
   assert.deepEqual(detail.body, { hello: "world" });
 });
 
@@ -102,6 +108,9 @@ test("mock diagnostic view reports intrinsic state and request-based matching", 
     }
   );
 
+  if (!("diagnostic" in detail)) {
+    assert.fail("Expected diagnostic mock rule payload");
+  }
   assert.equal(detail.diagnostic.enabled, true);
   assert.equal(detail.diagnostic.activeGroupMatches, true);
   assert.equal(detail.diagnostic.methodMatches, true);
