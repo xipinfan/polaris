@@ -14,6 +14,9 @@ export function hasBodyKeyPath(value: unknown, keyPath: string): boolean {
     .split(".")
     .map((part) => part.trim())
     .filter(Boolean);
+  if (segments.length === 0) {
+    return false;
+  }
 
   let current: unknown = value;
   for (const segment of segments) {
@@ -49,6 +52,9 @@ export function getBodyPathValue(value: unknown, keyPath: string): { found: bool
     .split(".")
     .map((part) => part.trim())
     .filter(Boolean);
+  if (segments.length === 0) {
+    return { found: false };
+  }
 
   let current: unknown = value;
   for (const segment of segments) {
@@ -102,12 +108,15 @@ export function parseExactBodyMatch(expression?: string | null): ExactBodyCondit
       return null;
     }
 
-    const expected = JSON.parse(expectedLiteral);
-    if (typeof expected !== "string") {
+    try {
+      const expected = JSON.parse(expectedLiteral);
+      if (typeof expected !== "string") {
+        return null;
+      }
+      conditions.push({ path, expected });
+    } catch {
       return null;
     }
-
-    conditions.push({ path, expected });
   }
 
   return conditions;
