@@ -57,12 +57,13 @@ import {
   buildWriteReceipt,
   detailViewValues
 } from "./payloads";
+import { resolveDetailTextMode } from "./toolResultPolicy";
 import { buildCreateMockRuleInput, buildUpdateMockRuleInput } from "./mockRuleMutations";
 import { CertificateManager } from "../proxy/certificateManager";
 import { MockService } from "../mock/mockService";
 import { ProxyService } from "../proxy/proxyService";
 import { RequestService } from "../requests/requestService";
-import { toMcpError } from "./errorHandling";
+import { createPolarisError, toMcpError } from "./errorHandling";
 
 export interface PolarisMcpSdkServerOptions {
   allowedToolNames?: ReadonlySet<string>;
@@ -138,18 +139,29 @@ const mockRulePatchSchema = z.object({
 
 const mockRuleOperationSchema = z.object({
   op: z.enum(["replace", "remove"]),
-  path: z.enum([
-    "name",
-    "group",
-    "method",
-    "url",
-    "requestBodyExactMatch",
-    "requestBodyKeyMatch",
-    "responseStatus",
-    "responseHeaders",
-    "responseBody",
-    "enabled"
-  ]),
+  path: z
+    .string()
+    .min(1)
+    .refine(
+      (value) =>
+        [
+          "name",
+          "group",
+          "method",
+          "url",
+          "requestBodyExactMatch",
+          "requestBodyKeyMatch",
+          "responseStatus",
+          "responseHeaders",
+          "responseBody",
+          "enabled"
+        ].includes(value) ||
+        value.startsWith("responseBody.") ||
+        value.startsWith("responseBody["),
+      {
+        message: "Operation path must be a top-level mock field or a nested responseBody path"
+      }
+    ),
   value: z.unknown().optional()
 });
 
@@ -191,7 +203,14 @@ const detailInputSchema = z.object({
   view: z.enum(detailViewValues).optional(),
   requestId: z.string().min(1).optional(),
   scenario: z.string().min(1).optional(),
-  bodyPreviewChars: z.number().int().positive().max(8000).optional()
+  bodyPreviewChars: z.number().int().positive().max(8000).optional(),
+  maxDepth: z.number().int().positive().max(20).optional(),
+  maxArrayItems: z.number().int().positive().max(100).optional(),
+  jsonPath: z.string().min(1).optional(),
+  responsePath: z.string().min(1).optional(),
+  includePaths: z.array(z.string().min(1)).optional(),
+  excludePaths: z.array(z.string().min(1)).optional(),
+  topLevelOnly: z.boolean().optional()
 });
 
 const mockRuleIdInputSchema = z.object({
@@ -373,15 +392,26 @@ export function createPolarisMcpSdkServer(
         readOnlyHint: true
       }
     },
-    async ({ id, view, bodyPreviewChars }) => {
+    async ({ id, view, bodyPreviewChars, maxDepth, maxArrayItems, jsonPath, responsePath, includePaths, excludePaths, topLevelOnly }) => {
       return safe(() => {
         const record = requestService.getById(id);
         if (!record) {
           throw new Error("Request not found");
         }
         return buildToolResult(
-          buildRequestDetailPayload(record, { view, bodyPreviewChars }),
-          `Loaded request ${record.method} ${record.path} (${view ?? "summary"})`
+          buildRequestDetailPayload(record, {
+            view,
+            bodyPreviewChars,
+            maxDepth,
+            maxArrayItems,
+            jsonPath,
+            responsePath,
+            includePaths,
+            excludePaths,
+            topLevelOnly
+          }),
+          `Loaded request ${record.method} ${record.path} (${view ?? "summary"})`,
+          { textMode: resolveDetailTextMode(view) }
         );
       });
     }
@@ -415,15 +445,26 @@ export function createPolarisMcpSdkServer(
         readOnlyHint: true
       }
     },
-    async ({ id, view, bodyPreviewChars }) => {
+    async ({ id, view, bodyPreviewChars, maxDepth, maxArrayItems, jsonPath, responsePath, includePaths, excludePaths, topLevelOnly }) => {
       return safe(() => {
         const savedRequest = requestService.getSavedById(id);
         if (!savedRequest) {
           throw new Error("Saved request not found");
         }
         return buildToolResult(
-          buildSavedRequestDetailPayload(savedRequest, { view, bodyPreviewChars }),
-          `Loaded saved request ${savedRequest.name} (${view ?? "summary"})`
+          buildSavedRequestDetailPayload(savedRequest, {
+            view,
+            bodyPreviewChars,
+            maxDepth,
+            maxArrayItems,
+            jsonPath,
+            responsePath,
+            includePaths,
+            excludePaths,
+            topLevelOnly
+          }),
+          `Loaded saved request ${savedRequest.name} (${view ?? "summary"})`,
+          { textMode: resolveDetailTextMode(view) }
         );
       });
     }
@@ -551,11 +592,45 @@ export function createPolarisMcpSdkServer(
         readOnlyHint: true
       }
     },
-    async ({ id, view, requestId, scenario, bodyPreviewChars }) => {
+    async ({
+      id,
+      view,
+      requestId,
+      scenario,
+      bodyPreviewChars,
+      maxDepth,
+      maxArrayItems,
+      jsonPath,
+      responsePath,
+      includePaths,
+      excludePaths,
+      topLevelOnly
+    }) => {
       return safe(() => {
         const rule = mockService.list().find((item) => item.id === id);
         if (!rule) {
-          throw new Error("Mock rule not found");
+          throw createPolarisError("MOCK_RULE_NOT_FOUND", "Mock rule not found", {
+            status: 404,
+            suggestions: [
+              "Call list_mock_rules first to confirm the id.",
+              "If you only know the name, search by group or name before loading detail.",
+              "Check whether the rule was deleted or belongs to another environment."
+            ],
+            input: {
+              id,
+              view,
+              requestId,
+              scenario,
+              bodyPreviewChars,
+              maxDepth,
+              maxArrayItems,
+              jsonPath,
+              responsePath,
+              includePaths,
+              excludePaths,
+              topLevelOnly
+            }
+          });
         }
         const requestRecord = requestId ? requestService.getById(requestId) : undefined;
         return buildToolResult(
@@ -565,14 +640,22 @@ export function createPolarisMcpSdkServer(
               view,
               requestId,
               scenario,
-              bodyPreviewChars
+              bodyPreviewChars,
+              maxDepth,
+              maxArrayItems,
+              jsonPath,
+              responsePath,
+              includePaths,
+              excludePaths,
+              topLevelOnly
             },
             {
               activeGroup: mockService.getActiveGroup(),
               requestRecord
             }
           ),
-          `Loaded mock rule ${rule.name} (${view ?? "summary"})`
+          `Loaded mock rule ${rule.name} (${view ?? "summary"})`,
+          { textMode: resolveDetailTextMode(view) }
         );
       });
     }
@@ -754,7 +837,7 @@ export function createPolarisMcpSdkServer(
         if (!rule) {
           throw new Error("Proxy rule not found");
         }
-        return buildToolResult(rule, `Loaded proxy rule ${rule.pattern}`);
+        return buildToolResult(rule, `Loaded proxy rule ${rule.pattern}`, { textMode: "full" });
       })
   );
 
@@ -853,7 +936,8 @@ export function createPolarisMcpSdkServer(
             activeRequestCount: requestService.list().length,
             settings: proxyService.getSettings()
           },
-          "Loaded service health"
+          "Loaded service health",
+          { textMode: "full" }
         )
       )
   );
@@ -866,7 +950,7 @@ export function createPolarisMcpSdkServer(
         readOnlyHint: true
       }
     },
-    async () => safe(() => buildToolResult(proxyService.getSettings(), "Loaded runtime settings"))
+    async () => safe(() => buildToolResult(proxyService.getSettings(), "Loaded runtime settings", { textMode: "full" }))
   );
 
   server.registerTool(
@@ -906,7 +990,8 @@ export function createPolarisMcpSdkServer(
             ...getInstallGuideForPlatform(certificatePath),
             certificatePath: certificatePath ?? null
           },
-          "Loaded certificate install guide"
+          "Loaded certificate install guide",
+          { textMode: "full" }
         );
       })
   );
@@ -937,7 +1022,8 @@ export function createPolarisMcpSdkServer(
             ready: Object.values(checks).every(Boolean),
             checks
           },
-          "Loaded HTTPS interception readiness"
+          "Loaded HTTPS interception readiness",
+          { textMode: "full" }
         );
       })
   );

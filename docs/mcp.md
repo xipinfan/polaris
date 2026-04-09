@@ -277,3 +277,47 @@ polaris mcp-url
 - [README](../README.md)
 - [Web Console 使用说明](./console.md)
 - [浏览器扩展使用说明](./extension.md)
+
+---
+
+## Tool 结果怎么看最稳
+
+Polaris 的 MCP tool result 同时有两层：
+
+- `structuredContent`：给模型稳定读取的结构化 JSON
+- `content`：给人和通用 MCP 客户端看的文本
+
+现在 detail 类工具会按 `view` 自动切换文本可见性策略：
+
+- `summary`：只给摘要文字，适合低上下文快速判断
+- `preview` 或未传 `view`：摘要 + 预览行，方便先看关键字段
+- `full` / `shape` / `diagnostic`：文本直接输出完整 JSON，避免关键信息只藏在 `structuredContent`
+
+所以如果你看到 `content` 很短，不代表服务端没返回数据；很多详细信息可能在 `structuredContent.result` 里。
+
+## 推荐的 detail 工作流
+
+建议按渐进式方式查：
+
+1. 先 `list_*`
+2. 再 `get_*_detail` 默认 `summary`
+3. 需要看字段内容时用 `preview`
+4. 需要看结构时用 `shape`
+5. 真要完整原文或排查匹配问题时再用 `full` / `diagnostic`
+
+如果响应体很深，不要一上来就读全量 JSON，可以先：
+
+- 用 `responsePath` 或 `jsonPath` 精准定位
+- 再配合 `includePaths` / `excludePaths`
+- 必要时加 `topLevelOnly`
+
+这样最省上下文，也最不容易漏看重点。
+
+## stdio MCP 和 legacy /invoke 有什么区别
+
+两条路都会走到 Polaris 的同一套核心 payload 生成逻辑，但定位不同：
+
+- stdio / SDK MCP：标准 MCP 返回 `structuredContent` + `content`
+- legacy `/invoke`：只返回 HTTP JSON `data`
+
+如果你在支持标准 MCP 的客户端里使用 Polaris，优先走 MCP，因为它会保留文本可见性策略、结构化结果和更稳定的工具体验。`/invoke` 更适合兼容旧脚本或临时调试。

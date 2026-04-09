@@ -1,9 +1,11 @@
 import type { CreateMockRuleInput, UpdateMockRuleInput } from "@polaris/shared-contracts";
 import type { MockRule, RequestRecord } from "@polaris/shared-types";
 import { mockTemplates } from "../mock/mockTemplates";
+import { assignPathValue, cloneJsonValue, extractWritableJsonPathTokens, removePathValue } from "./jsonPathUtils";
 
 type MockRulePatch = Partial<CreateMockRuleInput>;
-type MockRuleOperationPath = keyof CreateMockRuleInput;
+type TopLevelMockRuleOperationPath = keyof CreateMockRuleInput;
+type MockRuleOperationPath = string;
 
 type MockRuleOperation = {
   op: "replace" | "remove";
@@ -36,6 +38,19 @@ type UpdateMockRuleOperationsInput = {
 export type CreateMockRuleArgs = CreateMockRuleInput | CreateMockRuleFromRequestInput | CreateMockRuleFromTemplateInput;
 export type UpdateMockRuleArgs = ({ id: string } & UpdateMockRuleInput) | UpdateMockRulePatchInput | UpdateMockRuleOperationsInput;
 
+const topLevelOperationPaths = new Set<TopLevelMockRuleOperationPath>([
+  "name",
+  "group",
+  "method",
+  "url",
+  "requestBodyExactMatch",
+  "requestBodyKeyMatch",
+  "responseStatus",
+  "responseHeaders",
+  "responseBody",
+  "enabled"
+]);
+
 function isFullCreateInput(args: CreateMockRuleArgs): args is CreateMockRuleInput {
   return "method" in args && "url" in args && "responseStatus" in args;
 }
@@ -51,8 +66,34 @@ function applyPatch(base: CreateMockRuleInput, patch?: MockRulePatch): CreateMoc
   };
 }
 
+function isResponseBodyNestedPath(path: MockRuleOperationPath): boolean {
+  return path.startsWith("responseBody.") || path.startsWith("responseBody[");
+}
+
+function applyResponseBodyOperation(base: CreateMockRuleInput, operation: MockRuleOperation): CreateMockRuleInput {
+  const nestedPath = operation.path.slice("responseBody".length);
+  const tokens = extractWritableJsonPathTokens(nestedPath);
+  const responseBody =
+    operation.op === "remove"
+      ? removePathValue(cloneJsonValue(base.responseBody), tokens)
+      : assignPathValue(cloneJsonValue(base.responseBody), tokens, operation.value);
+
+  return {
+    ...base,
+    responseBody
+  };
+}
+
 function applyOperations(base: CreateMockRuleInput, operations: MockRuleOperation[]): CreateMockRuleInput {
   return operations.reduce<CreateMockRuleInput>((current, operation) => {
+    if (isResponseBodyNestedPath(operation.path)) {
+      return applyResponseBodyOperation(current, operation);
+    }
+
+    if (!topLevelOperationPaths.has(operation.path as TopLevelMockRuleOperationPath)) {
+      throw new Error(`Unsupported mock rule operation path: ${operation.path}`);
+    }
+
     if (operation.op === "remove") {
       return {
         ...current,

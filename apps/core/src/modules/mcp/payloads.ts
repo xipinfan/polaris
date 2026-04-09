@@ -1,15 +1,55 @@
-import type { MockRule, ProxyRule, RequestRecord, SavedRequest } from "@polaris/shared-types";
+import type { JsonValue, MockRule, ProxyRule, RequestRecord, SavedRequest } from "@polaris/shared-types";
 import { getBodyPathValue, getRuleGroupName, hasBodyKeyPath, matchesExactBodyExpression } from "../mock/mockMatchers";
+import {
+  assignPathValue,
+  buildEmptyLike,
+  cloneJsonValue,
+  executeJsonPath,
+  extractWritableJsonPathTokens,
+  isPlainObject,
+  normalizeToJsonPath,
+  removePathValue
+} from "./jsonPathUtils";
 
-export const detailViewValues = ["summary", "diagnostic", "preview", "full"] as const;
+export const detailViewValues = ["summary", "diagnostic", "preview", "full", "shape"] as const;
 export type DetailView = (typeof detailViewValues)[number];
 export const DEFAULT_BODY_PREVIEW_CHARS = 2000;
+export { executeJsonPath, normalizeToJsonPath } from "./jsonPathUtils";
 
 type DetailOptions = {
   view?: DetailView;
   requestId?: string;
   scenario?: string;
   bodyPreviewChars?: number;
+  maxDepth?: number;
+  maxArrayItems?: number;
+  jsonPath?: string;
+  responsePath?: string;
+  includePaths?: string[];
+  excludePaths?: string[];
+  topLevelOnly?: boolean;
+};
+
+type ToolResultTextMode = "summary" | "preview" | "full";
+
+type PathFilterResult = {
+  normalizedJsonPath: string | null;
+  matchedPaths: string[];
+  matchedValues: unknown[];
+  filteredValue: unknown;
+};
+
+type ShapeOptions = {
+  maxDepth?: number;
+  maxArrayItems?: number;
+  topLevelOnly?: boolean;
+};
+
+type JsonStats = {
+  serializedChars: number;
+  nodeCount: number;
+  maxDepth: number;
+  topLevelKeys: string[];
 };
 
 type MockDiagnosticContext = {
@@ -75,7 +115,253 @@ function buildScenarioChecks(requestBody: unknown, scenario?: string): string[] 
   });
 }
 
-export function buildToolResult(result: unknown, summary: string) {
+function buildIncludeSubset(source: unknown, includePaths: string[]): unknown {
+  let result: unknown = undefined;
+  for (const rawPath of includePaths) {
+    const normalized = normalizeToJsonPath(rawPath)!;
+    const execution = executeJsonPath(source, normalized);
+    for (let index = 0; index < execution.matchedPaths.length; index += 1) {
+      const matchedPath = execution.matchedPaths[index]!;
+      const matchedValue = execution.matchedValues[index];
+      const tokens = extractWritableJsonPathTokens(matchedPath);
+      result = assignPathValue(result, tokens, matchedValue);
+    }
+  }
+  return result ?? buildEmptyLike(source);
+}
+
+function applyExcludePaths(source: unknown, excludePaths: string[]): unknown {
+  let result = cloneJsonValue(source);
+  for (const rawPath of excludePaths) {
+    const normalized = normalizeToJsonPath(rawPath)!;
+    const execution = executeJsonPath(result, normalized);
+    for (const matchedPath of execution.matchedPaths) {
+      const tokens = extractWritableJsonPathTokens(matchedPath);
+      result = removePathValue(result, tokens);
+    }
+  }
+  return result;
+}
+
+function buildTopLevelView(value: unknown, maxArrayItems?: number): unknown {
+  if (Array.isArray(value)) {
+    return buildShape(value, { topLevelOnly: true, maxArrayItems });
+  }
+  if (isPlainObject(value)) {
+    return buildShape(value, { topLevelOnly: true, maxArrayItems });
+  }
+  return value;
+}
+
+function buildContentPreviewLine(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `items=${value.length}`;
+  }
+
+  if (!isPlainObject(value)) {
+    return truncateText(value, 160).replace(/\s+/g, " ");
+  }
+
+  const preferredKeys = [
+    "id",
+    "ruleId",
+    "name",
+    "title",
+    "url",
+    "method",
+    "enabled",
+    "host",
+    "pattern",
+    "action",
+    "statusCode"
+  ];
+  const selectedKeys = preferredKeys.filter((key) => key in value);
+  const fallbackKeys = Object.keys(value).slice(0, Math.max(0, 4 - selectedKeys.length));
+  const keys = [...new Set([...selectedKeys, ...fallbackKeys])].slice(0, 4);
+  if (keys.length === 0) {
+    return "{}";
+  }
+
+  return keys
+    .map((key) => `${key}=${truncateText(value[key], 80).replace(/\s+/g, " ")}`)
+    .join(", ");
+}
+
+function buildContentPreview(value: unknown): string {
+  if (Array.isArray(value)) {
+    const lines = value.slice(0, 5).map((item, index) => `${index + 1}. ${buildContentPreviewLine(item)}`);
+    if (value.length > 5) {
+      lines.push(`... (+${value.length - 5} more items)`);
+    }
+    return lines.join("\n");
+  }
+
+  return buildContentPreviewLine(value);
+}
+
+function buildTextContent(result: unknown, summary: string, textMode: ToolResultTextMode): string {
+  if (textMode === "summary") {
+    return summary;
+  }
+
+  if (textMode === "full") {
+    return JSON.stringify(result, null, 2);
+  }
+
+  const preview = buildContentPreview(result);
+  return preview ? `${summary}\n${preview}` : summary;
+}
+
+function jsonTypeName(value: unknown): string {
+  if (value === null) {
+    return "null";
+  }
+  if (Array.isArray(value)) {
+    return "array";
+  }
+  return typeof value;
+}
+
+function collapseMarker(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `{array:${value.length}}`;
+  }
+  if (isPlainObject(value)) {
+    return "{object}";
+  }
+  return jsonTypeName(value);
+}
+
+export function buildShape(value: unknown, options: ShapeOptions = {}, depth = 0): unknown {
+  const maxDepth = options.topLevelOnly ? 1 : (options.maxDepth ?? 6);
+  const maxArrayItems = options.maxArrayItems ?? 5;
+
+  if (value === null || typeof value !== "object") {
+    return jsonTypeName(value);
+  }
+
+  if (depth >= maxDepth) {
+    return collapseMarker(value);
+  }
+
+  if (Array.isArray(value)) {
+    const items = value.slice(0, maxArrayItems).map((item) => buildShape(item, options, depth + 1));
+    if (value.length > maxArrayItems) {
+      items.push(`{+${value.length - maxArrayItems} more items}`);
+    }
+    return items;
+  }
+
+  const shape: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value)) {
+    shape[key] = buildShape(child, options, depth + 1);
+  }
+  return shape;
+}
+
+export function applyPathFilters(value: unknown, options: DetailOptions): PathFilterResult {
+  const normalizedJsonPath = normalizeToJsonPath(options.jsonPath ?? options.responsePath) ?? null;
+  let workingValue = cloneJsonValue(value);
+  let matchedPaths: string[] = [];
+  let matchedValues: unknown[] = [];
+
+  if (normalizedJsonPath) {
+    const execution = executeJsonPath(workingValue, normalizedJsonPath);
+    matchedPaths = execution.matchedPaths;
+    matchedValues = execution.matchedValues;
+    if (matchedValues.length === 1) {
+      workingValue = matchedValues[0];
+    } else if (matchedValues.length > 1) {
+      workingValue = matchedValues;
+    } else {
+      workingValue = null;
+    }
+  }
+
+  if (options.includePaths?.length) {
+    workingValue = buildIncludeSubset(workingValue, options.includePaths);
+  }
+
+  if (options.excludePaths?.length) {
+    workingValue = applyExcludePaths(workingValue, options.excludePaths);
+  }
+
+  if (options.topLevelOnly) {
+    workingValue = buildTopLevelView(workingValue, options.maxArrayItems);
+  }
+
+  return {
+    normalizedJsonPath,
+    matchedPaths,
+    matchedValues,
+    filteredValue: workingValue
+  };
+}
+
+export function estimateJsonStats(value: unknown): JsonStats {
+  const serialized = typeof value === "string" ? value : JSON.stringify(value);
+
+  const walk = (node: unknown, depth: number): { nodeCount: number; maxDepth: number } => {
+    if (node === null || typeof node !== "object") {
+      return { nodeCount: 1, maxDepth: depth };
+    }
+
+    if (Array.isArray(node)) {
+      return node.reduce(
+        (acc, item) => {
+          const child = walk(item, depth + 1);
+          return {
+            nodeCount: acc.nodeCount + child.nodeCount,
+            maxDepth: Math.max(acc.maxDepth, child.maxDepth)
+          };
+        },
+        { nodeCount: 1, maxDepth: depth }
+      );
+    }
+
+    return Object.values(node).reduce(
+      (acc, item) => {
+        const child = walk(item, depth + 1);
+        return {
+          nodeCount: acc.nodeCount + child.nodeCount,
+          maxDepth: Math.max(acc.maxDepth, child.maxDepth)
+        };
+      },
+      { nodeCount: 1, maxDepth: depth }
+    );
+  };
+
+  const stats = walk(value, 1);
+  const topLevelKeys = isPlainObject(value) ? Object.keys(value) : [];
+  return {
+    serializedChars: serialized?.length ?? 0,
+    nodeCount: stats.nodeCount,
+    maxDepth: stats.maxDepth,
+    topLevelKeys
+  };
+}
+
+function buildFilteredBodyPreview(value: unknown, maxChars: number): string {
+  return truncateText(value, maxChars);
+}
+
+function buildMockRuleBaseDetail(rule: MockRule) {
+  return {
+    ...buildMockRuleSummary(rule),
+    responseStatus: rule.responseStatus,
+    requestBodyExactMatch: rule.requestBodyExactMatch ?? null,
+    requestBodyKeyMatch: rule.requestBodyKeyMatch ?? null,
+    responseHeaderCount: Object.keys(rule.responseHeaders).length,
+    responseBodyMeta: estimateJsonStats(rule.responseBody)
+  };
+}
+
+export function buildToolResult(
+  result: unknown,
+  summary: string,
+  options: { textMode?: ToolResultTextMode } = {}
+) {
+  const textMode = options.textMode ?? "summary";
   return {
     structuredContent: {
       result
@@ -83,7 +369,7 @@ export function buildToolResult(result: unknown, summary: string) {
     content: [
       {
         type: "text" as const,
-        text: summary
+        text: buildTextContent(result, summary, textMode)
       }
     ]
   };
@@ -170,6 +456,8 @@ export function buildMockRuleSummary(rule: MockRule) {
     enabled: rule.enabled,
     hitCount: rule.hitCount,
     updatedAt: rule.updatedAt,
+    hasRequestBodyMatcher: Boolean(rule.requestBodyExactMatch || rule.requestBodyKeyMatch),
+    hasResponseBody: rule.responseBody !== null && rule.responseBody !== undefined,
     detail: {
       tool: "get_mock_rule_detail",
       id: rule.id,
@@ -195,8 +483,22 @@ export function buildProxyRuleSummary(rule: ProxyRule) {
 
 export function buildRequestDetailPayload(record: RequestRecord, options: DetailOptions) {
   const view = options.view ?? "summary";
+  const filterResult = applyPathFilters(record.responseBody, options);
   if (view === "full") {
-    return record;
+    return {
+      ...record,
+      normalizedJsonPath: filterResult.normalizedJsonPath,
+      filteredResponseBody: filterResult.filteredValue
+    };
+  }
+
+  if (view === "shape") {
+    return {
+      ...buildRequestSummary(record),
+      requestBodyShape: buildShape(record.requestBody, options),
+      responseBodyShape: buildShape(filterResult.filteredValue, options),
+      normalizedJsonPath: filterResult.normalizedJsonPath
+    };
   }
 
   if (view === "preview") {
@@ -207,7 +509,8 @@ export function buildRequestDetailPayload(record: RequestRecord, options: Detail
       requestQuery: record.requestQuery,
       responseHeaders: record.responseHeaders,
       requestBodyPreview: truncateText(record.requestBody, maxChars),
-      responseBodyPreview: truncateText(record.responseBody, maxChars),
+      responseBodyPreview: truncateText(filterResult.filteredValue, maxChars),
+      normalizedJsonPath: filterResult.normalizedJsonPath,
       bodyPreviewChars: maxChars
     };
   }
@@ -222,14 +525,29 @@ export function buildRequestDetailPayload(record: RequestRecord, options: Detail
           matchedRuleName: record.resolution.matchedRuleName ?? null,
           reason: record.resolution.reason
         }
-      : null
+      : null,
+    normalizedJsonPath: filterResult.normalizedJsonPath,
+    filteredResponseBody: filterResult.filteredValue
   };
 }
 
 export function buildSavedRequestDetailPayload(savedRequest: SavedRequest, options: DetailOptions) {
   const view = options.view ?? "summary";
+  const filterResult = applyPathFilters(savedRequest.body, options);
   if (view === "full") {
-    return savedRequest;
+    return {
+      ...savedRequest,
+      normalizedJsonPath: filterResult.normalizedJsonPath,
+      filteredBody: filterResult.filteredValue
+    };
+  }
+
+  if (view === "shape") {
+    return {
+      ...buildSavedRequestSummary(savedRequest),
+      bodyShape: buildShape(filterResult.filteredValue, options),
+      normalizedJsonPath: filterResult.normalizedJsonPath
+    };
   }
 
   if (view === "preview") {
@@ -238,7 +556,8 @@ export function buildSavedRequestDetailPayload(savedRequest: SavedRequest, optio
       ...buildSavedRequestSummary(savedRequest),
       headers: savedRequest.headers,
       query: savedRequest.query,
-      bodyPreview: truncateText(savedRequest.body, maxChars),
+      bodyPreview: truncateText(filterResult.filteredValue, maxChars),
+      normalizedJsonPath: filterResult.normalizedJsonPath,
       bodyPreviewChars: maxChars
     };
   }
@@ -247,7 +566,9 @@ export function buildSavedRequestDetailPayload(savedRequest: SavedRequest, optio
     ...buildSavedRequestSummary(savedRequest),
     headerCount: Object.keys(savedRequest.headers).length,
     queryCount: Object.keys(savedRequest.query).length,
-    hasBody: savedRequest.body !== null && savedRequest.body !== undefined
+    hasBody: savedRequest.body !== null && savedRequest.body !== undefined,
+    normalizedJsonPath: filterResult.normalizedJsonPath,
+    filteredBody: filterResult.filteredValue
   };
 }
 
@@ -257,18 +578,34 @@ export function buildMockRuleDetailPayload(
   context: MockDiagnosticContext
 ) {
   const view = options.view ?? "summary";
+  const maxChars = options.bodyPreviewChars ?? DEFAULT_BODY_PREVIEW_CHARS;
+  const filterResult = applyPathFilters(rule.responseBody, options);
+  const baseDetail = buildMockRuleBaseDetail(rule);
+
   if (view === "full") {
-    return rule;
+    return {
+      rule,
+      normalizedJsonPath: filterResult.normalizedJsonPath,
+      matchedPaths: filterResult.matchedPaths,
+      filteredResponseBody: filterResult.filteredValue
+    };
+  }
+
+  if (view === "shape") {
+    return {
+      ...baseDetail,
+      normalizedJsonPath: filterResult.normalizedJsonPath,
+      responseBodyShape: buildShape(filterResult.filteredValue, options)
+    };
   }
 
   if (view === "preview") {
-    const maxChars = options.bodyPreviewChars ?? DEFAULT_BODY_PREVIEW_CHARS;
     return {
-      ...buildMockRuleSummary(rule),
-      requestBodyExactMatch: rule.requestBodyExactMatch ?? null,
-      requestBodyKeyMatch: rule.requestBodyKeyMatch ?? null,
+      ...baseDetail,
       responseHeaders: rule.responseHeaders,
-      responseBodyPreview: truncateText(rule.responseBody, maxChars),
+      normalizedJsonPath: filterResult.normalizedJsonPath,
+      matchedPaths: filterResult.matchedPaths,
+      filteredResponseBodyPreview: buildFilteredBodyPreview(filterResult.filteredValue, maxChars),
       bodyPreviewChars: maxChars
     };
   }
@@ -303,7 +640,9 @@ export function buildMockRuleDetailPayload(
     };
 
     return {
-      ...buildMockRuleSummary(rule),
+      ...baseDetail,
+      normalizedJsonPath: filterResult.normalizedJsonPath,
+      filteredResponseBody: filterResult.filteredValue,
       diagnostic,
       summary: [
         diagnostic.enabled ? "规则已启用" : "规则已禁用",
@@ -320,10 +659,8 @@ export function buildMockRuleDetailPayload(
   }
 
   return {
-    ...buildMockRuleSummary(rule),
-    responseStatus: rule.responseStatus,
-    hasBodyMatcher: Boolean(rule.requestBodyExactMatch || rule.requestBodyKeyMatch),
-    responseHeaderCount: Object.keys(rule.responseHeaders).length,
-    hasResponseBody: rule.responseBody !== null && rule.responseBody !== undefined
+    ...baseDetail,
+    normalizedJsonPath: filterResult.normalizedJsonPath,
+    filteredResponseBody: filterResult.filteredValue
   };
 }

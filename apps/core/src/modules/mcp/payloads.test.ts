@@ -7,8 +7,11 @@ import {
   buildRequestDetailPayload,
   buildSavedRequestDetailPayload,
   buildToolResult,
+  executeJsonPath,
+  normalizeToJsonPath,
   buildWriteReceipt
 } from "./payloads";
+import { resolveDetailTextMode } from "./toolResultPolicy";
 
 const requestRecord: RequestRecord = {
   id: "req-1",
@@ -67,10 +70,39 @@ const mockRule: MockRule = {
   updatedAt: "2026-04-08T00:00:00.000Z"
 };
 
-test("buildToolResult keeps structuredContent and short text only", () => {
-  const result = buildToolResult({ ok: true }, "Saved request receipt");
-  assert.deepEqual(result.structuredContent.result, { ok: true });
-  assert.equal(result.content[0]?.text, "Saved request receipt");
+test("buildToolResult keeps structuredContent and supports preview key=value text", () => {
+  const result = buildToolResult(
+    { name: "demo", enabled: true, count: 2 },
+    "Saved request receipt",
+    { textMode: "preview" }
+  );
+  assert.deepEqual(result.structuredContent.result, { name: "demo", enabled: true, count: 2 });
+  assert.match(result.content[0]?.text ?? "", /Saved request receipt/);
+  assert.match(result.content[0]?.text ?? "", /name=demo/);
+  assert.match(result.content[0]?.text ?? "", /enabled=true/);
+});
+
+test("buildToolResult list preview includes indexed rows and key fields", () => {
+  const result = buildToolResult(
+    [
+      { id: "1", name: "alpha", enabled: true },
+      { id: "2", name: "beta", enabled: false }
+    ],
+    "Loaded list",
+    { textMode: "preview" }
+  );
+
+  const text = result.content[0]?.text ?? "";
+  assert.match(text, /1\.\s*id=1/);
+  assert.match(text, /2\.\s*id=2/);
+});
+
+test("buildToolResult summary and full text modes are different", () => {
+  const summaryOnly = buildToolResult({ ok: true }, "Only summary", { textMode: "summary" });
+  assert.equal(summaryOnly.content[0]?.text, "Only summary");
+
+  const full = buildToolResult({ ok: true }, "Ignored summary", { textMode: "full" });
+  assert.equal(full.content[0]?.text, JSON.stringify({ ok: true }, null, 2));
 });
 
 test("request summary view omits heavy payload fields", () => {
@@ -191,4 +223,138 @@ test("buildWriteReceipt reports changed fields only", () => {
 
 test("default preview size stays small enough for low-context reads", () => {
   assert.equal(DEFAULT_BODY_PREVIEW_CHARS, 2000);
+});
+
+test("mock summary includes body matcher flags and response body metadata", () => {
+  const detail = buildMockRuleDetailPayload(
+    mockRule,
+    { view: "summary" },
+    {
+      activeGroup: "demo"
+    }
+  );
+
+  if (!("hasRequestBodyMatcher" in detail && "responseBodyMeta" in detail)) {
+    assert.fail("Expected summary mock rule payload");
+  }
+  assert.equal(detail.hasRequestBodyMatcher, true);
+  assert.equal(detail.hasResponseBody, true);
+  assert.equal(typeof detail.responseBodyMeta.serializedChars, "number");
+  assert.equal(typeof detail.responseBodyMeta.nodeCount, "number");
+  assert.equal(typeof detail.responseBodyMeta.maxDepth, "number");
+});
+
+test("executeJsonPath supports wildcard lookup and returns matched paths and values", () => {
+  const source = {
+    data: {
+      taskHbList: [{ couponArea: "A" }, { couponArea: "B" }]
+    }
+  };
+  const result = executeJsonPath(source, "$.data.taskHbList[*].couponArea");
+
+  assert.deepEqual(result.matchedPaths, ["$.data.taskHbList[0].couponArea", "$.data.taskHbList[1].couponArea"]);
+  assert.deepEqual(result.matchedValues, ["A", "B"]);
+});
+
+test("responsePath shorthand is normalized and used for filtering", () => {
+  const detail = buildMockRuleDetailPayload(
+    {
+      ...mockRule,
+      responseBody: {
+        data: {
+          taskHbList: [{ couponArea: "A" }, { couponArea: "B" }]
+        }
+      }
+    },
+    {
+      view: "summary",
+      responsePath: "data.taskHbList.0.couponArea"
+    },
+    {
+      activeGroup: "demo"
+    }
+  );
+
+  assert.equal(normalizeToJsonPath("data.taskHbList.0.couponArea"), "$.data.taskHbList[0].couponArea");
+  assert.equal(detail.normalizedJsonPath, "$.data.taskHbList[0].couponArea");
+  assert.equal(detail.filteredResponseBody, "A");
+});
+
+test("includePaths with no matches does not fall back to the full response body", () => {
+  const detail = buildMockRuleDetailPayload(
+    {
+      ...mockRule,
+      responseBody: {
+        data: {
+          taskHbList: [{ couponArea: "A" }, { couponArea: "B" }]
+        }
+      }
+    },
+    {
+      view: "summary",
+      includePaths: ["missing.path"]
+    },
+    {
+      activeGroup: "demo"
+    }
+  );
+
+  assert.deepEqual(detail.filteredResponseBody, {});
+});
+
+test("mock shape view returns response body shape skeleton", () => {
+  const detail = buildMockRuleDetailPayload(
+    {
+      ...mockRule,
+      responseBody: {
+        data: {
+          taskHbList: [{ couponArea: "A", amount: 1 }, { couponArea: "B", amount: 2 }]
+        }
+      }
+    },
+    {
+      view: "shape",
+      maxDepth: 4,
+      maxArrayItems: 1
+    },
+    {
+      activeGroup: "demo"
+    }
+  );
+
+  if (!("responseBodyShape" in detail)) {
+    assert.fail("Expected shape mock rule payload");
+  }
+  assert.deepEqual(detail.responseBodyShape, {
+    data: {
+      taskHbList: [{ couponArea: "string", amount: "number" }, "{+1 more items}"]
+    }
+  });
+});
+
+test("full/shape/diagnostic views map to full JSON text mode", () => {
+  const payload = { ok: true, nested: { count: 1 } };
+  const fullText = JSON.stringify(payload, null, 2);
+
+  assert.equal(
+    buildToolResult(payload, "x", { textMode: resolveDetailTextMode("full") }).content[0]?.text,
+    fullText
+  );
+  assert.equal(
+    buildToolResult(payload, "x", { textMode: resolveDetailTextMode("shape") }).content[0]?.text,
+    fullText
+  );
+  assert.equal(
+    buildToolResult(payload, "x", { textMode: resolveDetailTextMode("diagnostic") }).content[0]?.text,
+    fullText
+  );
+});
+
+test("resolveDetailTextMode maps views to expected text modes", () => {
+  assert.equal(resolveDetailTextMode("summary"), "summary");
+  assert.equal(resolveDetailTextMode("preview"), "preview");
+  assert.equal(resolveDetailTextMode("full"), "full");
+  assert.equal(resolveDetailTextMode("shape"), "full");
+  assert.equal(resolveDetailTextMode("diagnostic"), "full");
+  assert.equal(resolveDetailTextMode(undefined), "preview");
 });

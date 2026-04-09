@@ -65,6 +65,63 @@ test("buildUpdateMockRuleInput applies replace and remove operations", () => {
   assert.equal(next.requestBodyExactMatch, null);
 });
 
+test("buildUpdateMockRuleInput can replace a deep responseBody path", () => {
+  const next = buildUpdateMockRuleInput(
+    {
+      ...existingRule,
+      responseBody: {
+        data: {
+          taskHbList: [{ couponArea: "A", amount: 1 }]
+        }
+      }
+    },
+    {
+      id: "mock-1",
+      operations: [
+        {
+          op: "replace",
+          path: "responseBody.data.taskHbList[0].couponArea",
+          value: "B"
+        }
+      ]
+    }
+  );
+
+  assert.deepEqual(next.responseBody, {
+    data: {
+      taskHbList: [{ couponArea: "B", amount: 1 }]
+    }
+  });
+});
+
+test("buildUpdateMockRuleInput can remove a deep responseBody path", () => {
+  const next = buildUpdateMockRuleInput(
+    {
+      ...existingRule,
+      responseBody: {
+        data: {
+          taskHbList: [{ couponArea: "A", amount: 1 }]
+        }
+      }
+    },
+    {
+      id: "mock-1",
+      operations: [
+        {
+          op: "remove",
+          path: "responseBody.data.taskHbList[0].couponArea"
+        }
+      ]
+    }
+  );
+
+  assert.deepEqual(next.responseBody, {
+    data: {
+      taskHbList: [{ amount: 1 }]
+    }
+  });
+});
+
 test("buildCreateMockRuleInput can seed from a captured request", () => {
   const next = buildCreateMockRuleInput(
     {

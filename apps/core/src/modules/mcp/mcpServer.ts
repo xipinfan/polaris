@@ -27,7 +27,13 @@ import { MockService } from "../mock/mockService";
 import { CertificateManager } from "../proxy/certificateManager";
 import { ProxyService } from "../proxy/proxyService";
 import { RequestService } from "../requests/requestService";
-import { toLegacyErrorResponse, unknownPackError, unknownResourceError, unknownToolError } from "./errorHandling";
+import {
+  createPolarisError,
+  toLegacyErrorResponse,
+  unknownPackError,
+  unknownResourceError,
+  unknownToolError
+} from "./errorHandling";
 
 function getInstallGuideForPlatform(certificatePath?: string) {
   if (process.platform === "win32") {
@@ -172,7 +178,14 @@ export class MpcServer {
               res.json({
                 data: buildRequestDetailPayload(request, {
                   view: req.body.view,
-                  bodyPreviewChars: req.body.bodyPreviewChars
+                  bodyPreviewChars: req.body.bodyPreviewChars,
+                  maxDepth: req.body.maxDepth,
+                  maxArrayItems: req.body.maxArrayItems,
+                  jsonPath: req.body.jsonPath,
+                  responsePath: req.body.responsePath,
+                  includePaths: req.body.includePaths,
+                  excludePaths: req.body.excludePaths,
+                  topLevelOnly: req.body.topLevelOnly
                 })
               });
             }
@@ -195,7 +208,14 @@ export class MpcServer {
               res.json({
                 data: buildSavedRequestDetailPayload(savedRequest, {
                   view: req.body.view,
-                  bodyPreviewChars: req.body.bodyPreviewChars
+                  bodyPreviewChars: req.body.bodyPreviewChars,
+                  maxDepth: req.body.maxDepth,
+                  maxArrayItems: req.body.maxArrayItems,
+                  jsonPath: req.body.jsonPath,
+                  responsePath: req.body.responsePath,
+                  includePaths: req.body.includePaths,
+                  excludePaths: req.body.excludePaths,
+                  topLevelOnly: req.body.topLevelOnly
                 })
               });
             }
@@ -251,7 +271,15 @@ export class MpcServer {
             {
               const mockRule = this.mockService.list().find((item) => item.id === req.body.id);
               if (!mockRule) {
-                throw new Error("Mock rule not found");
+                throw createPolarisError("MOCK_RULE_NOT_FOUND", "Mock rule not found", {
+                  status: 404,
+                  suggestions: [
+                    "Call list_mock_rules first to confirm the id.",
+                    "Search by name or group if you do not have the exact id yet.",
+                    "Check whether the rule was removed in another session."
+                  ],
+                  input: req.body
+                });
               }
               const requestRecord = req.body.requestId ? this.requestService.getById(req.body.requestId) : undefined;
               res.json({
@@ -261,7 +289,14 @@ export class MpcServer {
                     view: req.body.view,
                     requestId: req.body.requestId,
                     scenario: req.body.scenario,
-                    bodyPreviewChars: req.body.bodyPreviewChars
+                    bodyPreviewChars: req.body.bodyPreviewChars,
+                    maxDepth: req.body.maxDepth,
+                    maxArrayItems: req.body.maxArrayItems,
+                    jsonPath: req.body.jsonPath,
+                    responsePath: req.body.responsePath,
+                    includePaths: req.body.includePaths,
+                    excludePaths: req.body.excludePaths,
+                    topLevelOnly: req.body.topLevelOnly
                   },
                   {
                     activeGroup: this.mockService.getActiveGroup(),
