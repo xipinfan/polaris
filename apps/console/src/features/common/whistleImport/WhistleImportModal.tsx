@@ -218,6 +218,7 @@ export function WhistleImportModal({ defaultScope, onClose, open }: WhistleImpor
 
   return (
     <Modal
+      className={styles.modal}
       destroyOnHidden
       footer={null}
       onCancel={onClose}
@@ -227,12 +228,12 @@ export function WhistleImportModal({ defaultScope, onClose, open }: WhistleImpor
     >
       <div className={styles.shell}>
         <div className={styles.topBar}>
-          <div>
+          <div className={styles.topBarCopy}>
             <h3>从 Whistle 导入</h3>
             <p>自动扫描本机 Whistle 存储目录，预览并选择要导入的 Mock 与代理规则。</p>
           </div>
           <div className={styles.topActions}>
-            <Button disabled={loading || submitting} onClick={() => void scan()}>
+            <Button className={styles.secondaryButton} disabled={loading || submitting} onClick={() => void scan()}>
               重新扫描
             </Button>
           </div>
@@ -251,20 +252,21 @@ export function WhistleImportModal({ defaultScope, onClose, open }: WhistleImpor
             <div className={styles.sourceMeta}>
               <span className={styles.label}>状态</span>
               <div className={styles.badges}>
-                <Tag color={scanResult.source.resolvedDir ? "green" : "default"}>
+                <Tag className={`${styles.pill} ${scanResult.source.resolvedDir ? styles.pillSuccess : styles.pillMuted}`}>
                   {scanResult.source.resolvedDir ? "扫描成功" : "未发现目录"}
                 </Tag>
-                <Tag color="blue">规则 {scanResult.source.ruleFileCount}</Tag>
-                <Tag color="cyan">Values {scanResult.source.valueFileCount}</Tag>
-                <Tag color="gold">分组 {scanResult.source.groupCount}</Tag>
+                <Tag className={`${styles.pill} ${styles.pillBrand}`}>规则 {scanResult.source.ruleFileCount}</Tag>
+                <Tag className={`${styles.pill} ${styles.pillProxy}`}>Values {scanResult.source.valueFileCount}</Tag>
+                <Tag className={`${styles.pill} ${styles.pillWarn}`}>分组 {scanResult.source.groupCount}</Tag>
               </div>
             </div>
           </section>
         ) : null}
 
-        {scanError ? <Alert message={scanError} type="error" showIcon /> : null}
+        {scanError ? <Alert className={styles.notice} message={scanError} type="error" showIcon /> : null}
         {scanResult?.source.scanWarnings.map((warning) => (
           <Alert
+            className={styles.notice}
             key={`${warning.code}-${warning.detail ?? warning.message}`}
             message={warning.message}
             description={warning.detail}
@@ -277,6 +279,7 @@ export function WhistleImportModal({ defaultScope, onClose, open }: WhistleImpor
           <Select
             className={styles.select}
             onChange={(value) => setScope(value)}
+            popupClassName={styles.selectDropdown}
             options={[
               { label: "全部", value: "all" },
               { label: "Mock", value: "mock" },
@@ -288,6 +291,7 @@ export function WhistleImportModal({ defaultScope, onClose, open }: WhistleImpor
             allowClear
             className={styles.select}
             onChange={(value) => setSelectedGroupName(value ?? null)}
+            popupClassName={styles.selectDropdown}
             options={(scanResult?.groupSummaries ?? []).map((group) => ({ label: group.name, value: group.name }))}
             placeholder="筛选分组"
             value={selectedGroupName ?? undefined}
@@ -295,6 +299,7 @@ export function WhistleImportModal({ defaultScope, onClose, open }: WhistleImpor
           <Select
             className={styles.select}
             onChange={(value) => setCompatibility(value)}
+            popupClassName={styles.selectDropdown}
             options={[
               { label: "全部状态", value: "all" },
               { label: "仅可导入", value: "compatible" },
@@ -310,19 +315,19 @@ export function WhistleImportModal({ defaultScope, onClose, open }: WhistleImpor
             placeholder="搜索文件名、URL、Host、规则摘要"
             value={search}
           />
-          <Checkbox checked={onlyCompatible} onChange={(event) => setOnlyCompatible(event.target.checked)}>
+          <Checkbox className={styles.filterCheckbox} checked={onlyCompatible} onChange={(event) => setOnlyCompatible(event.target.checked)}>
             仅显示可导入项
           </Checkbox>
-          <Checkbox checked={onlyEnabled} onChange={(event) => setOnlyEnabled(event.target.checked)}>
+          <Checkbox className={styles.filterCheckbox} checked={onlyEnabled} onChange={(event) => setOnlyEnabled(event.target.checked)}>
             仅显示启用项
           </Checkbox>
         </section>
 
         <section className={styles.actionsRow}>
-          <Button disabled={!selectableFilteredIds.length} onClick={handleSelectFiltered}>
+          <Button className={styles.secondaryButton} disabled={!selectableFilteredIds.length} onClick={handleSelectFiltered}>
             全选当前筛选结果
           </Button>
-          <Button onClick={handleClearSelection}>清空选择</Button>
+          <Button className={styles.secondaryButton} onClick={handleClearSelection}>清空选择</Button>
         </section>
 
         <div className={styles.content}>
@@ -344,6 +349,7 @@ export function WhistleImportModal({ defaultScope, onClose, open }: WhistleImpor
                       return (
                         <label className={styles.candidateCard} key={candidate.id}>
                           <Checkbox
+                            className={styles.cardCheckbox}
                             checked={selection.has(candidate.id)}
                             disabled={!candidate.compatible}
                             onChange={(event) => handleToggle(candidate, event.target.checked)}
@@ -352,13 +358,23 @@ export function WhistleImportModal({ defaultScope, onClose, open }: WhistleImpor
                             <div className={styles.candidateTitleRow}>
                               <strong>{candidate.title}</strong>
                               <div className={styles.badges}>
-                                <Tag color={candidate.candidateType === "mock" ? "blue" : candidate.candidateType === "proxy" ? "cyan" : "default"}>
+                                <Tag
+                                  className={`${styles.pill} ${
+                                    candidate.candidateType === "mock"
+                                      ? styles.pillBrand
+                                      : candidate.candidateType === "proxy"
+                                        ? styles.pillProxy
+                                        : styles.pillMuted
+                                  }`}
+                                >
                                   {candidate.candidateType === "mock" ? "Mock" : candidate.candidateType === "proxy" ? "代理" : "跳过"}
                                 </Tag>
-                                <Tag color={candidate.enabled ? "green" : "default"}>
+                                <Tag className={`${styles.pill} ${candidate.enabled ? styles.pillSuccess : styles.pillMuted}`}>
                                   {candidate.enabled ? "启用中" : "未启用"}
                                 </Tag>
-                                {effectiveConflictMode === "duplicate" ? <Tag color="gold">冲突复制</Tag> : null}
+                                {effectiveConflictMode === "duplicate" ? (
+                                  <Tag className={`${styles.pill} ${styles.pillWarn}`}>冲突复制</Tag>
+                                ) : null}
                               </div>
                             </div>
                             <div className={styles.summary}>{candidate.sourceSummary}</div>
@@ -390,30 +406,26 @@ export function WhistleImportModal({ defaultScope, onClose, open }: WhistleImpor
             </div>
 
             {result ? (
-              <Alert
-                description={formatExecuteSummary(result)}
-                message="导入完成"
-                showIcon
-                type="success"
-              />
+              <article className={`${styles.strategyCard} ${styles.strategyCardSuccess}`}>
+                <h4>导入完成</h4>
+                <p>{formatExecuteSummary(result)}</p>
+              </article>
             ) : (
-              <Alert
-                description="不兼容项会保持未勾选，并在列表中展示跳过原因。已有 Polaris 规则默认采用保留并复制策略。"
-                message="导入策略"
-                showIcon
-                type="info"
-              />
+              <article className={`${styles.strategyCard} ${styles.strategyCardInfo}`}>
+                <h4>导入策略</h4>
+                <p>不兼容项会保持未勾选，并在列表中展示跳过原因。已有 Polaris 规则默认采用保留并复制策略。</p>
+              </article>
             )}
           </aside>
         </div>
 
         <div className={styles.footer}>
-          <Button onClick={onClose}>{result ? "关闭" : "取消"}</Button>
+          <Button className={styles.secondaryButton} onClick={onClose}>{result ? "关闭" : "取消"}</Button>
           <Button
+            className={styles.primaryButton}
             disabled={submitting || loading || result !== null}
             loading={submitting}
             onClick={() => void handleImport()}
-            type="primary"
           >
             开始导入
           </Button>
