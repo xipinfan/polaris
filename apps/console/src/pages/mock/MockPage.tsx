@@ -1,6 +1,9 @@
 ﻿import type { MockRule } from "@polaris/shared-types";
+import { Button } from "antd";
+import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { asRecord, buildExportEnvelope, downloadJson, pickJsonFile } from "../../features/common/importExport";
+import { WhistleImportModal } from "../../features/common/whistleImport/WhistleImportModal";
 import { useToast } from "../../features/feedback/ToastProvider";
 import { MockRuleModal } from "./components/MockRuleModal";
 import { MockRulesWorkspace } from "./components/MockRulesWorkspace";
@@ -26,6 +29,7 @@ function getMethodClass(method: string) {
 
 export function MockPage() {
   const { showToast } = useToast();
+  const [isWhistleImportOpen, setIsWhistleImportOpen] = useState(false);
   const location = useLocation();
   const locationState = location.state as MockPageLocationState | null;
   const defaultGroup = "默认组";
@@ -99,6 +103,9 @@ export function MockPage() {
           <h2>{"模拟规则"}</h2>
           <p>{"仅当前分组生效，切换分组即切换整组规则。"}</p>
         </div>
+        <Button onClick={() => setIsWhistleImportOpen(true)} type="primary">
+          从 Whistle 导入
+        </Button>
       </section>
       <section className={styles.workspace}>
         <MockSidebar
@@ -161,6 +168,11 @@ export function MockPage() {
         setForm={workspace.setForm}
         setIsOpen={workspace.setIsModalOpen}
         showToast={showToast}
+      />
+      <WhistleImportModal
+        defaultScope="mock"
+        onClose={() => setIsWhistleImportOpen(false)}
+        open={isWhistleImportOpen}
       />
     </div>
   );

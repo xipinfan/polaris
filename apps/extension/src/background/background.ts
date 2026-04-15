@@ -1,33 +1,41 @@
+import {
+  buildProxyConfig,
+  resolveProxySyncAction,
+  shouldPollCore,
+  type ExtensionProxyMode,
+  type HealthPayload
+} from "./proxyState";
+
 type ApplyProxyMessage = {
   type: "apply-proxy-mode";
-  mode: "direct" | "global" | "rules" | "system";
+  mode: ExtensionProxyMode;
   proxyPort: number;
   apiPort: number;
+};
+
+type SyncCoreStateMessage = {
+  type: "sync-core-state";
+};
+
+type SetPopupStateMessage = {
+  type: "set-popup-state";
+  isOpen: boolean;
 };
 
 type OpenCertificateSettingsMessage = {
   type: "open-certificate-settings";
 };
 
-type ExtensionMessage = ApplyProxyMessage | OpenCertificateSettingsMessage;
-
-interface HealthPayload {
-  data?: {
-    online?: boolean;
-    proxyPort?: number;
-    apiPort?: number;
-    proxyMode?: "direct" | "global" | "rules" | "system";
-  };
-}
-
+type ExtensionMessage = ApplyProxyMessage | SyncCoreStateMessage | SetPopupStateMessage | OpenCertificateSettingsMessage;
 const HEALTH_CHECK_INTERVAL = 5000;
 const API_PORT_STORAGE_KEY = "polaris.apiPort";
 const DEFAULT_API_PORT = 19601;
 const API_PORT_SCAN_SIZE = 20;
 const FETCH_TIMEOUT_MS = 2000;
 const API_PORT_CANDIDATES = Array.from({ length: API_PORT_SCAN_SIZE }, (_, index) => DEFAULT_API_PORT + index);
-
 let healthCheckTimer: ReturnType<typeof setInterval> | null = null;
+let popupOpen = false;
+let keepMonitoringWhileConnected = false;
 
 async function readStoredApiPort(): Promise<number | null> {
   return new Promise((resolve) => {
@@ -100,41 +108,6 @@ async function discoverCore(): Promise<{ port: number; payload: HealthPayload } 
   }
 }
 
-function buildProxyConfig(
-  mode: "direct" | "global" | "rules" | "system",
-  proxyPort: number,
-  apiPort: number
-): chrome.proxy.ProxyConfig {
-  if (mode === "direct") {
-    return { mode: "direct" };
-  }
-
-  if (mode === "system") {
-    return { mode: "system" };
-  }
-
-  if (mode === "global") {
-    return {
-      mode: "fixed_servers",
-      rules: {
-        singleProxy: {
-          scheme: "http",
-          host: "127.0.0.1",
-          port: proxyPort
-        },
-        bypassList: ["<local>"]
-      }
-    };
-  }
-
-  return {
-    mode: "pac_script",
-    pacScript: {
-      url: `http://127.0.0.1:${apiPort}/api/proxy/pac`
-    }
-  };
-}
-
 function applyProxyConfig(config: chrome.proxy.ProxyConfig): Promise<void> {
   return new Promise((resolve, reject) => {
     chrome.proxy.settings.set(
@@ -153,27 +126,28 @@ function applyProxyConfig(config: chrome.proxy.ProxyConfig): Promise<void> {
   });
 }
 
-async function syncWithCore(): Promise<void> {
-  const discovery = await discoverCore();
-  if (!discovery) {
-    console.log("[Polaris] Core offline, restoring proxy to direct mode");
-    await applyProxyConfig(buildProxyConfig("direct", 0, DEFAULT_API_PORT));
-    return;
+function clearProxyConfig(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    chrome.proxy.settings.clear({ scope: "regular" }, () => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
+function stopHealthCheck(): void {
+  if (healthCheckTimer) {
+    clearInterval(healthCheckTimer);
+    healthCheckTimer = null;
   }
-
-  const {
-    proxyMode = "direct",
-    proxyPort = 0,
-    apiPort = discovery.port
-  } = discovery.payload.data ?? {};
-
-  await writeStoredApiPort(apiPort);
-  await applyProxyConfig(buildProxyConfig(proxyMode, proxyPort, apiPort));
 }
 
 function startHealthCheck(): void {
   if (healthCheckTimer) {
-    clearInterval(healthCheckTimer);
+    return;
   }
 
   healthCheckTimer = setInterval(() => {
@@ -181,6 +155,35 @@ function startHealthCheck(): void {
       console.error("[Polaris] Failed to sync proxy state", error);
     });
   }, HEALTH_CHECK_INTERVAL);
+}
+
+function reconcileHealthCheck(): void {
+  if (shouldPollCore(popupOpen, keepMonitoringWhileConnected)) {
+    startHealthCheck();
+    return;
+  }
+
+  stopHealthCheck();
+}
+
+async function syncWithCore(): Promise<void> {
+  const discovery = await discoverCore();
+  const action = resolveProxySyncAction(discovery);
+
+  if (action.type === "clear") {
+    console.log("[Polaris] Core offline, clearing extension proxy control");
+    keepMonitoringWhileConnected = false;
+    await clearProxyConfig();
+    reconcileHealthCheck();
+    return;
+  }
+
+  keepMonitoringWhileConnected = true;
+  if (typeof action.apiPort === "number") {
+    await writeStoredApiPort(action.apiPort);
+  }
+  await applyProxyConfig(action.config);
+  reconcileHealthCheck();
 }
 
 function openCertificateSettings(): Promise<void> {
@@ -198,11 +201,6 @@ function openCertificateSettings(): Promise<void> {
   });
 }
 
-void syncWithCore().catch((error) => {
-  console.error("[Polaris] Initial sync failed", error);
-});
-startHealthCheck();
-
 chrome.runtime.onInstalled.addListener(() => {
   console.log("Polaris extension installed");
 });
@@ -213,11 +211,39 @@ chrome.runtime.onStartup.addListener(() => {
 
 chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendResponse) => {
   if (message.type === "apply-proxy-mode") {
-    applyProxyConfig(buildProxyConfig(message.mode, message.proxyPort, message.apiPort))
+    discoverCore()
+      .then(async (discovery) => {
+        if (!discovery) {
+          await clearProxyConfig();
+          throw new Error("Core offline");
+        }
+
+        const proxyPort = discovery.payload.data?.proxyPort ?? message.proxyPort;
+        const apiPort = discovery.payload.data?.apiPort ?? message.apiPort;
+        keepMonitoringWhileConnected = true;
+        await writeStoredApiPort(apiPort);
+        await applyProxyConfig(buildProxyConfig(message.mode, proxyPort, apiPort));
+        reconcileHealthCheck();
+        sendResponse({ ok: true });
+      })
+      .catch((error) => sendResponse({ ok: false, error: error instanceof Error ? error.message : "unknown error" }));
+
+    return true;
+  }
+
+  if (message.type === "sync-core-state") {
+    syncWithCore()
       .then(() => sendResponse({ ok: true }))
       .catch((error) => sendResponse({ ok: false, error: error instanceof Error ? error.message : "unknown error" }));
 
     return true;
+  }
+
+  if (message.type === "set-popup-state") {
+    popupOpen = message.isOpen;
+    reconcileHealthCheck();
+    sendResponse({ ok: true });
+    return false;
   }
 
   if (message.type === "open-certificate-settings") {

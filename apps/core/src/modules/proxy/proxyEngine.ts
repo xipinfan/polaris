@@ -184,9 +184,12 @@ function isProxyLoopRequest(targetUrl: URL, proxyPort: number, lanIp?: string): 
   return targetPort === proxyPort && isSelfProxyHost(targetUrl.hostname, lanIp);
 }
 
-function buildPortalHtml(lanIp: string | undefined, apiPort: number, proxyPort: number): string {
-  const apiHost = lanIp ?? "127.0.0.1";
-  const certificateUrl = `http://${apiHost}:${apiPort}/api/certificates/root-ca`;
+function isPortalCertificatePath(pathname: string): boolean {
+  return pathname === "/certificates/root-ca" || pathname === "/api/certificates/root-ca";
+}
+
+function buildPortalHtml(lanIp: string | undefined, proxyPort: number): string {
+  const certificateUrl = "http://polaris.local/certificates/root-ca";
   const lanAddress = lanIp ?? "未检测到局域网 IP，请确认当前电脑已经接入 Wi-Fi 或有线网络。";
 
   return `<!doctype html>
@@ -647,12 +650,23 @@ export class ProxyEngine {
     }
 
     if (targetUrl.hostname.toLowerCase() === "polaris.local") {
+      if (isPortalCertificatePath(targetUrl.pathname)) {
+        res.writeHead(200, {
+          ...corsHeaders,
+          "Content-Disposition": 'attachment; filename="polaris-root-ca.crt"',
+          "Content-Type": "application/x-x509-ca-cert",
+          "Cache-Control": "no-store"
+        });
+        res.end(await this.certificateManager.getRootCertificatePem());
+        return;
+      }
+
       res.writeHead(200, {
         ...corsHeaders,
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": "no-store"
       });
-      res.end(buildPortalHtml(lanIp, settings.localApiPort, settings.localProxyPort));
+      res.end(buildPortalHtml(lanIp, settings.localProxyPort));
       return;
     }
 

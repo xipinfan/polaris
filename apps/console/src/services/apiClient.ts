@@ -1,9 +1,12 @@
-﻿import type {
+import type {
   CreateMockRuleInput,
   RunRequestInput,
   SaveRequestInput,
   ServiceSnapshot,
-  UpdateMockRuleInput
+  UpdateMockRuleInput,
+  WhistleImportExecuteInput,
+  WhistleImportExecuteResponse,
+  WhistleImportScanResponse,
 } from "@polaris/shared-contracts";
 import type {
   AppSetting,
@@ -12,7 +15,7 @@ import type {
   ProxyRule,
   RequestRecord,
   SavedRequest,
-  ServiceStatus
+  ServiceStatus,
 } from "@polaris/shared-types";
 import type { UpsertSiteRuleInput } from "../domains/proxy-forward/types";
 import { mapApiError, ApiError } from "./apiErrors";
@@ -25,9 +28,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const baseUrl = await getApiBaseUrl();
     const response = await fetch(`${baseUrl}${path}`, {
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
-      ...init
+      ...init,
     });
 
     let payload: unknown;
@@ -84,7 +87,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const apiClient = {
   bootstrap: () => request<ServiceSnapshot>("/bootstrap"),
   health: () => request<ServiceStatus>("/health"),
-  listRequests: (params?: URLSearchParams) => request<RequestRecord[]>(`/requests${params ? `?${params.toString()}` : ""}`),
+  listRequests: (params?: URLSearchParams) =>
+    request<RequestRecord[]>(`/requests${params ? `?${params.toString()}` : ""}`),
   clearRequests: () => request<{ cleared: true }>("/requests", { method: "DELETE" }),
   getRequest: (id: string) => request<RequestRecord>(`/requests/${id}`),
   saveCapturedRequest: (id: string, body: SaveRequestInput) =>
@@ -115,6 +119,13 @@ export const apiClient = {
     request<ProxyRule>("/proxy-rules/site", { method: "POST", body: JSON.stringify(body) }),
   removeSiteRule: (host: string) =>
     request<{ host: string }>(`/proxy-rules/site/${encodeURIComponent(host)}`, { method: "DELETE" }),
-  runRequest: (body: RunRequestInput) => request<RequestRecord>("/debug/run", { method: "POST", body: JSON.stringify(body) }),
-  settings: () => request<AppSetting>("/settings")
+  scanWhistleImport: () => request<WhistleImportScanResponse>("/whistle-import/scan"),
+  executeWhistleImport: (body: WhistleImportExecuteInput) =>
+    request<WhistleImportExecuteResponse>("/whistle-import/execute", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  runRequest: (body: RunRequestInput) =>
+    request<RequestRecord>("/debug/run", { method: "POST", body: JSON.stringify(body) }),
+  settings: () => request<AppSetting>("/settings"),
 };

@@ -1,7 +1,7 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { RequestRecord } from "@polaris/shared-types";
 import type { MenuProps } from "antd";
-import { Modal } from "antd";
+import { Button, Modal } from "antd";
 import {
   useRemoveProxyForwardSiteRuleMutation,
   useSetActiveProxyForwardGroupMutation,
@@ -10,6 +10,7 @@ import {
 import { useProxyForwardGroupsQuery } from "../../domains/proxy-forward/queries";
 import { useTrafficRequestsQuery } from "../../domains/traffic/queries";
 import { useToast } from "../../features/feedback/ToastProvider";
+import { WhistleImportModal } from "../../features/common/whistleImport/WhistleImportModal";
 import { toastQueryError } from "../../lib/query/queryOptions";
 import { GroupEditorModal } from "./components/GroupEditorModal";
 import { GroupSidebar } from "./components/GroupSidebar";
@@ -34,6 +35,7 @@ const DEFAULT_GROUPS: StoredGroup[] = [fallbackGroup];
 
 export function ProxyForwardPage() {
   const { showToast } = useToast();
+  const [isWhistleImportOpen, setIsWhistleImportOpen] = useState(false);
   const groupsQuery = useProxyForwardGroupsQuery();
   const trafficQuery = useTrafficRequestsQuery({}, { autoRefresh: true });
   const setActiveGroupMutation = useSetActiveProxyForwardGroupMutation();
@@ -217,6 +219,9 @@ export function ProxyForwardPage() {
           <h2>代理转发</h2>
           <p>管理站点级转发规则、运行状态和最近命中流量。</p>
         </div>
+        <Button onClick={() => setIsWhistleImportOpen(true)} type="primary">
+          从 Whistle 导入
+        </Button>
       </header>
       <div className={styles.workspace}>
         <GroupSidebar
@@ -272,6 +277,11 @@ export function ProxyForwardPage() {
         onCancel={() => setIsGroupModalOpen(false)}
         onSave={handleSaveGroup}
         setGroupName={setGroupName}
+      />
+      <WhistleImportModal
+        defaultScope="proxy"
+        onClose={() => setIsWhistleImportOpen(false)}
+        open={isWhistleImportOpen}
       />
     </div>
   );

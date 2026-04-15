@@ -11,6 +11,7 @@ import { MockService } from "../../modules/mock/mockService";
 import { CertificateManager } from "../../modules/proxy/certificateManager";
 import { ProxyService } from "../../modules/proxy/proxyService";
 import { RequestService } from "../../modules/requests/requestService";
+import { WhistleImportService } from "../../modules/whistle-import/whistleImportService";
 import { getLanIpv4Address } from "../../shared/network";
 
 export function createApiRouter(
@@ -20,6 +21,7 @@ export function createApiRouter(
   certificateManager: CertificateManager
 ): Router {
   const router = express.Router();
+  const whistleImportService = new WhistleImportService(mockService);
   const readSettings = async () => ({
     ...(await proxyService.setCertificateInstalled(await certificateManager.isRootCertificateTrusted())),
     lanIp: getLanIpv4Address()
@@ -222,6 +224,20 @@ export function createApiRouter(
     "/proxy-mode",
     withAsync(async (req, res) => {
       res.json({ data: { mode: await proxyService.setMode(req.body.mode) } });
+    })
+  );
+
+  router.get(
+    "/whistle-import/scan",
+    withAsync(async (_req, res) => {
+      res.json({ data: await whistleImportService.scan() });
+    })
+  );
+
+  router.post(
+    "/whistle-import/execute",
+    withAsync(async (req, res) => {
+      res.json({ data: await whistleImportService.execute(req.body) });
     })
   );
 

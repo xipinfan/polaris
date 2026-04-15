@@ -3,18 +3,22 @@
   inset: 0;
   z-index: 40;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 24px 16px;
+  overflow-y: auto;
   background: rgba(15, 23, 42, 0.56);
   backdrop-filter: blur(10px);
 }
 
 .modalCard {
   width: min(100%, 780px);
+  max-height: min(calc(100vh - 48px), 960px);
   display: grid;
   gap: 18px;
   padding: 22px;
+  margin: auto 0;
+  overflow-y: auto;
   border-radius: 28px;
   border: 1px solid rgba(224, 230, 239, 0.92);
   background:
@@ -183,8 +187,14 @@
 }
 
 @media (max-width: 700px) {
+  .modalOverlay {
+    padding: 12px;
+  }
+
   .modalCard {
     padding: 18px;
+    max-height: calc(100vh - 24px);
+    border-radius: 22px;
   }
 
   .modalHead,
@@ -199,5 +209,25 @@
 
   .platformGrid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .modalCard {
+    padding: 14px;
+    gap: 14px;
+    border-radius: 18px;
+  }
+
+  .stepCard {
+    padding: 14px;
+  }
+
+  .modalHead h3 {
+    font-size: 22px;
+  }
+
+  .stepContent strong {
+    font-size: 18px;
   }
 }

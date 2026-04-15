@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
+import http from "node:http";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import type http from "node:http";
 
 function closeServer(server: http.Server | undefined): Promise<void> {
   if (!server) {
@@ -45,7 +45,37 @@ function findAvailablePort(): Promise<number> {
   });
 }
 
-test("legacy mcp invoke accepts POST requests without re-reading the request stream", async () => {
+function proxyGet(
+  proxyPort: number,
+  targetUrl: string
+): Promise<{ statusCode: number; headers: http.IncomingHttpHeaders; body: string }> {
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      {
+        host: "127.0.0.1",
+        port: proxyPort,
+        method: "GET",
+        path: targetUrl
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+        res.on("end", () => {
+          resolve({
+            statusCode: res.statusCode ?? 0,
+            headers: res.headers,
+            body: Buffer.concat(chunks).toString("utf8")
+          });
+        });
+      }
+    );
+
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+test("core endpoints serve legacy MCP invoke and mobile certificate downloads", async () => {
   const tempHome = await mkdtemp(path.join(os.tmpdir(), "polaris-mcp-http-test-"));
   const ports = {
     proxy: await findAvailablePort(),
@@ -78,6 +108,25 @@ test("legacy mcp invoke accepts POST requests without re-reading the request str
 
     assert.equal(legacyResponse.status, 200);
     assert.equal((await legacyResponse.json()).data.online, true);
+    const portalResponse = await proxyGet(runtime.runtimeSettings.localProxyPort, "http://polaris.local/");
+
+    assert.equal(portalResponse.statusCode, 200);
+    assert.match(
+      portalResponse.body,
+      /http:\/\/polaris\.local\/certificates\/root-ca/
+    );
+
+    const certificateResponse = await proxyGet(
+      runtime.runtimeSettings.localProxyPort,
+      "http://polaris.local/certificates/root-ca"
+    );
+
+    assert.equal(certificateResponse.statusCode, 200);
+    assert.equal(
+      certificateResponse.headers["content-disposition"],
+      'attachment; filename="polaris-root-ca.crt"'
+    );
+    assert.match(certificateResponse.body, /BEGIN CERTIFICATE/);
   } finally {
     process.env.POLARIS_HOME = previousEnv.POLARIS_HOME;
     process.env.POLARIS_PROXY_PORT = previousEnv.POLARIS_PROXY_PORT;

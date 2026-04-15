@@ -6,10 +6,8 @@ type SettingsLanProxyCardProps = {
 };
 
 export function SettingsLanProxyCard({ settings }: SettingsLanProxyCardProps) {
-  const certificateUrl = settings.lanIp
-    ? `http://${settings.lanIp}:${settings.localApiPort}/api/certificates/root-ca`
-    : null;
   const portalUrl = "http://polaris.local";
+  const mobileCertificateUrl = "http://polaris.local/certificates/root-ca";
 
   return (
     <section className={localStyles.card}>
@@ -45,14 +43,12 @@ export function SettingsLanProxyCard({ settings }: SettingsLanProxyCardProps) {
         <p>3. iPhone / iPad：在“设置 → Wi-Fi → 当前网络 → 配置代理”中选择“手动”，服务器填写上方 LAN IP，端口填写 {settings.localProxyPort}。</p>
         <p>4. 代理保存后，在手机浏览器访问 {portalUrl} 下载 Polaris 根证书。</p>
         <p>5. Android 安装证书后，按系统提示为“VPN 和应用”或对应用途启用；iPhone 安装描述文件后，还要到“证书信任设置”里手动打开完全信任。</p>
-        {certificateUrl ? (
-          <p>
-            证书直链：
-            <a href={certificateUrl} rel="noreferrer" target="_blank">
-              {certificateUrl}
-            </a>
-          </p>
-        ) : null}
+        <p>
+          手机证书直链：
+          <a href={mobileCertificateUrl} rel="noreferrer" target="_blank">
+            {mobileCertificateUrl}
+          </a>
+        </p>
       </div>
     </section>
   );

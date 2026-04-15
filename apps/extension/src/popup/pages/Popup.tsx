@@ -7,6 +7,8 @@ import type {
 import {
   applyBrowserProxyMode,
   openBrowserCertificateSettings,
+  setPopupState,
+  syncBrowserProxyState,
 } from "../../bridge/browserProxyBridge";
 import { getConsoleBaseUrl, invalidateApiCache } from "../../bridge/coreDiscovery";
 import { coreBridge } from "../../bridge/coreBridge";
@@ -75,6 +77,7 @@ export function Popup() {
 
   const load = async () => {
     try {
+      await syncBrowserProxyState();
       const [nextStatus, nextRules] = await Promise.all([
         coreBridge.health(),
         coreBridge.listRules(),
@@ -99,14 +102,30 @@ export function Popup() {
   };
 
   useEffect(() => {
-    void hydrateSnapshot();
-    void load();
-    const retryTimer = setInterval(() => {
-      if (!statusRef.current?.online) {
-        invalidateApiCache();
-        void load();
+    let disposed = false;
+    let retryTimer: ReturnType<typeof setInterval> | null = null;
+
+    const startPolling = () => {
+      if (disposed || retryTimer) {
+        return;
       }
-    }, 3000);
+
+      retryTimer = setInterval(() => {
+        if (!statusRef.current?.online) {
+          invalidateApiCache();
+          void load();
+        }
+      }, 3000);
+    };
+
+    void setPopupState(true)
+      .catch(() => undefined)
+      .finally(() => {
+        void hydrateSnapshot();
+        void load().finally(() => {
+          startPolling();
+        });
+      });
 
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const tabUrl = tabs[0]?.url;
@@ -118,7 +137,13 @@ export function Popup() {
       }
     });
 
-    return () => clearInterval(retryTimer);
+    return () => {
+      disposed = true;
+      if (retryTimer) {
+        clearInterval(retryTimer);
+      }
+      void setPopupState(false).catch(() => undefined);
+    };
   }, []);
 
   const sitePatterns = useMemo(() => buildSitePatterns(host), [host]);

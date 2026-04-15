@@ -15,6 +15,10 @@ function getPortalAddress(settings: AppSetting | null): string {
   return `http://polaris.local（当前代理 ${settings.lanIp}:${settings.localProxyPort}）`;
 }
 
+function getCertificateDownloadAddress(): string {
+  return "http://polaris.local/certificates/root-ca";
+}
+
 export function TrafficProxyGuideModal({
   isOpen,
   settings,
@@ -76,6 +80,7 @@ export function TrafficProxyGuideModal({
                 <li>Android：进入“设置 → WLAN / Wi-Fi → 当前网络 → 代理”，选择“手动”。主机名填写上方 IP，端口填写上方端口后保存。</li>
                 <li>iPhone / iPad：进入“设置 → Wi-Fi → 当前网络右侧 i → 配置代理”，选择“手动”。服务器填写上方 IP，端口填写上方端口后保存。</li>
                 <li>代理保存成功后，手机浏览器访问 {getPortalAddress(settings)}，即可打开 Polaris 证书安装页。</li>
+                <li>如果下载按钮没有自动拉起安装，也可以直接访问 {getCertificateDownloadAddress()} 重新下载证书。</li>
               </ul>
             </div>
             <div className={localStyles.platformGrid}>
@@ -85,6 +90,7 @@ export function TrafficProxyGuideModal({
                   <li>在代理已生效的前提下，用手机浏览器访问 `http://polaris.local`，点击下载根证书。</li>
                   <li>若系统弹出“安装证书”或“从存储设备安装证书”，证书用途请选择“VPN 和应用”或系统允许的等效项。</li>
                   <li>若下载后未自动弹出安装页，可进入“设置 → 安全 / 隐私 → 加密与凭据 / 安装证书”，手动选择刚下载的证书文件。</li>
+                  <li>如果页面跳空白，可直接打开 `http://polaris.local/certificates/root-ca`，现在会由 Polaris 代理直接返回证书文件。</li>
                   <li>部分 Android 设备安装用户证书后，默认只对部分应用生效；浏览器抓包通常可用，但某些 App 还需要额外放开用户证书信任。</li>
                 </ul>
               </section>
@@ -93,6 +99,7 @@ export function TrafficProxyGuideModal({
                 <ul>
                   <li>在 Safari 中访问 `http://polaris.local`，下载 Polaris 根证书，系统会提示“已下载描述文件”。</li>
                   <li>进入“设置 → 已下载描述文件”或“设置 → 通用 → VPN 与设备管理”，安装刚下载的 Polaris 描述文件。</li>
+                  <li>如果下载按钮没有反应，可直接访问 `http://polaris.local/certificates/root-ca` 再试一次。</li>
                   <li>安装完成后，再进入“设置 → 通用 → 关于本机 → 证书信任设置”，手动开启 Polaris 根证书的完全信任。</li>
                   <li>如果没有打开“完全信任”，HTTPS 仍然无法被正常解密，这是 iOS 上最常见的遗漏步骤。</li>
                 </ul>
