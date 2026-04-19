@@ -1,9 +1,13 @@
 import { randomUUID } from "node:crypto";
 import type { AppSetting, ProxyMode, ProxyRule } from "@polaris/shared-types";
 import { StorageAdapter } from "../storage/storageAdapter";
+import type { SystemProxyManager } from "./systemProxy";
 
 type UpsertSiteRuleInput = {
+  id?: string;
   host: string;
+  path?: string;
+  method?: string;
   action: "proxy" | "direct";
   forwardMode?: ProxyRule["forwardMode"];
   targetUrl?: ProxyRule["targetUrl"];
@@ -24,12 +28,39 @@ export interface ProxyForwardDecision {
 }
 
 export class ProxyService {
-  constructor(private readonly storage: StorageAdapter) {}
+  constructor(
+    private readonly storage: StorageAdapter,
+    private readonly systemProxyManager: SystemProxyManager,
+  ) {}
+
   private readonly allowedModes: ProxyMode[] = ["direct", "global", "rules", "system"];
   private readonly allowedActions: Array<ProxyRule["action"]> = ["proxy", "direct"];
 
   private normalizePattern(pattern: string): string {
     return String(pattern ?? "").trim().toLowerCase().replace(/:\d+$/, "");
+  }
+
+  private normalizeMethod(method: string | null | undefined): string | undefined {
+    const normalized = String(method ?? "").trim().toUpperCase();
+    if (!normalized || normalized === "ALL" || normalized === "*") {
+      return undefined;
+    }
+    return normalized;
+  }
+
+  private normalizePath(input: string | null | undefined): string | undefined {
+    const raw = String(input ?? "").trim();
+    if (!raw || raw === "/") {
+      return undefined;
+    }
+
+    const pathOnly = raw.split("?")[0] ?? raw;
+    const normalized = pathOnly.startsWith("/") ? pathOnly : `/${pathOnly}`;
+    const collapsed = normalized.replace(/\/{2,}/g, "/");
+    if (collapsed === "/") {
+      return undefined;
+    }
+    return collapsed.endsWith("/") ? collapsed.slice(0, -1) : collapsed;
   }
 
   private isValidRule(rule: Partial<ProxyRule> | undefined): rule is ProxyRule {
@@ -38,10 +69,11 @@ export class ProxyService {
     }
 
     const normalizedPattern = this.normalizePattern(rule.pattern ?? "");
+    const matchType = rule.matchType;
     return (
       typeof rule.id === "string" &&
       normalizedPattern.length > 0 &&
-      rule.matchType === "host" &&
+      (matchType == null || matchType === "host" || matchType === "host+path") &&
       (rule.action === "proxy" || rule.action === "direct") &&
       typeof rule.enabled === "boolean" &&
       typeof rule.createdAt === "string" &&
@@ -53,10 +85,18 @@ export class ProxyService {
     return this.storage
       .getProxyRules()
       .filter((rule) => this.isValidRule(rule))
-      .map((rule) => ({
-        ...rule,
-        pattern: this.normalizePattern(rule.pattern)
-      }))
+      .map((rule) => {
+        const path = this.normalizePath(rule.path);
+        const method = this.normalizeMethod(rule.method);
+        const matchType = rule.matchType ?? (path ? "host+path" : "host");
+        return {
+          ...rule,
+          pattern: this.normalizePattern(rule.pattern),
+          matchType,
+          path: matchType === "host+path" ? path : undefined,
+          method,
+        };
+      })
       .filter((rule) => rule.pattern.length > 0);
   }
 
@@ -70,6 +110,39 @@ export class ProxyService {
     }
 
     return normalizedHost === normalizedPattern;
+  }
+
+  private matchesPath(rulePath: string | undefined, requestPath: string | undefined): boolean {
+    const normalizedRulePath = this.normalizePath(rulePath);
+    if (!normalizedRulePath) {
+      return true;
+    }
+
+    const normalizedRequestPath = this.normalizePath(requestPath) ?? "/";
+    return (
+      normalizedRequestPath === normalizedRulePath ||
+      normalizedRequestPath.startsWith(`${normalizedRulePath}/`)
+    );
+  }
+
+  private matchesMethod(ruleMethod: string | undefined, requestMethod: string | undefined): boolean {
+    const normalizedRuleMethod = this.normalizeMethod(ruleMethod);
+    if (!normalizedRuleMethod) {
+      return true;
+    }
+    const normalizedRequestMethod = this.normalizeMethod(requestMethod) ?? "GET";
+    return normalizedRequestMethod === normalizedRuleMethod;
+  }
+
+  private ruleMatchScore(rule: ProxyRule): number {
+    let score = 0;
+    if (this.normalizePath(rule.path)) {
+      score += 2;
+    }
+    if (this.normalizeMethod(rule.method)) {
+      score += 1;
+    }
+    return score;
   }
 
   getSettings(): AppSetting {
@@ -87,7 +160,7 @@ export class ProxyService {
     const settings = this.storage.getSettings();
     await this.storage.setSettings({
       ...settings,
-      currentProxyMode: mode
+      currentProxyMode: mode,
     });
     return mode;
   }
@@ -96,7 +169,7 @@ export class ProxyService {
     const settings = this.storage.getSettings();
     const nextSettings = {
       ...settings,
-      certificateInstalled
+      certificateInstalled,
     };
     await this.storage.setSettings(nextSettings);
     return nextSettings;
@@ -111,7 +184,11 @@ export class ProxyService {
     return this.normalizedRules();
   }
 
-  getForwardDecision(host: string): ProxyForwardDecision {
+  getForwardDecision(
+    host: string,
+    requestPath?: string,
+    requestMethod?: string,
+  ): ProxyForwardDecision {
     const normalizedHost = this.normalizePattern(host);
     const mode = this.getMode();
 
@@ -119,11 +196,32 @@ export class ProxyService {
       return {
         mode: "direct",
         source: "none",
-        reason: "Host is empty"
+        reason: "Host is empty",
       };
     }
 
-    const matchedRule = this.listRules().find((rule) => rule.enabled && this.matchesHostPattern(normalizedHost, rule.pattern));
+    const matchedRule = this.listRules()
+      .filter(
+        (rule) =>
+          rule.enabled &&
+          this.matchesHostPattern(normalizedHost, rule.pattern) &&
+          this.matchesPath(rule.path, requestPath) &&
+          this.matchesMethod(rule.method, requestMethod),
+      )
+      .sort((left, right) => {
+        const score = this.ruleMatchScore(right) - this.ruleMatchScore(left);
+        if (score !== 0) {
+          return score;
+        }
+        const pathLength =
+          (this.normalizePath(right.path)?.length ?? 0) -
+          (this.normalizePath(left.path)?.length ?? 0);
+        if (pathLength !== 0) {
+          return pathLength;
+        }
+        return right.updatedAt.localeCompare(left.updatedAt);
+      })[0];
+
     if (matchedRule) {
       return {
         mode: matchedRule.action === "proxy" ? "proxy_forward" : "direct",
@@ -134,7 +232,7 @@ export class ProxyService {
         targetUrl: matchedRule.targetUrl,
         rewriteHost: matchedRule.rewriteHost,
         rewritePath: matchedRule.rewritePath,
-        reason: `Matched rule ${matchedRule.pattern} (${matchedRule.action})`
+        reason: `Matched rule ${matchedRule.pattern} (${matchedRule.action})`,
       };
     }
 
@@ -142,7 +240,7 @@ export class ProxyService {
       return {
         mode: "proxy_forward",
         source: "proxy_global",
-        reason: "Proxy mode is global"
+        reason: "Proxy mode is global",
       };
     }
 
@@ -150,14 +248,14 @@ export class ProxyService {
       return {
         mode: "direct",
         source: "none",
-        reason: "No enabled proxy rule matched host"
+        reason: "No enabled proxy rule matched request",
       };
     }
 
     return {
       mode: "direct",
       source: "none",
-      reason: `Proxy mode is ${mode}`
+      reason: `Proxy mode is ${mode}`,
     };
   }
 
@@ -174,25 +272,35 @@ export class ProxyService {
     if (!pattern) {
       throw new Error("Host is required");
     }
+
+    const normalizedPath = this.normalizePath(input.path);
+    const normalizedMethod = this.normalizeMethod(input.method);
+    const matchType: ProxyRule["matchType"] = normalizedPath ? "host+path" : "host";
     const now = new Date().toISOString();
     const rules = this.listRules();
-    const existing = rules.find((rule) => this.normalizePattern(rule.pattern) === pattern);
+    const existing = input.id ? rules.find((rule) => rule.id === input.id) : undefined;
 
     const nextRule: ProxyRule = existing
       ? {
           ...existing,
+          pattern,
+          matchType,
+          path: matchType === "host+path" ? normalizedPath : undefined,
+          method: normalizedMethod,
           action,
           forwardMode: input.forwardMode,
           targetUrl: input.targetUrl,
           rewriteHost: input.rewriteHost,
           rewritePath: input.rewritePath,
           enabled: true,
-          updatedAt: now
+          updatedAt: now,
         }
       : {
-          id: randomUUID(),
+          id: input.id ?? randomUUID(),
           pattern,
-          matchType: "host",
+          matchType,
+          path: matchType === "host+path" ? normalizedPath : undefined,
+          method: normalizedMethod,
           action,
           forwardMode: input.forwardMode,
           targetUrl: input.targetUrl,
@@ -200,7 +308,7 @@ export class ProxyService {
           rewritePath: input.rewritePath,
           enabled: true,
           createdAt: now,
-          updatedAt: now
+          updatedAt: now,
         };
 
     const nextRules = existing
@@ -211,13 +319,37 @@ export class ProxyService {
     return nextRule;
   }
 
+  async removeRuleById(id: string): Promise<void> {
+    const normalizedId = String(id ?? "").trim();
+    if (!normalizedId) {
+      throw new Error("Rule id is required");
+    }
+    const nextRules = this.listRules().filter((rule) => rule.id !== normalizedId);
+    await this.storage.setProxyRules(nextRules);
+  }
+
   async removeSiteRule(host: string): Promise<void> {
     const pattern = this.normalizePattern(host);
     if (!pattern) {
       throw new Error("Host is required");
     }
-    const nextRules = this.listRules().filter((rule) => this.normalizePattern(rule.pattern) !== pattern);
+    const nextRules = this.listRules().filter(
+      (rule) => this.normalizePattern(rule.pattern) !== pattern,
+    );
     await this.storage.setProxyRules(nextRules);
+  }
+
+  async enableSystemProxy(): Promise<void> {
+    const settings = this.getSettings();
+    await this.systemProxyManager.enable("127.0.0.1", settings.localProxyPort);
+  }
+
+  async disableSystemProxy(): Promise<void> {
+    await this.systemProxyManager.disable();
+  }
+
+  async isSystemProxyEnabled(): Promise<boolean> {
+    return this.systemProxyManager.isEnabled();
   }
 
   generatePacScript(): string {

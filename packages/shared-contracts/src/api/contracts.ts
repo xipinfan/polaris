@@ -57,7 +57,7 @@ export interface SetActiveMockGroupInput {
   group: string | null;
 }
 
-export type WhistlePlatform = "windows" | "macos";
+export type WhistlePlatform = "windows" | "macos" | "linux";
 export type WhistleImportCandidateType = "mock" | "proxy" | "unsupported";
 export type WhistleImportConflictMode = "none" | "duplicate";
 export type WhistleImportSkipReason =
@@ -238,9 +238,24 @@ export interface CoreApiContract {
     post: ApiEnvelope<{ group: string | null }> & { body: SetActiveMockGroupInput };
   };
   "/api/proxy-rules": { get: ApiEnvelope<ProxyRule[]> };
-  "/api/proxy-rules/site": { post: ApiEnvelope<ProxyRule> & { body: { host: string; action: "proxy" | "direct" } } };
+  "/api/proxy-rules/site": {
+    post: ApiEnvelope<ProxyRule> & {
+      body: {
+        host: string;
+        action: "proxy" | "direct";
+        id?: string;
+        path?: string;
+        method?: string;
+      };
+    };
+  };
+  "/api/proxy-rules/:id": { delete: ApiEnvelope<{ id: string }> };
   "/api/proxy-rules/site/:host": { delete: ApiEnvelope<{ host: string }> };
   "/api/proxy-mode": { post: ApiEnvelope<{ mode: ProxyMode }> & { body: { mode: ProxyMode } } };
+  "/api/system-proxy": {
+    get: ApiEnvelope<{ enabled: boolean }>;
+    post: ApiEnvelope<{ enabled: boolean }> & { body: { enabled: boolean } };
+  };
   "/api/whistle-import/scan": { get: ApiEnvelope<WhistleImportScanResponse> };
   "/api/whistle-import/execute": {
     post: ApiEnvelope<WhistleImportExecuteResponse> & { body: WhistleImportExecuteInput };

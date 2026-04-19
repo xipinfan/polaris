@@ -9,6 +9,7 @@ import type {
 } from "@polaris/shared-contracts";
 import { MockService } from "../../modules/mock/mockService";
 import { CertificateManager } from "../../modules/proxy/certificateManager";
+import { ProxyEngine } from "../../modules/proxy/proxyEngine";
 import { ProxyService } from "../../modules/proxy/proxyService";
 import { RequestService } from "../../modules/requests/requestService";
 import { WhistleImportService } from "../../modules/whistle-import/whistleImportService";
@@ -18,7 +19,8 @@ export function createApiRouter(
   requestService: RequestService,
   mockService: MockService,
   proxyService: ProxyService,
-  certificateManager: CertificateManager
+  certificateManager: CertificateManager,
+  proxyEngine: ProxyEngine,
 ): Router {
   const router = express.Router();
   const whistleImportService = new WhistleImportService(mockService);
@@ -35,6 +37,7 @@ export function createApiRouter(
     "/health",
     withAsync(async (_req, res) => {
       const settings = await readSettings();
+      const connectionStats = proxyEngine.getConnectionStats();
       res.json({
         data: {
           online: true,
@@ -44,7 +47,10 @@ export function createApiRouter(
           proxyMode: settings.currentProxyMode,
           mcpEnabled: settings.mcpEnabled,
           certificateInstalled: settings.certificateInstalled,
-          activeRequestCount: requestService.list().length
+          activeRequestCount: requestService.list().length,
+          activeConnectionCount: connectionStats.active,
+          totalConnectionCount: connectionStats.total,
+          systemProxyEnabled: await proxyService.isSystemProxyEnabled(),
         }
       });
     })
@@ -54,6 +60,7 @@ export function createApiRouter(
     "/bootstrap",
     withAsync(async (_req, res) => {
       const settings = await readSettings();
+      const connectionStats = proxyEngine.getConnectionStats();
       res.json({
         data: {
           status: {
@@ -64,7 +71,10 @@ export function createApiRouter(
             proxyMode: settings.currentProxyMode,
             mcpEnabled: settings.mcpEnabled,
             certificateInstalled: settings.certificateInstalled,
-            activeRequestCount: requestService.list().length
+            activeRequestCount: requestService.list().length,
+            activeConnectionCount: connectionStats.active,
+            totalConnectionCount: connectionStats.total,
+            systemProxyEnabled: await proxyService.isSystemProxyEnabled(),
           },
           settings,
           proxyRules: proxyService.listRules(),
@@ -220,10 +230,44 @@ export function createApiRouter(
     })
   );
 
+  // keep `/proxy-rules/site/:host` before this route to avoid wildcard capture.
+  router.delete(
+    "/proxy-rules/:id",
+    withAsync(async (req, res) => {
+      await proxyService.removeRuleById(req.params.id);
+      res.json({ data: { id: req.params.id } });
+    })
+  );
+
   router.post(
     "/proxy-mode",
     withAsync(async (req, res) => {
       res.json({ data: { mode: await proxyService.setMode(req.body.mode) } });
+    })
+  );
+
+  router.get(
+    "/system-proxy",
+    withAsync(async (_req, res) => {
+      const enabled = await proxyService.isSystemProxyEnabled();
+      res.json({ data: { enabled } });
+    })
+  );
+
+  router.post(
+    "/system-proxy",
+    withAsync(async (req, res) => {
+      const enabled = (req.body as { enabled?: unknown } | null)?.enabled;
+      if (typeof enabled !== "boolean") {
+        res.status(400).json({ error: "enabled must be boolean" });
+        return;
+      }
+      if (enabled) {
+        await proxyService.enableSystemProxy();
+      } else {
+        await proxyService.disableSystemProxy();
+      }
+      res.json({ data: { enabled: await proxyService.isSystemProxyEnabled() } });
     })
   );
 
@@ -237,6 +281,15 @@ export function createApiRouter(
   router.post(
     "/whistle-import/execute",
     withAsync(async (req, res) => {
+      const { mockRules, proxyGroups, currentProxyGroups } = req.body ?? {};
+      if (
+        !Array.isArray(mockRules) ||
+        !Array.isArray(proxyGroups) ||
+        !Array.isArray(currentProxyGroups)
+      ) {
+        res.status(400).json({ error: "mockRules, proxyGroups and currentProxyGroups must be arrays" });
+        return;
+      }
       res.json({ data: await whistleImportService.execute(req.body) });
     })
   );

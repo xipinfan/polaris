@@ -1,7 +1,6 @@
 import type { StoredForwardRule, StoredGroup } from "../types";
 import { createId, sanitizeText } from "./proxyForwardHelpers";
 import {
-  hasOtherEnabledRuleWithPattern,
   updateGroupRules,
 } from "./proxyForwardPageHelpers";
 
@@ -73,16 +72,6 @@ export function buildRuleSaveGroups(params: {
       ? activeRules.map((rule) => (rule.id === nextRule.id ? nextRule : rule))
       : [nextRule, ...activeRules];
   });
-}
-
-export function shouldRemoveRuleHost(params: {
-  activeGroupId: string;
-  excludeRuleId: string;
-  groups: StoredGroup[];
-  pattern: string;
-}) {
-  const { activeGroupId, excludeRuleId, groups, pattern } = params;
-  return !hasOtherEnabledRuleWithPattern(pattern, excludeRuleId, getGroupRules(groups, activeGroupId));
 }
 
 export function buildGroupSaveGroups(params: {

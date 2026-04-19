@@ -117,8 +117,16 @@ export const apiClient = {
     request<{ mode: ProxyMode }>("/proxy-mode", { method: "POST", body: JSON.stringify({ mode }) }),
   upsertSiteRule: (body: UpsertSiteRuleInput) =>
     request<ProxyRule>("/proxy-rules/site", { method: "POST", body: JSON.stringify(body) }),
+  removeRuleById: (id: string) =>
+    request<{ id: string }>(`/proxy-rules/${encodeURIComponent(id)}`, { method: "DELETE" }),
   removeSiteRule: (host: string) =>
     request<{ host: string }>(`/proxy-rules/site/${encodeURIComponent(host)}`, { method: "DELETE" }),
+  getSystemProxy: () => request<{ enabled: boolean }>("/system-proxy"),
+  setSystemProxy: (enabled: boolean) =>
+    request<{ enabled: boolean }>("/system-proxy", {
+      method: "POST",
+      body: JSON.stringify({ enabled }),
+    }),
   scanWhistleImport: () => request<WhistleImportScanResponse>("/whistle-import/scan"),
   executeWhistleImport: (body: WhistleImportExecuteInput) =>
     request<WhistleImportExecuteResponse>("/whistle-import/execute", {

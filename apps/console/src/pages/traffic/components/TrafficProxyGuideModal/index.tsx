@@ -1,4 +1,5 @@
 import type { AppSetting } from "@polaris/shared-types";
+import { ProxyQRCode } from "../../../../features/common/ProxyQRCode";
 import localStyles from "./index.module.less";
 
 type TrafficProxyGuideModalProps = {
@@ -74,6 +75,10 @@ export function TrafficProxyGuideModal({
                 <strong>{settings?.localProxyPort ?? "-"}</strong>
               </article>
             </div>
+            <ProxyQRCode
+              lanIp={settings?.lanIp ?? null}
+              proxyPort={settings?.localProxyPort ?? null}
+            />
             <div className={localStyles.platformSection}>
               <h4>连接代理</h4>
               <ul>

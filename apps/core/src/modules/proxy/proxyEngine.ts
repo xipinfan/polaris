@@ -17,6 +17,9 @@ import { RequestService } from "../requests/requestService";
 import { CertificateManager } from "./certificateManager";
 
 const MAX_CAPTURE_BODY_SIZE = 2 * 1024 * 1024;
+const SOCKET_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
+const SOCKET_KEEP_ALIVE_DELAY_MS = 30 * 1000;
+const UPSTREAM_TIMEOUT_MS = 30_000;
 
 function collectBody(req: Readable, maxSize?: number): Promise<Buffer> {
   return new Promise((resolve) => {
@@ -121,7 +124,6 @@ function sanitizeProxyHeaders(headers: IncomingMessage["headers"]): Record<strin
   delete nextHeaders["proxy-authorization"];
   delete nextHeaders.connection;
   delete nextHeaders["keep-alive"];
-  delete nextHeaders["transfer-encoding"];
   delete nextHeaders.upgrade;
   return nextHeaders;
 }
@@ -497,6 +499,8 @@ function buildPortalHtml(lanIp: string | undefined, proxyPort: number): string {
 
 export class ProxyEngine {
   private mitmServer: https.Server | null = null;
+  private activeSockets = new Set<Duplex>();
+  private totalConnectionCount = 0;
 
   constructor(
     private readonly requestService: RequestService,
@@ -504,6 +508,47 @@ export class ProxyEngine {
     private readonly certificateManager: CertificateManager,
     private readonly proxyService: ProxyService
   ) {}
+
+  private trackSocket(socket: Duplex): void {
+    this.activeSockets.add(socket);
+    this.totalConnectionCount += 1;
+
+    const maybeSocket = socket as net.Socket;
+    if (typeof maybeSocket.setTimeout === "function") {
+      maybeSocket.setTimeout(SOCKET_IDLE_TIMEOUT_MS, () => {
+        if (!socket.destroyed) {
+          socket.destroy();
+        }
+      });
+    }
+    if (typeof maybeSocket.setKeepAlive === "function") {
+      maybeSocket.setKeepAlive(true, SOCKET_KEEP_ALIVE_DELAY_MS);
+    }
+
+    const onClose = () => {
+      this.activeSockets.delete(socket);
+      socket.removeListener("close", onClose);
+      socket.removeListener("error", onClose);
+    };
+    socket.on("close", onClose);
+    socket.on("error", onClose);
+  }
+
+  getConnectionStats(): { active: number; total: number } {
+    return {
+      active: this.activeSockets.size,
+      total: this.totalConnectionCount,
+    };
+  }
+
+  destroyAllConnections(): void {
+    for (const socket of this.activeSockets) {
+      if (!socket.destroyed) {
+        socket.destroy();
+      }
+    }
+    this.activeSockets.clear();
+  }
 
   private buildResolution(partial: Omit<RequestResolution, "decidedAt">): RequestResolution {
     return {
@@ -515,6 +560,11 @@ export class ProxyEngine {
   createServer(): http.Server {
     const server = http.createServer(async (req, res) => {
       await this.handleHttpRequest(req, res, "http:");
+    });
+    server.maxConnections = 256;
+
+    server.on("connection", (socket) => {
+      this.trackSocket(socket);
     });
 
     server.on("connect", async (req, clientSocket, head) => {
@@ -531,6 +581,7 @@ export class ProxyEngine {
     }
 
     this.mitmServer = null;
+    this.destroyAllConnections();
     await new Promise<void>((resolve) => {
       server.close(() => resolve());
     });
@@ -557,6 +608,9 @@ export class ProxyEngine {
 
     this.mitmServer.on("tlsClientError", () => {});
     this.mitmServer.on("clientError", () => {});
+    this.mitmServer.on("connection", (socket) => {
+      this.trackSocket(socket);
+    });
     return this.mitmServer;
   }
 
@@ -675,7 +729,11 @@ export class ProxyEngine {
     const requestHeaders = sanitizeProxyHeaders(req.headers);
     const normalizedRequestBody = normalizeCapturedBody(preRead.buffer, requestHeaders);
     const startedAt = Date.now();
-    const forwardDecision = this.proxyService.getForwardDecision(targetUrl.host);
+    const forwardDecision = this.proxyService.getForwardDecision(
+      targetUrl.host,
+      targetUrl.pathname,
+      req.method,
+    );
 
     const mockRule = await this.mockService.match(req.method ?? "GET", targetUrl.toString(), normalizedRequestBody);
     if (mockRule) {
@@ -769,6 +827,16 @@ export class ProxyEngine {
         : `${finalHostname}:${finalPort}`;
     const finalTargetUrl = `${finalProtocol}//${finalHost}${finalPathname}${finalSearch}`;
     requestHeaders.host = finalHost;
+    const upstreamHeaders: Record<string, string> = {
+      ...requestHeaders,
+      host: finalHost,
+    };
+    if (preRead.complete) {
+      upstreamHeaders["content-length"] = String(preRead.buffer.length);
+      delete upstreamHeaders["transfer-encoding"];
+    } else {
+      delete upstreamHeaders["content-length"];
+    }
 
     const options: RequestOptions = {
       protocol: finalProtocol,
@@ -776,7 +844,7 @@ export class ProxyEngine {
       port: finalPort,
       method: req.method,
       path: `${finalPathname}${finalSearch}`,
-      headers: requestHeaders
+      headers: upstreamHeaders
     };
 
     const client = finalProtocol === "https:" ? https : http;
@@ -785,7 +853,11 @@ export class ProxyEngine {
         ...normalizeHeaders(proxyRes.headers),
         ...corsHeaders
       };
-      res.writeHead(proxyRes.statusCode ?? 502, responseHeaders);
+      const responseHeadersForClient: http.OutgoingHttpHeaders = { ...responseHeaders };
+      if (Array.isArray(proxyRes.headers["set-cookie"])) {
+        responseHeadersForClient["set-cookie"] = proxyRes.headers["set-cookie"];
+      }
+      res.writeHead(proxyRes.statusCode ?? 502, responseHeadersForClient);
 
       if (!shouldCapture) {
         proxyRes.pipe(res);
@@ -834,6 +906,9 @@ export class ProxyEngine {
       proxyRes.on("error", () => {
         res.destroy();
       });
+    });
+    proxyReq.setTimeout(UPSTREAM_TIMEOUT_MS, () => {
+      proxyReq.destroy(new Error("Upstream request timeout"));
     });
 
     req.on("close", () => {

@@ -29,6 +29,11 @@ async function main() {
       runtime.streamableMcpServer.close(),
       runtime.sseMcpServer.close(),
       runtime.proxyEngine.closeMitmServer(),
+      (async () => {
+        if (await runtime.systemProxyManager.isEnabled()) {
+          await runtime.systemProxyManager.disable();
+        }
+      })(),
       runtime.storage.flush()
     ]);
     process.exit(exitCode);

@@ -3,6 +3,7 @@ import { MockService } from "../modules/mock/mockService";
 import { CertificateManager } from "../modules/proxy/certificateManager";
 import { ProxyEngine } from "../modules/proxy/proxyEngine";
 import { ProxyService } from "../modules/proxy/proxyService";
+import { createSystemProxyManager, type SystemProxyManager } from "../modules/proxy/systemProxy";
 import { RequestService } from "../modules/requests/requestService";
 import { StorageAdapter } from "../modules/storage/storageAdapter";
 
@@ -14,6 +15,7 @@ export interface PolarisRuntime {
   requestService: RequestService;
   certificateManager: CertificateManager;
   proxyEngine: ProxyEngine;
+  systemProxyManager: SystemProxyManager;
 }
 
 export interface CreateRuntimeOptions {
@@ -25,7 +27,8 @@ export async function createRuntime(options?: CreateRuntimeOptions): Promise<Pol
   await storage.init();
 
   const extensionHost = new ExtensionHost();
-  const proxyService = new ProxyService(storage);
+  const systemProxyManager = createSystemProxyManager();
+  const proxyService = new ProxyService(storage, systemProxyManager);
   const mockService = new MockService(storage, extensionHost);
   const requestService = new RequestService(storage, mockService, extensionHost);
   const certificateManager = new CertificateManager();
@@ -40,6 +43,7 @@ export async function createRuntime(options?: CreateRuntimeOptions): Promise<Pol
     mockService,
     requestService,
     certificateManager,
-    proxyEngine
+    proxyEngine,
+    systemProxyManager,
   };
 }

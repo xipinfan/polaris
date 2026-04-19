@@ -9,4 +9,7 @@ export interface ServiceStatus {
   mcpEnabled: boolean;
   certificateInstalled: boolean;
   activeRequestCount: number;
+  activeConnectionCount: number;
+  totalConnectionCount: number;
+  systemProxyEnabled: boolean;
 }

@@ -111,7 +111,7 @@ export function buildDefaultSelectedIds(
 ) {
   return new Set(
     candidates
-      .filter((candidate) => candidate.compatible && matchesScope(candidate, scope))
+      .filter((candidate) => candidate.compatible && candidate.enabled && matchesScope(candidate, scope))
       .map((candidate) => candidate.id),
   );
 }

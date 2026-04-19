@@ -3,7 +3,7 @@ import type { RequestRecord } from "@polaris/shared-types";
 import type { MenuProps } from "antd";
 import { Button, Modal } from "antd";
 import {
-  useRemoveProxyForwardSiteRuleMutation,
+  useRemoveProxyForwardRuleByIdMutation,
   useSetActiveProxyForwardGroupMutation,
   useUpsertProxyForwardSiteRuleMutation,
 } from "../../domains/proxy-forward/mutations";
@@ -40,7 +40,7 @@ export function ProxyForwardPage() {
   const trafficQuery = useTrafficRequestsQuery({}, { autoRefresh: true });
   const setActiveGroupMutation = useSetActiveProxyForwardGroupMutation();
   const upsertRuleMutation = useUpsertProxyForwardSiteRuleMutation();
-  const removeRuleMutation = useRemoveProxyForwardSiteRuleMutation();
+  const removeRuleMutation = useRemoveProxyForwardRuleByIdMutation();
 
   const requests = trafficQuery.data ?? EMPTY_REQUESTS;
 

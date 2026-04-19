@@ -1,4 +1,5 @@
 import type { AppSetting } from "@polaris/shared-types";
+import { ProxyQRCode } from "../../../../features/common/ProxyQRCode";
 import localStyles from "./index.module.less";
 
 type SettingsLanProxyCardProps = {
@@ -35,6 +36,8 @@ export function SettingsLanProxyCard({ settings }: SettingsLanProxyCardProps) {
           <strong>{settings.localProxyPort}</strong>
         </article>
       </div>
+
+      <ProxyQRCode lanIp={settings.lanIp ?? null} proxyPort={settings.localProxyPort} />
 
       <div className={localStyles.guide}>
         <strong>手机端接入说明</strong>

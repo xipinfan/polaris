@@ -52,8 +52,14 @@ function getSkipReasonText(candidate: Extract<WhistleImportCandidate, { candidat
   }
 }
 
-function getPlatformLabel(platform: "windows" | "macos") {
-  return platform === "windows" ? "Windows" : "macOS";
+function getPlatformLabel(platform: "windows" | "macos" | "linux") {
+  if (platform === "windows") {
+    return "Windows";
+  }
+  if (platform === "linux") {
+    return "Linux";
+  }
+  return "macOS";
 }
 
 export function WhistleImportModal({ defaultScope, onClose, open }: WhistleImportModalProps) {

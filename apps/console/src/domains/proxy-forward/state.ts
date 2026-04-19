@@ -124,14 +124,14 @@ function buildStoredRuleFromBackend(
 ): StoredForwardRule {
   const parsedSource = parseSourceUrl(current?.url ?? "");
   const pattern = derivePattern(current?.pattern ?? rule.pattern, parsedSource?.normalizedUrl, current?.targetUrl);
-  const path = derivePath(current?.path ?? parsedSource?.path ?? "/");
+  const path = derivePath(rule.path ?? current?.path ?? parsedSource?.path ?? "/");
   const targetUrl = sanitizeText(current?.targetUrl, `http://127.0.0.1:3000${path}`);
 
   return {
     id: rule.id,
     name: sanitizeText(current?.name, pattern),
     pattern,
-    method: sanitizeText(current?.method, "GET").toUpperCase(),
+    method: sanitizeText(rule.method ?? current?.method, "ALL").toUpperCase(),
     url: buildRuleUrl(pattern, path, parsedSource?.normalizedUrl ?? current?.url),
     path,
     priority: current?.priority ?? 100,
@@ -297,8 +297,8 @@ export function syncActiveGroupRulesFromBackend(
   activeGroupId: string,
   backendRules: ProxyRule[],
 ) {
-  const backendByPattern = new Map(
-    backendRules.map((rule) => [sanitizeText(rule.pattern, "").toLowerCase(), rule]),
+  const backendById = new Map(
+    backendRules.map((rule) => [sanitizeText(rule.id, ""), rule]),
   );
 
   return groups.map((group) => {
@@ -306,19 +306,19 @@ export function syncActiveGroupRulesFromBackend(
       return group;
     }
 
-    const existingByPattern = new Map(
-      group.rules.map((rule) => [sanitizeText(rule.pattern, "").toLowerCase(), rule] as const),
+    const existingById = new Map(
+      group.rules.map((rule) => [sanitizeText(rule.id, ""), rule] as const),
     );
 
     const syncedFromBackend = backendRules.map((backendRule) =>
       buildStoredRuleFromBackend(
         backendRule,
-        existingByPattern.get(sanitizeText(backendRule.pattern, "").toLowerCase()),
+        existingById.get(sanitizeText(backendRule.id, "")),
       ),
     );
 
     const localOnlyRules = group.rules
-      .filter((rule) => !backendByPattern.has(sanitizeText(rule.pattern, "").toLowerCase()))
+      .filter((rule) => !backendById.has(sanitizeText(rule.id, "")))
       .map((rule) => ({ ...rule, enabled: false }));
 
     const rules = [...syncedFromBackend, ...localOnlyRules];

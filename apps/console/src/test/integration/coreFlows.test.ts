@@ -8,10 +8,10 @@ describe("core flows integration", () => {
   it("group switch is mutually exclusive and respects enabled hierarchy", async () => {
     const api = {
       listProxyRules: vi.fn().mockResolvedValue([
-        { pattern: "old-1.com" },
-        { pattern: "old-2.com" },
+        { id: "old-1", pattern: "old-1.com" },
+        { id: "old-2", pattern: "old-2.com" },
       ]),
-      removeSiteRule: vi.fn().mockResolvedValue({}),
+      removeRuleById: vi.fn().mockResolvedValue({}),
       upsertSiteRule: vi.fn().mockResolvedValue({}),
       setProxyMode: vi.fn(),
     };
@@ -21,17 +21,20 @@ describe("core flows integration", () => {
         id: "group-a",
         name: "A",
         rules: [
-          { pattern: "enabled-a.com", action: "proxy", enabled: true },
-          { pattern: "disabled-a.com", action: "direct", enabled: false },
+          { id: "rule-1", pattern: "enabled-a.com", path: "/", method: "GET", action: "proxy", enabled: true },
+          { id: "rule-2", pattern: "disabled-a.com", path: "/", method: "GET", action: "direct", enabled: false },
         ] as any,
       },
       api as any,
     );
 
-    expect(api.removeSiteRule).toHaveBeenCalledTimes(2);
+    expect(api.removeRuleById).toHaveBeenCalledTimes(2);
     expect(api.upsertSiteRule).toHaveBeenCalledTimes(1);
     expect(api.upsertSiteRule).toHaveBeenCalledWith({
+      id: "rule-1",
       host: "enabled-a.com",
+      path: "/",
+      method: "GET",
       action: "proxy",
       forwardMode: undefined,
       targetUrl: undefined,

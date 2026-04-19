@@ -7,7 +7,7 @@ import { writePersistence } from "../../../lib/persistence";
 import { queryKeys } from "../../../lib/query/queryKeys";
 import { toastQueryError } from "../../../lib/query/queryOptions";
 import type {
-  useRemoveProxyForwardSiteRuleMutation,
+  useRemoveProxyForwardRuleByIdMutation,
   useSetActiveProxyForwardGroupMutation,
   useUpsertProxyForwardSiteRuleMutation,
 } from "../../../domains/proxy-forward/mutations";
@@ -25,7 +25,6 @@ import {
   buildRuleSaveGroups,
   buildRuleToggleGroups,
   formatProxyImportSummary,
-  shouldRemoveRuleHost,
 } from "../utils/proxyForwardActionUtils";
 import {
   exportProxyGroup,
@@ -47,7 +46,7 @@ type UseProxyForwardActionsParams = {
   groupName: string;
   groups: StoredGroup[];
   groupsQuery: ReturnType<typeof useProxyForwardGroupsQuery>;
-  removeRuleMutation: ReturnType<typeof useRemoveProxyForwardSiteRuleMutation>;
+  removeRuleMutation: ReturnType<typeof useRemoveProxyForwardRuleByIdMutation>;
   ruleForm: StoredForwardRule;
   setActiveGroupId: (groupId: string) => void;
   setActiveGroupMutation: ReturnType<typeof useSetActiveProxyForwardGroupMutation>;
@@ -195,7 +194,10 @@ export function useProxyForwardActions({
     try {
       if (checked) {
         await upsertRuleMutation.mutateAsync({
+          id: rule.id,
           host: normalizeRuleHost(rule.pattern),
+          path: rule.path,
+          method: rule.method,
           action: rule.action,
           forwardMode: rule.forwardMode,
           targetUrl: rule.targetUrl,
@@ -203,17 +205,7 @@ export function useProxyForwardActions({
           rewritePath: rule.rewritePath,
         });
       } else {
-        const shouldRemoveHost = shouldRemoveRuleHost({
-          activeGroupId,
-          excludeRuleId: rule.id,
-          groups: nextGroups,
-          pattern: rule.pattern,
-        });
-        if (shouldRemoveHost) {
-          await removeRuleMutation.mutateAsync({
-            host: normalizeRuleHost(rule.pattern),
-          });
-        }
+        await removeRuleMutation.mutateAsync({ id: rule.id });
       }
     } catch (error) {
       commitGroups(previousGroups, activeGroupId);
@@ -238,17 +230,7 @@ export function useProxyForwardActions({
 
     try {
       if (rule.enabled) {
-        const shouldRemoveHost = shouldRemoveRuleHost({
-          activeGroupId,
-          excludeRuleId: rule.id,
-          groups: nextGroups,
-          pattern: rule.pattern,
-        });
-        if (shouldRemoveHost) {
-          await removeRuleMutation.mutateAsync({
-            host: normalizeRuleHost(rule.pattern),
-          });
-        }
+        await removeRuleMutation.mutateAsync({ id: rule.id });
       }
       showToast("规则已删除", "success");
     } catch (error) {
@@ -274,7 +256,7 @@ export function useProxyForwardActions({
     }
 
     setSubmitting(true);
-    const { nextRule, patternChanged, previousPattern } = saveRuleResult;
+    const { nextRule } = saveRuleResult;
 
     const previousGroups = groups;
     const nextGroups = buildRuleSaveGroups({
@@ -285,41 +267,20 @@ export function useProxyForwardActions({
     commitGroups(nextGroups, activeGroupId);
 
     try {
-      if (editingRule?.enabled && patternChanged && previousPattern) {
-        const shouldRemovePreviousHost = shouldRemoveRuleHost({
-          activeGroupId,
-          excludeRuleId: editingRule.id,
-          groups: nextGroups,
-          pattern: previousPattern,
-        });
-        if (shouldRemovePreviousHost) {
-          await removeRuleMutation.mutateAsync({
-            host: normalizeRuleHost(previousPattern),
-          });
-        }
-      }
-
       if (nextRule.enabled) {
         await upsertRuleMutation.mutateAsync({
+          id: nextRule.id,
           host: normalizeRuleHost(nextRule.pattern),
+          path: nextRule.path,
+          method: nextRule.method,
           action: nextRule.action,
           forwardMode: nextRule.forwardMode,
           targetUrl: nextRule.targetUrl,
           rewriteHost: nextRule.rewriteHost,
           rewritePath: nextRule.rewritePath,
         });
-      } else if (editingRule?.enabled && !patternChanged) {
-        const shouldRemoveHost = shouldRemoveRuleHost({
-          activeGroupId,
-          excludeRuleId: editingRule.id,
-          groups: nextGroups,
-          pattern: editingRule.pattern,
-        });
-        if (shouldRemoveHost) {
-          await removeRuleMutation.mutateAsync({
-            host: normalizeRuleHost(editingRule.pattern),
-          });
-        }
+      } else if (editingRule?.enabled) {
+        await removeRuleMutation.mutateAsync({ id: editingRule.id });
       }
 
       setProxyFilterMode("all");

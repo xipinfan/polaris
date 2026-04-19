@@ -25,6 +25,7 @@ const defaultRuleGroupName = "默认规则";
 const supportedPlatforms = {
   win32: "windows",
   darwin: "macos",
+  linux: "linux",
 } as const;
 
 type WhistlePlatform = WhistleImportSource["platform"];
@@ -100,6 +101,38 @@ function truncateSummary(value: string, maxLength = 120) {
 
 function buildTitle(fileName: string, matcher: string) {
   return fileName.trim() || truncateSummary(matcher, 80);
+}
+
+function extractValueRefName(value: string): string | null {
+  const match = value.trim().match(/^\{([^{}]+)\}$/);
+  if (!match?.[1]) {
+    return null;
+  }
+  const rawName = path.basename(match[1].trim());
+  if (!rawName) {
+    return null;
+  }
+  const parsed = path.parse(rawName).name.trim();
+  return parsed || rawName;
+}
+
+function isSubPath(targetPath: string, parentPath: string) {
+  const relative = path.relative(parentPath, targetPath);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+function isBareHostOrIp(token: string) {
+  const value = token.trim();
+  if (!value || /[\s/]/.test(value)) {
+    return false;
+  }
+  if (value.toLowerCase() === "localhost") {
+    return true;
+  }
+  if (/^(?:\d{1,3}\.){3}\d{1,3}(?::\d{1,5})?$/.test(value)) {
+    return true;
+  }
+  return /^[a-z0-9.-]+(?::\d{1,5})?$/i.test(value) && value.includes(".");
 }
 
 function stripComment(line: string) {
@@ -248,6 +281,14 @@ function parseRuleLine(line: string): ParsedRuleLine | null {
 
     const operatorMatch = token.match(/^([\w.-]+):\/\/([\s\S]*)$/);
     if (!operatorMatch) {
+      if (isBareHostOrIp(token)) {
+        operators.push({
+          token,
+          protocol: "host",
+          value: token,
+        });
+        continue;
+      }
       return {
         matcher,
         operators: [],
@@ -550,6 +591,15 @@ async function resolveFileLikeValue(
       : path.isAbsolute(trimmed)
         ? trimmed
         : path.resolve(resolvedDir, trimmed);
+    const normalizedCandidatePath = path.resolve(candidatePath);
+    const normalizedResolvedDir = path.resolve(resolvedDir);
+    const normalizedHomeDir = path.resolve(os.homedir());
+    const inAllowedRoots =
+      isSubPath(normalizedCandidatePath, normalizedResolvedDir) ||
+      isSubPath(normalizedCandidatePath, normalizedHomeDir);
+    if (!inAllowedRoots) {
+      return { kind: "unsupported", reason: "unsupported_dynamic_value" };
+    }
     if (!existsSync(candidatePath)) {
       return { kind: "unsupported", reason: "unsupported_dynamic_value" };
     }
@@ -928,6 +978,7 @@ export class WhistleImportService {
     const headers: Record<string, string> = {};
     let responseStatus = 200;
     let responseBody: JsonValue | string | null = null;
+    let extractedName: string | null = null;
 
     for (const operator of parsedLine.operators) {
       switch (operator.protocol) {
@@ -960,6 +1011,7 @@ export class WhistleImportService {
         case "htmlBody":
         case "jsBody":
         case "cssBody": {
+          extractedName = extractedName ?? extractValueRefName(operator.value);
           const resolved = await resolveFileLikeValue(operator.value, valueMap, resolvedDir);
           if (resolved.kind === "unsupported") {
             return { type: "unsupported", reason: resolved.reason };
@@ -984,10 +1036,18 @@ export class WhistleImportService {
     }
 
     if (!method) {
-      return {
-        type: "unsupported",
-        reason: "no_supported_mapping",
-      };
+      const hasResponseOperator = parsedLine.operators.some((operator) =>
+        ["resBody", "file", "htmlBody", "jsBody", "cssBody", "statusCode", "resHeaders", "resType"].includes(
+          operator.protocol,
+        ),
+      );
+      if (!hasResponseOperator) {
+        return {
+          type: "unsupported",
+          reason: "no_supported_mapping",
+        };
+      }
+      method = "GET";
     }
 
     if (responseBody == null && responseStatus === 200 && Object.keys(headers).length === 0) {
@@ -1000,7 +1060,7 @@ export class WhistleImportService {
     return {
       type: "mock",
       payload: {
-        name: buildTitle(sourceFile.name, parsedLine.matcher),
+        name: extractedName ?? buildTitle(sourceFile.name, parsedLine.matcher),
         group: sourceFile.groupName === defaultGroupName ? null : sourceFile.groupName,
         method,
         url: matcherInfo.normalizedUrl,
@@ -1041,7 +1101,7 @@ export class WhistleImportService {
       id: randomUUID(),
       name: buildTitle(sourceFile.name, parsedLine.matcher),
       pattern: matcherInfo.host,
-      method: "GET",
+      method: "ALL",
       url: matcherInfo.normalizedUrl,
       path: "/",
       priority: 100,
@@ -1160,12 +1220,11 @@ export class WhistleImportService {
 
   private buildDuplicateName(baseName: string, exists: (name: string) => boolean) {
     const normalizedBase = baseName.trim() || "Whistle 规则";
-    const suffix = "（Whistle 导入）";
-    let attempt = `${normalizedBase}${suffix}`;
     let index = 2;
+    let attempt = `${normalizedBase} ${index}`;
     while (exists(attempt)) {
-      attempt = `${normalizedBase}${suffix} ${index}`;
       index += 1;
+      attempt = `${normalizedBase} ${index}`;
     }
     return attempt;
   }

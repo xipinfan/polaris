@@ -62,7 +62,13 @@ export async function startServers() {
   apiApp.use(express.json({ limit: "2mb" }));
   apiApp.use(
     "/api",
-    createApiRouter(runtime.requestService, runtime.mockService, runtime.proxyService, runtime.certificateManager)
+    createApiRouter(
+      runtime.requestService,
+      runtime.mockService,
+      runtime.proxyService,
+      runtime.certificateManager,
+      runtime.proxyEngine,
+    )
   );
 
   const consoleDistDir = resolveConsoleDistDir();
@@ -142,6 +148,7 @@ export async function startServers() {
     mockService: runtime.mockService,
     storage: runtime.storage,
     proxyEngine: runtime.proxyEngine,
+    systemProxyManager: runtime.systemProxyManager,
     runtimeSettings
   };
 }

@@ -58,7 +58,10 @@ export type SetActiveGroupInput = {
 };
 
 export type UpsertSiteRuleInput = {
+  id?: string;
   host: string;
+  path?: string;
+  method?: string;
   action: ProxyRule["action"];
   forwardMode?: ProxyRule["forwardMode"];
   targetUrl?: ProxyRule["targetUrl"];
@@ -68,4 +71,8 @@ export type UpsertSiteRuleInput = {
 
 export type RemoveSiteRuleInput = {
   host: string;
+};
+
+export type RemoveRuleByIdInput = {
+  id: string;
 };

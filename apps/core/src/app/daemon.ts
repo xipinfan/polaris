@@ -9,7 +9,7 @@ function getRunPaths() {
   return {
     runDir,
     pidFile: path.join(runDir, "polaris.pid"),
-    stateFile: path.join(runDir, "daemon-state.json")
+    stateFile: path.join(runDir, "daemon-state.json"),
   };
 }
 
@@ -26,18 +26,18 @@ async function writeRunFiles(settings: AppSetting) {
         ports: {
           proxy: settings.localProxyPort,
           api: settings.localApiPort,
-          mcp: settings.mcpPort
+          mcp: settings.mcpPort,
         },
         urls: {
           health: `http://127.0.0.1:${settings.localApiPort}/api/health`,
           mcp: `http://127.0.0.1:${settings.mcpPort}/mcp`,
-          console: `http://127.0.0.1:${settings.localApiPort}/`
-        }
+          console: `http://127.0.0.1:${settings.localApiPort}/`,
+        },
       },
       null,
-      2
+      2,
     ),
-    "utf8"
+    "utf8",
   );
 }
 
@@ -47,24 +47,39 @@ async function cleanupRunFiles() {
 }
 
 async function main() {
-  const { runtimeSettings } = await startServers();
+  const { runtimeSettings, systemProxyManager } = await startServers();
   await writeRunFiles(runtimeSettings);
   console.log(
-    `Polaris daemon started on proxy ${runtimeSettings.localProxyPort}, api ${runtimeSettings.localApiPort}, mcp ${runtimeSettings.mcpPort}`
+    `Polaris daemon started on proxy ${runtimeSettings.localProxyPort}, api ${runtimeSettings.localApiPort}, mcp ${runtimeSettings.mcpPort}`,
   );
+
+  let closing = false;
+  const cleanupAndExit = async (code: number) => {
+    if (closing) {
+      return;
+    }
+    closing = true;
+    try {
+      await systemProxyManager.disable();
+    } catch {
+      // ignore cleanup failures
+    }
+    await cleanupRunFiles();
+    process.exit(code);
+  };
+
+  process.on("SIGINT", () => {
+    void cleanupAndExit(130);
+  });
+
+  process.on("SIGTERM", () => {
+    void cleanupAndExit(143);
+  });
+
+  process.on("exit", () => {
+    void cleanupRunFiles();
+  });
 }
-
-process.on("SIGINT", () => {
-  void cleanupRunFiles().finally(() => process.exit(130));
-});
-
-process.on("SIGTERM", () => {
-  void cleanupRunFiles().finally(() => process.exit(143));
-});
-
-process.on("exit", () => {
-  void cleanupRunFiles();
-});
 
 main().catch((error) => {
   console.error("Failed to start Polaris daemon", error);

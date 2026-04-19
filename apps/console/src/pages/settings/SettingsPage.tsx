@@ -8,6 +8,7 @@ import { SettingsLanProxyCard } from "./components/SettingsLanProxyCard";
 import { SettingsMcpCard } from "./components/SettingsMcpCard";
 import { SettingsOverview } from "./components/SettingsOverview";
 import { SettingsProxyModeCard } from "./components/SettingsProxyModeCard";
+import { SettingsSystemProxyCard } from "./components/SettingsSystemProxyCard";
 import styles from "./SettingsPage.module.less";
 
 const proxyModeLabels: Record<string, string> = {
@@ -101,6 +102,10 @@ export function SettingsPage() {
               currentModeLabel={currentModeLabel}
               enabledRuleCount={activeRules.length}
               modeItems={proxyModeDescriptions}
+            />
+            <SettingsSystemProxyCard
+              enabled={Boolean(status.systemProxyEnabled)}
+              proxyPort={settings.localProxyPort}
             />
             <SettingsHttpsCard
               certificateInstalled={Boolean(settings.certificateInstalled)}

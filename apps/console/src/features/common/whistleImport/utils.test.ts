@@ -99,6 +99,13 @@ const unsupportedCandidate: WhistleImportCandidate = {
   skipReason: "unsupported_plugin_rule",
 };
 
+const disabledMockCandidate: WhistleImportCandidate = {
+  ...mockCandidate,
+  id: "mock-disabled",
+  title: "orders-mock-disabled",
+  enabled: false,
+};
+
 const currentProxyGroups: StoredGroup[] = [
   {
     id: "g1",
@@ -115,11 +122,20 @@ const currentProxyGroups: StoredGroup[] = [
 describe("whistle import utils", () => {
   it("builds default selection from compatible scope candidates", () => {
     const selectedIds = buildDefaultSelectedIds(
-      [mockCandidate, proxyCandidate, unsupportedCandidate],
+      [mockCandidate, disabledMockCandidate, proxyCandidate, unsupportedCandidate],
       "mock",
     );
 
     expect([...selectedIds]).toEqual(["mock-1"]);
+  });
+
+  it("includes both mock and proxy when scope is all", () => {
+    const selectedIds = buildDefaultSelectedIds(
+      [mockCandidate, proxyCandidate, unsupportedCandidate],
+      "all",
+    );
+
+    expect([...selectedIds].sort()).toEqual(["mock-1", "proxy-1"]);
   });
 
   it("detects proxy conflicts from current groups", () => {

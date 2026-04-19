@@ -1,11 +1,11 @@
-﻿import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../services/apiClient";
 import { queryKeys } from "../../lib/query/queryKeys";
-import type { RemoveSiteRuleInput, SetActiveGroupInput, UpsertSiteRuleInput } from "./types";
+import type { RemoveRuleByIdInput, SetActiveGroupInput, UpsertSiteRuleInput } from "./types";
 
 type ProxyForwardMutationApi = Pick<
   typeof apiClient,
-  "listProxyRules" | "removeSiteRule" | "upsertSiteRule" | "setProxyMode"
+  "listProxyRules" | "removeRuleById" | "upsertSiteRule" | "setProxyMode"
 >;
 
 export async function applyActiveProxyForwardGroup(
@@ -15,27 +15,21 @@ export async function applyActiveProxyForwardGroup(
   const currentRules = await api.listProxyRules();
 
   for (const rule of currentRules) {
-    await api.removeSiteRule(rule.pattern);
+    await api.removeRuleById(rule.id);
   }
 
-  const enabledRulesByHost = new Map(
-    group.rules
-      .filter((rule) => rule.enabled)
-      .map((rule) => [
-        rule.pattern,
-        {
-          host: rule.pattern,
-          action: rule.action,
-          forwardMode: rule.forwardMode,
-          targetUrl: rule.targetUrl,
-          rewriteHost: rule.rewriteHost,
-          rewritePath: rule.rewritePath,
-        },
-      ] as const),
-  );
-
-  for (const payload of enabledRulesByHost.values()) {
-    await api.upsertSiteRule(payload);
+  for (const rule of group.rules.filter((item) => item.enabled)) {
+    await api.upsertSiteRule({
+      id: rule.id,
+      host: rule.pattern,
+      path: rule.path,
+      method: rule.method,
+      action: rule.action,
+      forwardMode: rule.forwardMode,
+      targetUrl: rule.targetUrl,
+      rewriteHost: rule.rewriteHost,
+      rewritePath: rule.rewritePath,
+    });
   }
 
   return group;
@@ -70,11 +64,11 @@ export function useUpsertProxyForwardSiteRuleMutation() {
   });
 }
 
-export function useRemoveProxyForwardSiteRuleMutation() {
+export function useRemoveProxyForwardRuleByIdMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ host }: RemoveSiteRuleInput) => apiClient.removeSiteRule(host),
+    mutationFn: ({ id }: RemoveRuleByIdInput) => apiClient.removeRuleById(id),
     onSuccess: async () => {
       await invalidateProxyForwardQueries(queryClient);
     },

@@ -4,7 +4,8 @@
   --panel-radius: 18px;
   --panel-muted: #667085;
   --panel-title: #0f172a;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   max-height: min(780px, calc(100vh - 120px));
   overflow: hidden;
@@ -374,18 +375,27 @@
 .content {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-rows: minmax(0, 1fr);
   gap: 14px;
+  flex: 1;
   min-height: 0;
   overflow: hidden;
 }
 
 .listPane {
   min-height: 360px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 12px;
   border: 1px solid var(--panel-border);
   border-radius: var(--panel-radius);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(248, 250, 252, 0.92) 100%);
+  scrollbar-width: none;
+}
+
+.listPane::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .groupSection {
@@ -487,6 +497,13 @@
   align-content: start;
   gap: 12px;
   min-width: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.summaryPane::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .summaryCard {
