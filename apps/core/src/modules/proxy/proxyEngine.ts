@@ -118,13 +118,20 @@ function normalizeHeaders(headers: IncomingMessage["headers"] | http.IncomingHtt
   );
 }
 
+function isWebSocketUpgrade(headers: IncomingMessage["headers"]): boolean {
+  const upgradeValue = getHeaderValue(headers.upgrade) ?? "";
+  return upgradeValue.toLowerCase() === "websocket";
+}
+
 function sanitizeProxyHeaders(headers: IncomingMessage["headers"]): Record<string, string> {
   const nextHeaders = normalizeHeaders(headers);
   delete nextHeaders["proxy-connection"];
   delete nextHeaders["proxy-authorization"];
-  delete nextHeaders.connection;
-  delete nextHeaders["keep-alive"];
-  delete nextHeaders.upgrade;
+  if (!isWebSocketUpgrade(headers)) {
+    delete nextHeaders.connection;
+    delete nextHeaders["keep-alive"];
+    delete nextHeaders.upgrade;
+  }
   return nextHeaders;
 }
 
@@ -570,6 +577,9 @@ export class ProxyEngine {
     server.on("connect", async (req, clientSocket, head) => {
       await this.handleConnectRequest(req, clientSocket, head);
     });
+    server.on("upgrade", (req, socket, head) => {
+      this.handleUpgradeRequest(req, socket, head, "http:");
+    });
 
     return server;
   }
@@ -606,12 +616,209 @@ export class ProxyEngine {
       }
     );
 
-    this.mitmServer.on("tlsClientError", () => {});
+    this.mitmServer.on("tlsClientError", () => {
+      // Expected when client does not trust Polaris CA (TLS alert 46: certificate unknown).
+    });
     this.mitmServer.on("clientError", () => {});
     this.mitmServer.on("connection", (socket) => {
       this.trackSocket(socket);
     });
+    this.mitmServer.on("upgrade", (req, socket, head) => {
+      this.handleUpgradeRequest(req, socket, head, "https:");
+    });
     return this.mitmServer;
+  }
+
+  private handleUpgradeRequest(
+    req: IncomingMessage,
+    clientSocket: Duplex,
+    head: Buffer,
+    protocol: "http:" | "https:"
+  ): void {
+    if (!req.url || !req.headers.host) {
+      clientSocket.destroy();
+      return;
+    }
+
+    let targetUrl: URL;
+    try {
+      const absoluteUrl = req.url.startsWith("http") ? req.url : `${protocol}//${req.headers.host}${req.url}`;
+      targetUrl = new URL(absoluteUrl);
+    } catch {
+      clientSocket.destroy();
+      return;
+    }
+
+    const settings = this.proxyService.getSettings();
+    const lanIp = settings.lanIp ?? getLanIpv4Address();
+    if (isProxyLoopRequest(targetUrl, settings.localProxyPort, lanIp)) {
+      clientSocket.destroy();
+      return;
+    }
+
+    const startedAt = Date.now();
+    const shouldCapture = !isPolarisControlPlaneRequest(targetUrl);
+    const forwardDecision = this.proxyService.getForwardDecision(
+      targetUrl.host,
+      targetUrl.pathname,
+      req.method,
+    );
+
+    let finalProtocol = targetUrl.protocol;
+    let finalHostname = targetUrl.hostname;
+    let finalPort = targetUrl.port || (targetUrl.protocol === "https:" ? "443" : "80");
+    let finalPathname = targetUrl.pathname;
+    let finalSearch = targetUrl.search;
+
+    if (forwardDecision.mode === "proxy_forward" && forwardDecision.forwardMode) {
+      switch (forwardDecision.forwardMode) {
+        case "rewriteTarget": {
+          if (forwardDecision.targetUrl) {
+            const rewrittenTarget = new URL(forwardDecision.targetUrl);
+            finalProtocol = rewrittenTarget.protocol;
+            finalHostname = rewrittenTarget.hostname;
+            finalPort = rewrittenTarget.port || (rewrittenTarget.protocol === "https:" ? "443" : "80");
+            finalPathname = joinUrlPaths(rewrittenTarget.pathname || "/", targetUrl.pathname);
+            finalSearch = mergeSearchParams(rewrittenTarget.search, targetUrl.search);
+          }
+          break;
+        }
+        case "rewriteHost": {
+          if (forwardDecision.rewriteHost) {
+            const rewrittenHost = new URL(`http://${forwardDecision.rewriteHost}`);
+            finalHostname = rewrittenHost.hostname;
+            finalPort = rewrittenHost.port || finalPort;
+          }
+          break;
+        }
+        case "rewritePath": {
+          if (forwardDecision.rewritePath) {
+            finalPathname = forwardDecision.rewritePath.startsWith("/")
+              ? forwardDecision.rewritePath
+              : `/${forwardDecision.rewritePath}`;
+          }
+          break;
+        }
+        case "direct":
+        default:
+          break;
+      }
+    }
+
+    const finalHost =
+      (finalProtocol === "http:" && finalPort === "80") || (finalProtocol === "https:" && finalPort === "443")
+        ? finalHostname
+        : `${finalHostname}:${finalPort}`;
+    const finalTargetUrl = `${finalProtocol}//${finalHost}${finalPathname}${finalSearch}`;
+    const requestHeaders = sanitizeProxyHeaders(req.headers);
+    requestHeaders.host = finalHost;
+    const options: RequestOptions = {
+      protocol: finalProtocol,
+      hostname: finalHostname,
+      port: finalPort,
+      method: req.method,
+      path: `${finalPathname}${finalSearch}`,
+      headers: requestHeaders
+    };
+
+    const client = finalProtocol === "https:" ? https : http;
+    const proxyReq = client.request(options);
+    proxyReq.setTimeout(UPSTREAM_TIMEOUT_MS, () => {
+      proxyReq.destroy(new Error("Upstream request timeout"));
+    });
+
+    proxyReq.on("upgrade", (proxyRes, proxySocket, proxyHead) => {
+      const statusCode = proxyRes.statusCode ?? 101;
+      const statusMessage = proxyRes.statusMessage || "Switching Protocols";
+      const responseHeaders = normalizeHeaders(proxyRes.headers);
+      const serializedHeaders = Object.entries(responseHeaders)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join("\r\n");
+      clientSocket.write(`HTTP/1.1 ${statusCode} ${statusMessage}\r\n${serializedHeaders}\r\n\r\n`);
+
+      if (proxyHead.length) {
+        clientSocket.write(proxyHead);
+      }
+
+      proxySocket.pipe(clientSocket);
+      clientSocket.pipe(proxySocket);
+
+      let cleanedUp = false;
+      const cleanup = () => {
+        if (cleanedUp) {
+          return;
+        }
+        cleanedUp = true;
+        clientSocket.unpipe(proxySocket);
+        proxySocket.unpipe(clientSocket);
+        if (!clientSocket.destroyed) {
+          clientSocket.destroy();
+        }
+        if (!proxySocket.destroyed) {
+          proxySocket.destroy();
+        }
+      };
+
+      proxySocket.on("error", cleanup);
+      proxySocket.on("close", cleanup);
+      clientSocket.on("error", cleanup);
+      clientSocket.on("close", cleanup);
+
+      if (shouldCapture) {
+        const record: RequestRecord = {
+          id: randomUUID(),
+          method: req.method ?? "GET",
+          url: targetUrl.toString(),
+          host: targetUrl.host,
+          path: targetUrl.pathname,
+          statusCode,
+          duration: Date.now() - startedAt,
+          requestHeaders,
+          requestQuery: parseSearchParamsRecord(targetUrl.searchParams),
+          requestBody: normalizeCapturedBody(Buffer.alloc(0), requestHeaders),
+          responseHeaders,
+          responseBody: null,
+          createdAt: new Date().toISOString(),
+          source: "proxy",
+          secure: targetUrl.protocol === "https:",
+          resolution: this.buildResolution({
+            mode:
+              forwardDecision.source === "proxy_rules" && forwardDecision.mode === "proxy_forward"
+                ? "proxy_forward"
+                : "direct",
+            source: forwardDecision.source,
+            matchedRuleId: forwardDecision.matchedRuleId ?? null,
+            matchedRuleName: forwardDecision.matchedRuleName ?? null,
+            target: finalTargetUrl,
+            reason: forwardDecision.reason
+          })
+        };
+        void this.requestService.capture(record).catch(() => {});
+      }
+    });
+
+    proxyReq.on("response", (proxyRes) => {
+      const statusCode = proxyRes.statusCode ?? 502;
+      const statusMessage = proxyRes.statusMessage || "Bad Gateway";
+      const responseHeaders = normalizeHeaders(proxyRes.headers);
+      const serializedHeaders = Object.entries(responseHeaders)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join("\r\n");
+      clientSocket.write(`HTTP/1.1 ${statusCode} ${statusMessage}\r\n${serializedHeaders}\r\n\r\n`);
+      proxyRes.pipe(clientSocket);
+    });
+
+    proxyReq.on("error", () => {
+      clientSocket.destroy();
+    });
+    clientSocket.on("error", () => {
+      proxyReq.destroy();
+    });
+
+    if (head.length) {
+      proxyReq.write(head);
+    }
+    proxyReq.end();
   }
 
   private async handleConnectRequest(req: IncomingMessage, clientSocket: Duplex, head: Buffer): Promise<void> {

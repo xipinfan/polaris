@@ -1,5 +1,5 @@
 export const getSavedRequestDetailTool = {
   name: "get_saved_request_detail",
-  description:
-    "Get one saved request by id. Defaults to view='summary'. Use view='preview' before view='full' to avoid loading full headers, query, and body fields."
+  description: "查看某条已保存请求的详情时调用。视图递进同 get_request_detail：summary → preview → shape → full。"
 };
+

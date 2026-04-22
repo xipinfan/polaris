@@ -9,6 +9,7 @@ type UpsertSiteRuleInput = {
   path?: string;
   method?: string;
   action: "proxy" | "direct";
+  enabled?: boolean;
   forwardMode?: ProxyRule["forwardMode"];
   targetUrl?: ProxyRule["targetUrl"];
   rewriteHost?: ProxyRule["rewriteHost"];
@@ -37,7 +38,11 @@ export class ProxyService {
   private readonly allowedActions: Array<ProxyRule["action"]> = ["proxy", "direct"];
 
   private normalizePattern(pattern: string): string {
-    return String(pattern ?? "").trim().toLowerCase().replace(/:\d+$/, "");
+    return String(pattern ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//, "")
+      .replace(/:\d+$/, "");
   }
 
   private normalizeMethod(method: string | null | undefined): string | undefined {
@@ -273,6 +278,11 @@ export class ProxyService {
       throw new Error("Host is required");
     }
 
+    const targetUrl = input.targetUrl
+      ? (/^https?:\/\//i.test(input.targetUrl) ? input.targetUrl : `http://${input.targetUrl}`)
+      : undefined;
+    const rewriteHost = input.rewriteHost ? input.rewriteHost.replace(/^https?:\/\//i, "") : undefined;
+
     const normalizedPath = this.normalizePath(input.path);
     const normalizedMethod = this.normalizeMethod(input.method);
     const matchType: ProxyRule["matchType"] = normalizedPath ? "host+path" : "host";
@@ -289,10 +299,10 @@ export class ProxyService {
           method: normalizedMethod,
           action,
           forwardMode: input.forwardMode,
-          targetUrl: input.targetUrl,
-          rewriteHost: input.rewriteHost,
+          targetUrl,
+          rewriteHost,
           rewritePath: input.rewritePath,
-          enabled: true,
+          enabled: input.enabled ?? existing.enabled ?? true,
           updatedAt: now,
         }
       : {
@@ -303,10 +313,10 @@ export class ProxyService {
           method: normalizedMethod,
           action,
           forwardMode: input.forwardMode,
-          targetUrl: input.targetUrl,
-          rewriteHost: input.rewriteHost,
+          targetUrl,
+          rewriteHost,
           rewritePath: input.rewritePath,
-          enabled: true,
+          enabled: input.enabled ?? true,
           createdAt: now,
           updatedAt: now,
         };

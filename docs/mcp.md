@@ -291,7 +291,8 @@ Polaris 的 MCP tool result 同时有两层：
 
 - `summary`：只给摘要文字，适合低上下文快速判断
 - `preview` 或未传 `view`：摘要 + 预览行，方便先看关键字段
-- `full` / `shape` / `diagnostic`：文本直接输出完整 JSON，避免关键信息只藏在 `structuredContent`
+- `full` / `diagnostic`：文本给预览，完整结构仍在 `structuredContent.result`
+- `shape`：文本给摘要，结构骨架在 `structuredContent.result`
 
 所以如果你看到 `content` 很短，不代表服务端没返回数据；很多详细信息可能在 `structuredContent.result` 里。
 
@@ -299,8 +300,8 @@ Polaris 的 MCP tool result 同时有两层：
 
 建议按渐进式方式查：
 
-1. 先 `list_*`
-2. 再 `get_*_detail` 默认 `summary`
+1. 先 `query_*({ action: "list" })`
+2. 再 `query_*({ action: "detail", ... })` 默认 `summary`
 3. 需要看字段内容时用 `preview`
 4. 需要看结构时用 `shape`
 5. 真要完整原文或排查匹配问题时再用 `full` / `diagnostic`

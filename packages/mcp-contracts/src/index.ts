@@ -4,6 +4,7 @@ export * from "./resources/proxyMode";
 export * from "./resources/proxyRuleList";
 export * from "./resources/requestList";
 export * from "./resources/savedRequestList";
+// 旧工具契约（向后兼容，阶段 3 完成后可清理）
 export * from "./tools/createMockRule";
 export * from "./tools/clearRequests";
 export * from "./tools/deleteMockRule";
@@ -34,3 +35,13 @@ export * from "./tools/updateMockRule";
 export * from "./tools/updateSavedRequest";
 export * from "./tools/upsertProxyRule";
 export * from "./tools/verifyHttpsInterceptionReady";
+export * from "./tools/getWorkspaceSnapshot";
+export * from "./tools/testMockMatch";
+// 新合并工具契约（阶段 3）
+export * from "./tools/queryRequests";
+export * from "./tools/mutateRequest";
+export * from "./tools/queryMock";
+export * from "./tools/mutateMock";
+export * from "./tools/queryProxy";
+export * from "./tools/mutateProxy";
+export * from "./tools/setupHttps";

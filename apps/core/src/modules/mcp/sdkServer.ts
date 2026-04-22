@@ -1,69 +1,52 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type {
-  RequestFilters,
-  RunRequestInput,
-  SaveRequestInput,
-  SetActiveMockGroupInput,
-  UpdateMockRuleInput
-} from "@polaris/shared-contracts";
 import {
   clearRequestsTool,
-  createMockRuleTool,
-  deleteMockRuleTool,
-  deleteSavedRequestTool,
-  enableMockRuleTool,
-  getActiveMockGroupTool,
-  getCertificateInstallGuideTool,
-  getCertificateStatusTool,
-  getMockRuleDetailTool,
-  getProxyRuleDetailTool,
-  getProxyDecisionTool,
-  getProxyModeTool,
-  getRequestDetailTool,
-  getRuntimeSettingsTool,
-  getSavedRequestDetailTool,
-  getServiceHealthTool,
-  listMockRulesTool,
-  listProxyRulesTool,
-  listRequestsTool,
-  listSavedRequestsTool,
-  removeProxyRuleTool,
+  getWorkspaceSnapshotTool,
+  mockRuleListResource,
+  mutateMockTool,
+  mutateProxyTool,
+  mutateRequestTool,
+  proxyModeResource,
+  proxyRuleListResource,
+  queryMockTool,
+  queryProxyTool,
+  queryRequestsTool,
   replayRequestTool,
   requestListResource,
   runRequestTool,
-  saveRequestTool,
-  setProxyModeTool,
   savedRequestListResource,
-  mockRuleListResource,
-  proxyModeResource,
-  proxyRuleListResource,
-  setActiveMockGroupTool,
-  upsertProxyRuleTool,
-  verifyHttpsInterceptionReadyTool,
-  updateMockRuleTool,
-  updateSavedRequestTool
+  setupHttpsTool,
+  testMockMatchTool
 } from "@polaris/mcp-contracts";
-import {
-  buildMockRuleDetailPayload,
-  buildMockRuleSummary,
-  buildProxyRuleSummary,
-  buildRequestDetailPayload,
-  buildRequestSummary,
-  buildResourceResult,
-  buildSavedRequestDetailPayload,
-  buildSavedRequestSummary,
-  buildToolResult,
-  buildWriteReceipt,
-  detailViewValues
-} from "./payloads";
-import { resolveDetailTextMode } from "./toolResultPolicy";
-import { buildCreateMockRuleInput, buildUpdateMockRuleInput } from "./mockRuleMutations";
+import { buildMockRuleSummary, buildProxyRuleSummary, buildRequestSummary, buildResourceResult, buildSavedRequestSummary, detailViewValues } from "./payloads";
+import { toMcpError } from "./errorHandling";
 import { CertificateManager } from "../proxy/certificateManager";
 import { MockService } from "../mock/mockService";
 import { ProxyService } from "../proxy/proxyService";
 import { RequestService } from "../requests/requestService";
-import { createPolarisError, toMcpError } from "./errorHandling";
+import {
+  handleClearRequests,
+  handleGetWorkspaceSnapshot,
+  handleMutateMock,
+  handleMutateProxy,
+  handleMutateRequest,
+  handleQueryMock,
+  handleQueryProxy,
+  handleQueryRequests,
+  handleReplayRequest,
+  handleRunRequest,
+  handleSetupHttps,
+  handleTestMockMatch,
+  type MutateMockArgs,
+  type MutateProxyArgs,
+  type MutateRequestArgs,
+  type QueryMockArgs,
+  type QueryProxyArgs,
+  type QueryRequestsArgs,
+  type SetupHttpsArgs,
+  type ToolServiceDeps
+} from "./toolHandlers";
 
 export interface PolarisMcpSdkServerOptions {
   allowedToolNames?: ReadonlySet<string>;
@@ -71,138 +54,8 @@ export interface PolarisMcpSdkServerOptions {
 }
 
 const stringMapSchema = z.record(z.string(), z.string());
-
-const listRequestsInputSchema = z.object({
-  keyword: z.string().optional(),
-  method: z.string().optional(),
-  host: z.string().optional(),
-  statusCode: z.number().int().optional(),
-  limit: z.number().int().positive().max(100).optional(),
-  offset: z.number().int().min(0).optional()
-});
-
-const saveRequestInputSchema = z.object({
-  name: z.string().min(1),
-  requestId: z.string().optional(),
-  method: z.string().optional(),
-  url: z.string().url().optional(),
-  headers: stringMapSchema.optional(),
-  query: stringMapSchema.optional(),
-  body: z.unknown().nullable().optional(),
-  tags: z.array(z.string()).optional()
-});
-
-const runRequestInputSchema = z.object({
-  name: z.string().optional(),
-  method: z.string().min(1),
-  url: z.string().url(),
-  headers: stringMapSchema.optional(),
-  query: stringMapSchema.optional(),
-  body: z.unknown().nullable().optional()
-});
-
-const baseCreateMockRuleInputSchema = z.object({
-  name: z.string().min(1).describe("Rule name. Use '[Group] Name' format for grouping."),
-  group: z.string().min(1).optional(),
-  method: z.string().min(1).describe("HTTP method, e.g. GET, POST."),
-  url: z.string().min(1).describe("URL substring to match against. Plain string matching, not URL validation."),
-  requestBodyExactMatch: z
-    .string()
-    .min(1)
-    .nullable()
-    .optional()
-    .describe("DSL: 'dot.path: \"stringValue\"', combine with ';'. Only string values."),
-  requestBodyKeyMatch: z
-    .string()
-    .min(1)
-    .nullable()
-    .optional()
-    .describe("Dot-path to check key existence, e.g. 'user.premium'."),
-  responseStatus: z.number().int(),
-  responseHeaders: stringMapSchema.optional(),
-  responseBody: z.unknown().nullable().optional(),
-  enabled: z.boolean()
-});
-
-const mockRulePatchSchema = z.object({
-  name: z.string().min(1).optional(),
-  group: z.string().min(1).nullable().optional(),
-  method: z.string().min(1).optional(),
-  url: z.string().min(1).optional(),
-  requestBodyExactMatch: z.string().min(1).nullable().optional(),
-  requestBodyKeyMatch: z.string().min(1).nullable().optional(),
-  responseStatus: z.number().int().optional(),
-  responseHeaders: stringMapSchema.optional(),
-  responseBody: z.unknown().nullable().optional(),
-  enabled: z.boolean().optional()
-});
-
-const mockRuleOperationSchema = z.object({
-  op: z.enum(["replace", "remove"]),
-  path: z
-    .string()
-    .min(1)
-    .refine(
-      (value) =>
-        [
-          "name",
-          "group",
-          "method",
-          "url",
-          "requestBodyExactMatch",
-          "requestBodyKeyMatch",
-          "responseStatus",
-          "responseHeaders",
-          "responseBody",
-          "enabled"
-        ].includes(value) ||
-        value.startsWith("responseBody.") ||
-        value.startsWith("responseBody["),
-      {
-        message: "Operation path must be a top-level mock field or a nested responseBody path"
-      }
-    ),
-  value: z.unknown().optional()
-});
-
-const createMockRuleInputSchema = z.union([
-  baseCreateMockRuleInputSchema,
-  z.object({
-    name: z.string().min(1),
-    requestId: z.string().min(1),
-    patch: mockRulePatchSchema.optional()
-  }),
-  z.object({
-    name: z.string().min(1),
-    template: z.string().min(1),
-    patch: mockRulePatchSchema.optional()
-  })
-]);
-
-const updateSavedRequestInputSchema = saveRequestInputSchema.extend({
-  id: z.string().min(1)
-});
-
-const listMockRulesInputSchema = z.object({
-  name: z.string().optional(),
-  group: z.string().optional(),
-  method: z.string().optional(),
-  url: z.string().optional(),
-  enabled: z.boolean().optional(),
-  limit: z.number().int().positive().max(100).optional(),
-  offset: z.number().int().min(0).optional()
-});
-
-const listSavedRequestsInputSchema = z.object({
-  limit: z.number().int().positive().max(100).optional(),
-  offset: z.number().int().min(0).optional()
-});
-
-const detailInputSchema = z.object({
-  id: z.string().min(1),
+const detailFilterFields = {
   view: z.enum(detailViewValues).optional(),
-  requestId: z.string().min(1).optional(),
-  scenario: z.string().min(1).optional(),
   bodyPreviewChars: z.number().int().positive().max(8000).optional(),
   maxDepth: z.number().int().positive().max(20).optional(),
   maxArrayItems: z.number().int().positive().max(100).optional(),
@@ -211,117 +64,196 @@ const detailInputSchema = z.object({
   includePaths: z.array(z.string().min(1)).optional(),
   excludePaths: z.array(z.string().min(1)).optional(),
   topLevelOnly: z.boolean().optional()
-});
+};
 
-const mockRuleIdInputSchema = z.object({
-  id: z.string().min(1)
-});
-
-const proxyRuleIdInputSchema = z.object({
-  ruleId: z.string().min(1)
-});
-
-const updateMockRuleToolInputSchema = z.union([
-  baseCreateMockRuleInputSchema.extend({
-    id: z.string().min(1)
+const queryRequestsInputSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("list"),
+    keyword: z.string().optional(),
+    method: z.string().optional(),
+    host: z.string().optional(),
+    statusCode: z.number().int().optional(),
+    limit: z.number().int().min(1).max(100).optional(),
+    offset: z.number().int().min(0).optional()
   }),
   z.object({
+    action: z.literal("detail"),
     id: z.string().min(1),
-    patch: mockRulePatchSchema
+    ...detailFilterFields
   }),
   z.object({
+    action: z.literal("list_saved"),
+    limit: z.number().int().min(1).max(100).optional(),
+    offset: z.number().int().min(0).optional()
+  }),
+  z.object({
+    action: z.literal("saved_detail"),
     id: z.string().min(1),
-    operations: z.array(mockRuleOperationSchema).min(1)
+    ...detailFilterFields
   })
 ]);
 
-const setActiveMockGroupInputSchema = z.object({
-  group: z.string().min(1).nullable()
-});
-
-const proxyModeInputSchema = z.object({
-  mode: z.enum(["direct", "global", "rules", "system"])
-});
-
-const upsertProxyRuleInputSchema = z.object({
-  host: z.string().min(1),
-  action: z.enum(["proxy", "direct"]),
-  forwardMode: z.enum(["direct", "rewriteTarget", "rewriteHost", "rewritePath"]).optional(),
-  targetUrl: z.string().url().optional(),
-  rewriteHost: z.string().min(1).optional(),
-  rewritePath: z.string().min(1).optional()
-});
-
-const removeProxyRuleInputSchema = z.object({
-  host: z.string().min(1)
-});
-
-const listProxyRulesInputSchema = z.object({
-  host: z.string().optional(),
-  enabled: z.boolean().optional(),
-  action: z.enum(["proxy", "direct"]).optional(),
-  limit: z.number().int().positive().max(100).optional(),
-  offset: z.number().int().min(0).optional()
-});
-
-const proxyDecisionInputSchema = z
-  .object({
-    host: z.string().min(1).optional(),
-    url: z.string().url().optional()
+const mutateRequestInputSchema = z.discriminatedUnion("op", [
+  z.object({
+    op: z.literal("save"),
+    name: z.string().min(1),
+    requestId: z.string().optional(),
+    method: z.string().optional(),
+    url: z.string().url().optional(),
+    headers: stringMapSchema.optional(),
+    query: stringMapSchema.optional(),
+    body: z.unknown().nullable().optional(),
+    tags: z.array(z.string()).optional()
+  }),
+  z.object({
+    op: z.literal("update"),
+    id: z.string().min(1),
+    name: z.string().optional(),
+    method: z.string().optional(),
+    url: z.string().url().optional(),
+    headers: stringMapSchema.optional(),
+    query: stringMapSchema.optional(),
+    body: z.unknown().nullable().optional(),
+    tags: z.array(z.string()).optional()
+  }),
+  z.object({
+    op: z.literal("delete"),
+    id: z.string().min(1)
   })
-  .refine((value) => Boolean(value.host || value.url), {
-    message: "Either host or url is required"
-  });
+]);
 
-function getRuleGroupName(name: string): string | null {
-  const match = name.match(/^\[(.+?)\]\s*(.+)$/);
-  return match?.[1]?.trim() || null;
-}
+const queryMockInputSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("list"),
+    name: z.string().optional(),
+    group: z.string().optional(),
+    method: z.string().optional(),
+    url: z.string().optional(),
+    enabled: z.boolean().optional(),
+    limit: z.number().int().min(1).max(100).optional(),
+    offset: z.number().int().min(0).optional()
+  }),
+  z.object({
+    action: z.literal("detail"),
+    id: z.string().min(1),
+    requestId: z.string().optional(),
+    ...detailFilterFields
+  }),
+  z.object({
+    action: z.literal("active_group")
+  })
+]);
 
-async function syncActiveMockGroupFromRuleName(mockService: MockService, ruleName: string): Promise<void> {
-  const nextGroup = getRuleGroupName(ruleName);
-  if (!nextGroup || nextGroup === mockService.getActiveGroup()) {
-    return;
-  }
-  await mockService.setActiveGroup(nextGroup);
-}
+const mutateMockInputSchema = z.discriminatedUnion("op", [
+  z.object({
+    op: z.literal("create"),
+    name: z.string().min(1),
+    requestId: z.string().optional(),
+    template: z.string().optional(),
+    method: z.string().optional(),
+    url: z.string().optional(),
+    group: z.string().optional(),
+    responseStatus: z.number().int().optional(),
+    responseHeaders: stringMapSchema.optional(),
+    responseBody: z.unknown().nullable().optional(),
+    requestBodyExactMatch: z.string().nullable().optional(),
+    requestBodyKeyMatch: z.string().nullable().optional(),
+    enabled: z.boolean().optional(),
+    patch: z.record(z.string(), z.unknown()).optional()
+  }),
+  z.object({
+    op: z.literal("update"),
+    id: z.string().min(1),
+    name: z.string().optional(),
+    method: z.string().optional(),
+    url: z.string().optional(),
+    group: z.string().optional(),
+    responseStatus: z.number().int().optional(),
+    responseHeaders: stringMapSchema.optional(),
+    responseBody: z.unknown().nullable().optional(),
+    requestBodyExactMatch: z.string().nullable().optional(),
+    requestBodyKeyMatch: z.string().nullable().optional(),
+    enabled: z.boolean().optional(),
+    patch: z.record(z.string(), z.unknown()).optional(),
+    operations: z
+      .array(
+        z.object({
+          op: z.enum(["replace", "remove"]),
+          path: z.string().min(1),
+          value: z.unknown().optional()
+        })
+      )
+      .optional()
+  }),
+  z.object({
+    op: z.literal("delete"),
+    id: z.string().min(1)
+  }),
+  z.object({
+    op: z.literal("enable"),
+    id: z.string().optional(),
+    name: z.string().optional(),
+    enabled: z.boolean()
+  }),
+  z.object({
+    op: z.literal("set_group"),
+    group: z.string().nullable()
+  })
+]);
 
-function getInstallGuideForPlatform(certificatePath?: string) {
-  if (process.platform === "win32") {
-    return {
-      platform: "win32",
-      steps: [
-        `Download or locate the Polaris root certificate${certificatePath ? ` (${certificatePath})` : ""}.`,
-        "In Edge, open edge://certificate-manager/ (or Settings -> Privacy, search, and services -> Security -> Manage certificates).",
-        "In Chrome, open chrome://settings/certificates and click Manage certificates.",
-        "Import the certificate into Current User -> Trusted Root Certification Authorities.",
-        "Confirm the subject Polaris Development Root CA exists in Trusted Root Certification Authorities.",
-        "Optional PowerShell check: Get-ChildItem Cert:\\CurrentUser\\Root | Where-Object { $_.Subject -like '*Polaris Development Root CA*' }",
-        "Restart Edge/Chrome and verify certificate trust status again from Polaris."
-      ]
-    };
-  }
+const testMockMatchInputSchema = z.object({
+  method: z.string().min(1),
+  url: z.string().min(1),
+  body: z.unknown().optional()
+});
 
-  if (process.platform === "darwin") {
-    return {
-      platform: "darwin",
-      steps: [
-        `Open Keychain Access and import the certificate${certificatePath ? ` at ${certificatePath}` : ""}.`,
-        "Add it to the System keychain.",
-        "Set trust to Always Trust for SSL."
-      ]
-    };
-  }
+const queryProxyInputSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("list"),
+    host: z.string().optional(),
+    enabled: z.boolean().optional(),
+    ruleAction: z.enum(["proxy", "direct"]).optional(),
+    actionFilter: z.enum(["proxy", "direct"]).optional()
+  }),
+  z.object({
+    action: z.literal("detail"),
+    ruleId: z.string().min(1)
+  }),
+  z.object({
+    action: z.literal("mode")
+  }),
+  z.object({
+    action: z.literal("decision"),
+    host: z.string().min(1)
+  })
+]);
 
-  return {
-    platform: process.platform,
-    steps: [
-      `Import the certificate${certificatePath ? ` from ${certificatePath}` : ""} into your OS/browser trust store.`,
-      "Trust the certificate authority for HTTPS interception.",
-      "Restart browsers/apps that should use the local proxy."
-    ]
-  };
-}
+const mutateProxyInputSchema = z.discriminatedUnion("op", [
+  z.object({
+    op: z.literal("set_mode"),
+    mode: z.enum(["direct", "global", "rules", "system"])
+  }),
+  z.object({
+    op: z.literal("upsert"),
+    host: z.string().min(1),
+    action: z.enum(["proxy", "direct"]).optional(),
+    enabled: z.boolean().optional(),
+    forwardMode: z.enum(["direct", "rewriteTarget", "rewriteHost", "rewritePath"]).optional(),
+    targetUrl: z.string().optional(),
+    rewriteHost: z.string().optional(),
+    rewritePath: z.string().optional()
+  }),
+  z.object({
+    op: z.literal("remove"),
+    host: z.string().min(1)
+  })
+]);
+
+const setupHttpsInputSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("status") }),
+  z.object({ action: z.literal("install_guide") }),
+  z.object({ action: z.literal("verify") })
+]);
 
 export function createPolarisMcpSdkServer(
   requestService: RequestService,
@@ -333,14 +265,30 @@ export function createPolarisMcpSdkServer(
   const server = new McpServer(
     {
       name: "polaris",
-      version: "0.1.0"
+      version: "0.2.0"
     },
     {
-      instructions:
-        "Use Polaris to inspect captured requests, read saved assets, replay requests, and manage mock or proxy state for local debugging."
+      instructions: `Polaris 是本地接口调试工作台，提供请求抓包、Mock 规则、代理转发三大能力。
+
+核心工作流：
+1. 先 query 再 detail：先用列表动作定位目标，再看详情。
+2. 写后不读：执行 mutate 后优先使用写回执，不要立刻 full 读回。
+3. 大响应用 jsonPath：响应体大时先过滤再读取。
+4. mock 排障用 diagnostic：排查规则不生效时用 diagnostic 并传 requestId。
+
+常见任务 -> 工具链：
+- mock 没生效：test_mock_match -> query_mock(list) -> query_mock(detail:diagnostic)
+- 帮我 mock 接口：query_requests(detail) -> mutate_mock(create) -> test_mock_match
+- HTTPS 抓不到包：setup_https(verify/status/install_guide)
+- 请求被转发到哪了：query_proxy(decision) -> query_proxy(detail/list)
+
+反模式：
+- 不要直接使用 view="full" 读取大 body。
+- 不要写操作后再读完整对象确认。`
     }
   );
 
+  const deps: ToolServiceDeps = { requestService, mockService, proxyService, certificateManager };
   const safe = async <T>(operation: () => Promise<T> | T): Promise<T> => {
     try {
       return await operation();
@@ -350,11 +298,9 @@ export function createPolarisMcpSdkServer(
   };
 
   const allowsTool = (name: string) => !options.allowedToolNames || options.allowedToolNames.has(name);
-  const allowsResource = (name: string) =>
-    !options.allowedResourceNames || options.allowedResourceNames.has(name);
+  const allowsResource = (name: string) => !options.allowedResourceNames || options.allowedResourceNames.has(name);
 
   const registerTool = server.registerTool.bind(server);
-
   (server as unknown as { registerTool: typeof registerTool }).registerTool = ((name, config, handler) => {
     if (!allowsTool(name)) {
       return server;
@@ -363,733 +309,201 @@ export function createPolarisMcpSdkServer(
   }) as typeof registerTool;
 
   server.registerTool(
-    listRequestsTool.name,
-    {
-      description: listRequestsTool.description,
-      inputSchema: listRequestsInputSchema,
-      annotations: {
-        readOnlyHint: true
-      }
-    },
-    async (args) => {
-      return safe(() => {
-        const { offset, limit, ...rawFilters } = args;
-        const records = requestService.list(rawFilters as RequestFilters);
-        const start = offset ?? 0;
-        const sliced = records.slice(start);
-        const paged = typeof limit === "number" ? sliced.slice(0, limit) : sliced;
-        return buildToolResult(paged.map(buildRequestSummary), `Loaded ${paged.length} request summaries`);
-      });
-    }
+    queryRequestsTool.name,
+    { description: queryRequestsTool.description, inputSchema: queryRequestsInputSchema, annotations: { readOnlyHint: true } },
+    async (args) => safe(() => handleQueryRequests(args as QueryRequestsArgs, deps))
   );
-
   server.registerTool(
-    getRequestDetailTool.name,
-    {
-      description: getRequestDetailTool.description,
-      inputSchema: detailInputSchema.omit({ requestId: true, scenario: true }),
-      annotations: {
-        readOnlyHint: true
-      }
-    },
-    async ({ id, view, bodyPreviewChars, maxDepth, maxArrayItems, jsonPath, responsePath, includePaths, excludePaths, topLevelOnly }) => {
-      return safe(() => {
-        const record = requestService.getById(id);
-        if (!record) {
-          throw new Error("Request not found");
-        }
-        return buildToolResult(
-          buildRequestDetailPayload(record, {
-            view,
-            bodyPreviewChars,
-            maxDepth,
-            maxArrayItems,
-            jsonPath,
-            responsePath,
-            includePaths,
-            excludePaths,
-            topLevelOnly
-          }),
-          `Loaded request ${record.method} ${record.path} (${view ?? "summary"})`,
-          { textMode: resolveDetailTextMode(view) }
-        );
-      });
-    }
+    mutateRequestTool.name,
+    { description: mutateRequestTool.description, inputSchema: mutateRequestInputSchema },
+    async (args) => safe(() => handleMutateRequest(args as MutateRequestArgs, deps))
   );
-
-  server.registerTool(
-    listSavedRequestsTool.name,
-    {
-      description: listSavedRequestsTool.description,
-      inputSchema: listSavedRequestsInputSchema,
-      annotations: {
-        readOnlyHint: true
-      }
-    },
-    async (args) =>
-      safe(() => {
-        const saved = requestService.listSaved();
-        const start = args.offset ?? 0;
-        const sliced = saved.slice(start);
-        const paged = typeof args.limit === "number" ? sliced.slice(0, args.limit) : sliced;
-        return buildToolResult(paged.map(buildSavedRequestSummary), `Loaded ${paged.length} saved request summaries`);
-      })
-  );
-
-  server.registerTool(
-    getSavedRequestDetailTool.name,
-    {
-      description: getSavedRequestDetailTool.description,
-      inputSchema: detailInputSchema.omit({ requestId: true, scenario: true }),
-      annotations: {
-        readOnlyHint: true
-      }
-    },
-    async ({ id, view, bodyPreviewChars, maxDepth, maxArrayItems, jsonPath, responsePath, includePaths, excludePaths, topLevelOnly }) => {
-      return safe(() => {
-        const savedRequest = requestService.getSavedById(id);
-        if (!savedRequest) {
-          throw new Error("Saved request not found");
-        }
-        return buildToolResult(
-          buildSavedRequestDetailPayload(savedRequest, {
-            view,
-            bodyPreviewChars,
-            maxDepth,
-            maxArrayItems,
-            jsonPath,
-            responsePath,
-            includePaths,
-            excludePaths,
-            topLevelOnly
-          }),
-          `Loaded saved request ${savedRequest.name} (${view ?? "summary"})`,
-          { textMode: resolveDetailTextMode(view) }
-        );
-      });
-    }
-  );
-
-  server.registerTool(
-    saveRequestTool.name,
-    {
-      description: saveRequestTool.description,
-      inputSchema: saveRequestInputSchema
-    },
-    async (args) =>
-      safe(async () => {
-        const data = await requestService.save(args as SaveRequestInput);
-        return buildToolResult(buildWriteReceipt(null, data, `Saved request ${data.name}`), `Saved request ${data.name}`);
-      })
-  );
-
-  server.registerTool(
-    updateSavedRequestTool.name,
-    {
-      description: updateSavedRequestTool.description,
-      inputSchema: updateSavedRequestInputSchema
-    },
-    async ({ id, ...input }) =>
-      safe(async () => {
-        const before = requestService.getSavedById(id);
-        if (!before) {
-          throw new Error("Saved request not found");
-        }
-        const data = await requestService.updateSaved(id, input as SaveRequestInput);
-        return buildToolResult(
-          buildWriteReceipt(before, data, `Updated saved request ${data.name}`),
-          `Updated saved request ${data.name}`
-        );
-      })
-  );
-
-  server.registerTool(
-    deleteSavedRequestTool.name,
-    {
-      description: deleteSavedRequestTool.description,
-      inputSchema: z.object({
-        id: z.string().min(1)
-      }),
-      annotations: {
-        destructiveHint: true
-      }
-    },
-    async ({ id }) => {
-      return safe(async () => {
-        await requestService.removeSaved(id);
-        return buildToolResult({ id }, `Deleted saved request ${id}`);
-      });
-    }
-  );
-
   server.registerTool(
     replayRequestTool.name,
-    {
-      description: replayRequestTool.description,
-      inputSchema: z.object({
-        id: z.string().min(1)
-      })
-    },
-    async ({ id }) =>
-      safe(async () => {
-        const data = await requestService.replayRequest(id);
-        return buildToolResult(
-          buildWriteReceipt(null, data, `Replayed request ${data.method} ${data.path}`),
-          `Replayed request ${data.method} ${data.path}`
-        );
-      })
+    { description: replayRequestTool.description, inputSchema: z.object({ id: z.string().min(1) }) },
+    async (args) => safe(() => handleReplayRequest(args, deps))
   );
-
-  server.registerTool(
-    clearRequestsTool.name,
-    {
-      description: clearRequestsTool.description,
-      annotations: {
-        destructiveHint: true
-      }
-    },
-    async () => {
-      return safe(async () => {
-        await requestService.clear();
-        return buildToolResult({ cleared: true }, "Cleared captured requests");
-      });
-    }
-  );
-
-  server.registerTool(
-    listMockRulesTool.name,
-    {
-      description: listMockRulesTool.description,
-      inputSchema: listMockRulesInputSchema,
-      annotations: {
-        readOnlyHint: true
-      }
-    },
-    async (args) => {
-      return safe(() => {
-        const rules = mockService.list().filter((rule) => {
-          const nameMatch = !args.name || rule.name.includes(args.name);
-          const groupMatch = !args.group || getRuleGroupName(rule.name) === args.group;
-          const methodMatch = !args.method || rule.method === args.method.toUpperCase();
-          const urlMatch = !args.url || rule.url.includes(args.url);
-          const enabledMatch = typeof args.enabled !== "boolean" || rule.enabled === args.enabled;
-          return nameMatch && groupMatch && methodMatch && urlMatch && enabledMatch;
-        });
-        const start = args.offset ?? 0;
-        const sliced = rules.slice(start);
-        const paged = typeof args.limit === "number" ? sliced.slice(0, args.limit) : sliced;
-        return buildToolResult(paged.map(buildMockRuleSummary), `Loaded ${paged.length} mock rule summaries`);
-      });
-    }
-  );
-
-  server.registerTool(
-    getMockRuleDetailTool.name,
-    {
-      description: getMockRuleDetailTool.description,
-      inputSchema: detailInputSchema,
-      annotations: {
-        readOnlyHint: true
-      }
-    },
-    async ({
-      id,
-      view,
-      requestId,
-      scenario,
-      bodyPreviewChars,
-      maxDepth,
-      maxArrayItems,
-      jsonPath,
-      responsePath,
-      includePaths,
-      excludePaths,
-      topLevelOnly
-    }) => {
-      return safe(() => {
-        const rule = mockService.list().find((item) => item.id === id);
-        if (!rule) {
-          throw createPolarisError("MOCK_RULE_NOT_FOUND", "Mock rule not found", {
-            status: 404,
-            suggestions: [
-              "Call list_mock_rules first to confirm the id.",
-              "If you only know the name, search by group or name before loading detail.",
-              "Check whether the rule was deleted or belongs to another environment."
-            ],
-            input: {
-              id,
-              view,
-              requestId,
-              scenario,
-              bodyPreviewChars,
-              maxDepth,
-              maxArrayItems,
-              jsonPath,
-              responsePath,
-              includePaths,
-              excludePaths,
-              topLevelOnly
-            }
-          });
-        }
-        const requestRecord = requestId ? requestService.getById(requestId) : undefined;
-        return buildToolResult(
-          buildMockRuleDetailPayload(
-            rule,
-            {
-              view,
-              requestId,
-              scenario,
-              bodyPreviewChars,
-              maxDepth,
-              maxArrayItems,
-              jsonPath,
-              responsePath,
-              includePaths,
-              excludePaths,
-              topLevelOnly
-            },
-            {
-              activeGroup: mockService.getActiveGroup(),
-              requestRecord
-            }
-          ),
-          `Loaded mock rule ${rule.name} (${view ?? "summary"})`,
-          { textMode: resolveDetailTextMode(view) }
-        );
-      });
-    }
-  );
-
-  server.registerTool(
-    createMockRuleTool.name,
-    {
-      description: createMockRuleTool.description,
-      inputSchema: createMockRuleInputSchema
-    },
-    async (args) =>
-      safe(async () => {
-        const nextInput = buildCreateMockRuleInput(args, {
-          requestRecord: "requestId" in args ? requestService.getById(args.requestId) : undefined
-        });
-        const data = await mockService.create(nextInput);
-        await syncActiveMockGroupFromRuleName(mockService, data.name);
-        return buildToolResult(
-          buildWriteReceipt(null, data, `Created mock rule ${data.name}`),
-          `Created mock rule ${data.name}`
-        );
-      })
-  );
-
-  server.registerTool(
-    updateMockRuleTool.name,
-    {
-      description: updateMockRuleTool.description,
-      inputSchema: updateMockRuleToolInputSchema
-    },
-    async (input) =>
-      safe(async () => {
-        const { id } = input;
-        const before = mockService.list().find((item) => item.id === id);
-        if (!before) {
-          throw new Error("Mock rule not found");
-        }
-        const nextInput = buildUpdateMockRuleInput(before, input);
-        const data = await mockService.update(id, nextInput as UpdateMockRuleInput);
-        await syncActiveMockGroupFromRuleName(mockService, data.name);
-        return buildToolResult(
-          buildWriteReceipt(before, data, `Updated mock rule ${data.name}`),
-          `Updated mock rule ${data.name}`
-        );
-      })
-  );
-
-  server.registerTool(
-    deleteMockRuleTool.name,
-    {
-      description: deleteMockRuleTool.description,
-      inputSchema: mockRuleIdInputSchema,
-      annotations: {
-        destructiveHint: true
-      }
-    },
-    async ({ id }) => {
-      return safe(async () => {
-        await mockService.remove(id);
-        return buildToolResult({ id }, `Deleted mock rule ${id}`);
-      });
-    }
-  );
-
-  server.registerTool(
-    enableMockRuleTool.name,
-    {
-      description: enableMockRuleTool.description,
-      inputSchema: z
-        .object({
-          id: z.string().min(1).optional(),
-          name: z.string().min(1).optional(),
-          enabled: z.boolean()
-        })
-        .refine((value) => Boolean(value.id || value.name), {
-          message: "Either id or name is required"
-        })
-    },
-    async ({ id, name, enabled }) =>
-      safe(async () => {
-        if (id) {
-          const data = await mockService.toggle(id, enabled);
-          return buildToolResult(data, `Set mock rule ${data.name} enabled=${enabled}`);
-        }
-
-        const matched = mockService.list().filter((rule) => rule.name === name);
-        if (matched.length === 0) {
-          throw new Error("Mock rule not found");
-        }
-        if (matched.length > 1) {
-          throw new Error("Multiple mock rules matched this name, please use id");
-        }
-        const data = await mockService.toggle(matched[0].id, enabled);
-        return buildToolResult(data, `Set mock rule ${data.name} enabled=${enabled}`);
-      })
-  );
-
-  server.registerTool(
-    getActiveMockGroupTool.name,
-    {
-      description: getActiveMockGroupTool.description,
-      annotations: {
-        readOnlyHint: true
-      }
-    },
-    async () => safe(() => buildToolResult({ group: mockService.getActiveGroup() }, "Loaded active mock group"))
-  );
-
-  server.registerTool(
-    setActiveMockGroupTool.name,
-    {
-      description: setActiveMockGroupTool.description,
-      inputSchema: setActiveMockGroupInputSchema
-    },
-    async ({ group }) =>
-      safe(async () =>
-        buildToolResult(
-          {
-            group: await mockService.setActiveGroup(group as SetActiveMockGroupInput["group"])
-          },
-          `Set active mock group to ${group ?? "null"}`
-        )
-      )
-  );
-
   server.registerTool(
     runRequestTool.name,
     {
       description: runRequestTool.description,
-      inputSchema: runRequestInputSchema
-    },
-    async (args) =>
-      safe(async () => {
-        const data = await requestService.run(args as RunRequestInput);
-        return buildToolResult(
-          buildWriteReceipt(null, data, `Ran request ${data.method} ${data.path}`),
-          `Ran request ${data.method} ${data.path}`
-        );
+      inputSchema: z.object({
+        name: z.string().optional(),
+        method: z.string().min(1),
+        url: z.string().url(),
+        headers: stringMapSchema.optional(),
+        query: stringMapSchema.optional(),
+        body: z.unknown().nullable().optional()
       })
+    },
+    async (args) => safe(() => handleRunRequest(args, deps))
+  );
+  server.registerTool(
+    clearRequestsTool.name,
+    { description: clearRequestsTool.description, annotations: { destructiveHint: true } },
+    async () => safe(() => handleClearRequests(deps))
+  );
+  server.registerTool(
+    queryMockTool.name,
+    { description: queryMockTool.description, inputSchema: queryMockInputSchema, annotations: { readOnlyHint: true } },
+    async (args) => safe(() => handleQueryMock(args as QueryMockArgs, deps))
+  );
+  server.registerTool(
+    mutateMockTool.name,
+    { description: mutateMockTool.description, inputSchema: mutateMockInputSchema },
+    async (args) => safe(() => handleMutateMock(args as MutateMockArgs, deps))
+  );
+  server.registerTool(
+    testMockMatchTool.name,
+    { description: testMockMatchTool.description, inputSchema: testMockMatchInputSchema, annotations: { readOnlyHint: true } },
+    async (args) => safe(() => handleTestMockMatch(args, deps))
+  );
+  server.registerTool(
+    queryProxyTool.name,
+    { description: queryProxyTool.description, inputSchema: queryProxyInputSchema, annotations: { readOnlyHint: true } },
+    async (args) => safe(() => handleQueryProxy(args as QueryProxyArgs, deps))
+  );
+  server.registerTool(
+    mutateProxyTool.name,
+    { description: mutateProxyTool.description, inputSchema: mutateProxyInputSchema },
+    async (args) => safe(() => handleMutateProxy(args as MutateProxyArgs, deps))
+  );
+  server.registerTool(
+    getWorkspaceSnapshotTool.name,
+    { description: getWorkspaceSnapshotTool.description, annotations: { readOnlyHint: true } },
+    async () => safe(() => handleGetWorkspaceSnapshot(deps))
+  );
+  server.registerTool(
+    setupHttpsTool.name,
+    { description: setupHttpsTool.description, inputSchema: setupHttpsInputSchema },
+    async (args) => safe(() => handleSetupHttps(args as SetupHttpsArgs, deps))
   );
 
-  server.registerTool(
-    listProxyRulesTool.name,
-    {
-      description: listProxyRulesTool.description,
-      inputSchema: listProxyRulesInputSchema,
-      annotations: {
-        readOnlyHint: true
-      }
-    },
-    async (args) =>
-      safe(() => {
-        const filtered = proxyService.listRules().filter((rule) => {
-          const hostMatch = !args.host || rule.pattern.includes(args.host);
-          const enabledMatch = typeof args.enabled !== "boolean" || rule.enabled === args.enabled;
-          const actionMatch = !args.action || rule.action === args.action;
-          return hostMatch && enabledMatch && actionMatch;
-        });
-        const start = args.offset ?? 0;
-        const sliced = filtered.slice(start);
-        const paged = typeof args.limit === "number" ? sliced.slice(0, args.limit) : sliced;
-        return buildToolResult(paged.map(buildProxyRuleSummary), `Loaded ${paged.length} proxy rule summaries`);
-      })
-  );
+  const promptServer = server as unknown as {
+    registerPrompt?: (
+      name: string,
+      config: { title: string; description: string; argsSchema?: z.ZodTypeAny },
+      handler: (args: Record<string, unknown>) => { messages: Array<{ role: "user" | "assistant"; content: { type: "text"; text: string } }> }
+    ) => void
+  };
 
-  server.registerTool(
-    getProxyRuleDetailTool.name,
+  promptServer.registerPrompt?.(
+    "debug_mock",
     {
-      description: getProxyRuleDetailTool.description,
-      inputSchema: proxyRuleIdInputSchema,
-      annotations: {
-        readOnlyHint: true
-      }
+      title: "排查 Mock 不生效",
+      description: "引导排查为什么某个请求没有被 Mock 规则命中",
+      argsSchema: z.object({ url: z.string(), requestId: z.string().optional() })
     },
-    async ({ ruleId }) =>
-      safe(() => {
-        const rule = proxyService.listRules().find((item) => item.id === ruleId);
-        if (!rule) {
-          throw new Error("Proxy rule not found");
+    (args) => ({
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `请排查 Mock 未命中问题：\n1) 先调用 test_mock_match(method,url,body) 检查匹配链路。\n2) 调用 query_mock(action=\"list\") 查看规则范围。\n3) 调用 query_mock(action=\"detail\", view=\"diagnostic\") 深入分析。url=${String(args.url ?? "")} requestId=${String(args.requestId ?? "")}\n4) 检查 active_group 并给出修复建议。`
+          }
         }
-        return buildToolResult(rule, `Loaded proxy rule ${rule.pattern}`, { textMode: "full" });
-      })
+      ]
+    })
   );
 
-  server.registerTool(
-    getProxyModeTool.name,
+  promptServer.registerPrompt?.(
+    "mock_from_request",
     {
-      description: getProxyModeTool.description,
-      annotations: {
-        readOnlyHint: true
-      }
+      title: "从请求创建 Mock",
+      description: "引导从已捕获的请求快速创建 Mock 规则",
+      argsSchema: z.object({ requestId: z.string(), group: z.string().optional() })
     },
-    async () => safe(() => buildToolResult({ mode: proxyService.getMode() }, "Loaded proxy mode"))
+    (args) => ({
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `请按步骤创建 Mock：\n1) query_requests(action=\"detail\", id=requestId)确认请求。\n2) mutate_mock(op=\"create\") 从该请求创建规则，名称前缀使用 [${String(args.group ?? "default")}] 。\n3) 使用 test_mock_match 验证是否命中。requestId=${String(args.requestId)}`
+          }
+        }
+      ]
+    })
   );
 
-  server.registerTool(
-    setProxyModeTool.name,
+  promptServer.registerPrompt?.(
+    "check_proxy_routing",
     {
-      description: setProxyModeTool.description,
-      inputSchema: proxyModeInputSchema
+      title: "检查代理路由",
+      description: "引导检查某个域名的代理路由决策",
+      argsSchema: z.object({ host: z.string() })
     },
-    async ({ mode }) => safe(async () => buildToolResult({ mode: await proxyService.setMode(mode) }, `Set proxy mode to ${mode}`))
+    (args) => ({
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `请检查该域名路由：先 query_proxy(action=\"decision\", host)，再解释命中规则和原因，并给出 mutate_proxy 的调整建议。host=${String(args.host)}`
+          }
+        }
+      ]
+    })
   );
 
-  server.registerTool(
-    upsertProxyRuleTool.name,
+  promptServer.registerPrompt?.(
+    "setup_https",
     {
-      description: upsertProxyRuleTool.description,
-      inputSchema: upsertProxyRuleInputSchema
+      title: "配置 HTTPS 抓包",
+      description: "引导配置 HTTPS 抓包的完整流程"
     },
-    async (args) =>
-      safe(async () => {
-        const data = await proxyService.upsertSiteRule(args);
-        return buildToolResult(data, `Upserted proxy rule ${data.pattern}`);
-      })
-  );
-
-  server.registerTool(
-    removeProxyRuleTool.name,
-    {
-      description: removeProxyRuleTool.description,
-      inputSchema: removeProxyRuleInputSchema,
-      annotations: {
-        destructiveHint: true
-      }
-    },
-    async ({ host }) => {
-      return safe(async () => {
-        await proxyService.removeSiteRule(host);
-        return buildToolResult({ host }, `Removed proxy rule ${host}`);
-      });
-    }
-  );
-
-  server.registerTool(
-    getProxyDecisionTool.name,
-    {
-      description: getProxyDecisionTool.description,
-      inputSchema: proxyDecisionInputSchema,
-      annotations: {
-        readOnlyHint: true
-      }
-    },
-    async ({ host, url }) =>
-      safe(() => {
-        const resolvedHost = host ?? new URL(url!).host;
-        const forwardDecision = proxyService.getForwardDecision(resolvedHost);
-        return buildToolResult(
-          {
-            host: resolvedHost,
-            mode: proxyService.getMode(),
-            decision: forwardDecision.mode === "proxy_forward" ? "proxy" : "direct",
-            routeMode: forwardDecision.mode,
-            source: forwardDecision.source,
-            matchedRuleId: forwardDecision.matchedRuleId ?? null,
-            matchedRuleName: forwardDecision.matchedRuleName ?? null,
-            reason: forwardDecision.reason
-          },
-          `Loaded proxy decision for ${resolvedHost}`
-        );
-      })
-  );
-
-  server.registerTool(
-    getServiceHealthTool.name,
-    {
-      description: getServiceHealthTool.description,
-      annotations: {
-        readOnlyHint: true
-      }
-    },
-    async () =>
-      safe(() =>
-        buildToolResult(
-          {
-            online: true,
-            activeRequestCount: requestService.list().length,
-            settings: proxyService.getSettings()
-          },
-          "Loaded service health",
-          { textMode: "full" }
-        )
-      )
-  );
-
-  server.registerTool(
-    getRuntimeSettingsTool.name,
-    {
-      description: getRuntimeSettingsTool.description,
-      annotations: {
-        readOnlyHint: true
-      }
-    },
-    async () => safe(() => buildToolResult(proxyService.getSettings(), "Loaded runtime settings", { textMode: "full" }))
-  );
-
-  server.registerTool(
-    getCertificateStatusTool.name,
-    {
-      description: getCertificateStatusTool.description,
-      annotations: {
-        readOnlyHint: true
-      }
-    },
-    async () =>
-      safe(async () => {
-        const trusted = certificateManager ? await certificateManager.isRootCertificateTrusted() : undefined;
-        return buildToolResult(
-          {
-            trusted,
-            available: Boolean(certificateManager)
-          },
-          "Loaded certificate status"
-        );
-      })
-  );
-
-  server.registerTool(
-    getCertificateInstallGuideTool.name,
-    {
-      description: getCertificateInstallGuideTool.description,
-      annotations: {
-        readOnlyHint: true
-      }
-    },
-    async () =>
-      safe(() => {
-        const certificatePath = certificateManager?.getRootCertificatePath();
-        return buildToolResult(
-          {
-            ...getInstallGuideForPlatform(certificatePath),
-            certificatePath: certificatePath ?? null
-          },
-          "Loaded certificate install guide",
-          { textMode: "full" }
-        );
-      })
-  );
-
-  server.registerTool(
-    verifyHttpsInterceptionReadyTool.name,
-    {
-      description: verifyHttpsInterceptionReadyTool.description,
-      annotations: {
-        readOnlyHint: true
-      }
-    },
-    async () =>
-      safe(async () => {
-        const settings = proxyService.getSettings();
-        const certificateTrusted = certificateManager
-          ? await certificateManager.isRootCertificateTrusted()
-          : settings.certificateInstalled;
-        const proxyModeReady = settings.currentProxyMode === "rules" || settings.currentProxyMode === "global";
-        const checks = {
-          certificateTrusted,
-          mcpEnabled: settings.mcpEnabled,
-          proxyModeReady,
-          localProxyPortValid: Number.isInteger(settings.localProxyPort) && settings.localProxyPort > 0
-        };
-        return buildToolResult(
-          {
-            ready: Object.values(checks).every(Boolean),
-            checks
-          },
-          "Loaded HTTPS interception readiness",
-          { textMode: "full" }
-        );
-      })
+    () => ({
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: "请执行 setup_https(action=\"verify\")，逐项检查 certificateTrusted/proxyModeReady/mcpEnabled，给出修复建议并再次 verify 确认。"
+          }
+        }
+      ]
+    })
   );
 
   if (allowsResource(requestListResource.name)) {
     server.registerResource(
       requestListResource.name,
       requestListResource.uri,
-      {
-        title: "Recent requests",
-        description: "The 20 most recent captured requests.",
-        mimeType: "application/json"
-      },
-      async () => buildResourceResult(requestListResource.uri, requestService.list({ limit: 20 }).map(buildRequestSummary))
+      { title: "Recent requests", description: "Recent captured requests.", mimeType: "application/json" },
+      async () => buildResourceResult(requestListResource.uri, requestService.list({ limit: 50 }).map(buildRequestSummary))
     );
   }
-
   if (allowsResource(savedRequestListResource.name)) {
     server.registerResource(
       savedRequestListResource.name,
       savedRequestListResource.uri,
-      {
-        title: "Saved requests",
-        description: "Saved request assets that can be replayed later.",
-        mimeType: "application/json"
-      },
-      async () => buildResourceResult(savedRequestListResource.uri, requestService.listSaved().map(buildSavedRequestSummary))
+      { title: "Saved requests", description: "Saved request assets.", mimeType: "application/json" },
+      async () => buildResourceResult(savedRequestListResource.uri, requestService.listSaved().slice(0, 50).map(buildSavedRequestSummary))
     );
   }
-
   if (allowsResource(mockRuleListResource.name)) {
     server.registerResource(
       mockRuleListResource.name,
       mockRuleListResource.uri,
-      {
-        title: "Mock rules",
-        description: "All configured mock rules.",
-        mimeType: "application/json"
-      },
-      async () => buildResourceResult(mockRuleListResource.uri, mockService.list().map(buildMockRuleSummary))
+      { title: "Mock rules", description: "Configured mock rules.", mimeType: "application/json" },
+      async () => buildResourceResult(mockRuleListResource.uri, mockService.list().slice(0, 50).map(buildMockRuleSummary))
     );
   }
-
   if (allowsResource(proxyModeResource.name)) {
     server.registerResource(
       proxyModeResource.name,
       proxyModeResource.uri,
-      {
-        title: "Proxy mode",
-        description: "The current Polaris proxy mode.",
-        mimeType: "application/json"
-      },
+      { title: "Proxy mode", description: "Current proxy mode.", mimeType: "application/json" },
       async () => buildResourceResult(proxyModeResource.uri, proxyService.getMode())
     );
   }
-
   if (allowsResource(proxyRuleListResource.name)) {
     server.registerResource(
       proxyRuleListResource.name,
       proxyRuleListResource.uri,
-      {
-        title: "Proxy rules",
-        description: "Current host-based proxy rules.",
-        mimeType: "application/json"
-      },
-      async () => buildResourceResult(proxyRuleListResource.uri, proxyService.listRules().map(buildProxyRuleSummary))
+      { title: "Proxy rules", description: "Host based proxy rules.", mimeType: "application/json" },
+      async () => buildResourceResult(proxyRuleListResource.uri, proxyService.listRules().slice(0, 50).map(buildProxyRuleSummary))
     );
   }
 

@@ -28,6 +28,15 @@ import { updateSavedRequestTool } from "../tools/updateSavedRequest";
 import { upsertProxyRuleTool } from "../tools/upsertProxyRule";
 import { verifyHttpsInterceptionReadyTool } from "../tools/verifyHttpsInterceptionReady";
 import { removeProxyRuleTool } from "../tools/removeProxyRule";
+import { queryRequestsTool } from "../tools/queryRequests";
+import { mutateRequestTool } from "../tools/mutateRequest";
+import { queryMockTool } from "../tools/queryMock";
+import { mutateMockTool } from "../tools/mutateMock";
+import { testMockMatchTool } from "../tools/testMockMatch";
+import { queryProxyTool } from "../tools/queryProxy";
+import { mutateProxyTool } from "../tools/mutateProxy";
+import { getWorkspaceSnapshotTool } from "../tools/getWorkspaceSnapshot";
+import { setupHttpsTool } from "../tools/setupHttps";
 import { mockRuleListResource } from "../resources/mockRuleList";
 import { proxyModeResource } from "../resources/proxyMode";
 import { proxyRuleListResource } from "../resources/proxyRuleList";
@@ -64,7 +73,24 @@ export const mcpToolRegistry = [
   getRuntimeSettingsTool,
   getCertificateStatusTool,
   getCertificateInstallGuideTool,
-  verifyHttpsInterceptionReadyTool
+  verifyHttpsInterceptionReadyTool,
+  getWorkspaceSnapshotTool,
+  testMockMatchTool
+];
+
+export const mcpMergedToolRegistry = [
+  queryRequestsTool,
+  mutateRequestTool,
+  replayRequestTool,
+  runRequestTool,
+  clearRequestsTool,
+  queryMockTool,
+  mutateMockTool,
+  testMockMatchTool,
+  queryProxyTool,
+  mutateProxyTool,
+  getWorkspaceSnapshotTool,
+  setupHttpsTool
 ];
 
 export const mcpResourceRegistry = [
@@ -83,7 +109,12 @@ export interface McpPackDefinition {
   resourceNames: string[];
 }
 
-const mockPackToolNames = [
+const mockPackToolNames = [queryMockTool.name, mutateMockTool.name, testMockMatchTool.name];
+const proxyPackToolNames = [queryProxyTool.name, mutateProxyTool.name];
+const requestPackToolNames = [queryRequestsTool.name, mutateRequestTool.name, replayRequestTool.name, runRequestTool.name, clearRequestsTool.name];
+const opsPackToolNames = [getWorkspaceSnapshotTool.name, setupHttpsTool.name];
+
+const legacyMockPackToolNames = [
   listMockRulesTool.name,
   getMockRuleDetailTool.name,
   createMockRuleTool.name,
@@ -91,10 +122,11 @@ const mockPackToolNames = [
   deleteMockRuleTool.name,
   enableMockRuleTool.name,
   getActiveMockGroupTool.name,
-  setActiveMockGroupTool.name
+  setActiveMockGroupTool.name,
+  testMockMatchTool.name
 ];
 
-const proxyPackToolNames = [
+const legacyProxyPackToolNames = [
   listProxyRulesTool.name,
   getProxyRuleDetailTool.name,
   getProxyModeTool.name,
@@ -104,7 +136,7 @@ const proxyPackToolNames = [
   removeProxyRuleTool.name
 ];
 
-const requestPackToolNames = [
+const legacyRequestPackToolNames = [
   listRequestsTool.name,
   getRequestDetailTool.name,
   listSavedRequestsTool.name,
@@ -117,12 +149,13 @@ const requestPackToolNames = [
   clearRequestsTool.name
 ];
 
-const opsPackToolNames = [
+const legacyOpsPackToolNames = [
   getServiceHealthTool.name,
   getRuntimeSettingsTool.name,
   getCertificateStatusTool.name,
   getCertificateInstallGuideTool.name,
-  verifyHttpsInterceptionReadyTool.name
+  verifyHttpsInterceptionReadyTool.name,
+  getWorkspaceSnapshotTool.name
 ];
 
 export const mcpPackRegistry: McpPackDefinition[] = [
@@ -156,6 +189,37 @@ export const mcpPackRegistry: McpPackDefinition[] = [
   }
 ];
 
+export const mcpLegacyPackRegistry: McpPackDefinition[] = [
+  {
+    id: "mock_pack.v1",
+    name: "Mock Pack",
+    description: "Manage mock rules and active mock groups.",
+    toolNames: legacyMockPackToolNames,
+    resourceNames: [mockRuleListResource.name]
+  },
+  {
+    id: "proxy_pack.v1",
+    name: "Proxy Pack",
+    description: "Manage proxy mode, host rules, and proxy routing decisions.",
+    toolNames: legacyProxyPackToolNames,
+    resourceNames: [proxyModeResource.name, proxyRuleListResource.name]
+  },
+  {
+    id: "request_pack.v1",
+    name: "Request Pack",
+    description: "Inspect captured requests and run or replay saved requests.",
+    toolNames: legacyRequestPackToolNames,
+    resourceNames: [requestListResource.name, savedRequestListResource.name]
+  },
+  {
+    id: "ops_pack.v1",
+    name: "Ops Pack",
+    description: "Read runtime health, settings, and HTTPS certificate readiness.",
+    toolNames: legacyOpsPackToolNames,
+    resourceNames: []
+  }
+];
+
 const packAliasMap: Record<string, string> = {
   mock: "mock_pack.v1",
   "mock_pack.v1": "mock_pack.v1",
@@ -179,11 +243,23 @@ export function getMcpPackById(id: string): McpPackDefinition | undefined {
   return mcpPackRegistry.find((pack) => pack.id === id);
 }
 
-export function getMcpToolRegistryByPackId(id?: string): typeof mcpToolRegistry {
+export function getMcpToolRegistryByPackId(id?: string): typeof mcpMergedToolRegistry {
+  if (!id) {
+    return mcpMergedToolRegistry;
+  }
+  const pack = getMcpPackById(id);
+  if (!pack) {
+    return [];
+  }
+  const toolNameSet = new Set(pack.toolNames);
+  return mcpMergedToolRegistry.filter((tool) => toolNameSet.has(tool.name));
+}
+
+export function getLegacyMcpToolRegistryByPackId(id?: string): typeof mcpToolRegistry {
   if (!id) {
     return mcpToolRegistry;
   }
-  const pack = getMcpPackById(id);
+  const pack = mcpLegacyPackRegistry.find((item) => item.id === id);
   if (!pack) {
     return [];
   }
@@ -202,3 +278,4 @@ export function getMcpResourceRegistryByPackId(id?: string): typeof mcpResourceR
   const resourceNameSet = new Set(pack.resourceNames);
   return mcpResourceRegistry.filter((resource) => resourceNameSet.has(resource.name));
 }
+

@@ -14,6 +14,8 @@ import {
 export const detailViewValues = ["summary", "diagnostic", "preview", "full", "shape"] as const;
 export type DetailView = (typeof detailViewValues)[number];
 export const DEFAULT_BODY_PREVIEW_CHARS = 2000;
+export const DEFAULT_LIST_LIMIT = 20;
+export const MAX_FULL_VIEW_CHARS = 16000;
 export { executeJsonPath, normalizeToJsonPath } from "./jsonPathUtils";
 
 type DetailOptions = {
@@ -30,7 +32,21 @@ type DetailOptions = {
   topLevelOnly?: boolean;
 };
 
-type ToolResultTextMode = "summary" | "preview" | "full";
+export type BodySizeClassification = "small" | "medium" | "large";
+export type BodySizeInfo = {
+  chars: number;
+  classification: BodySizeClassification;
+};
+
+export type PaginationMeta = {
+  offset: number;
+  limit: number;
+  returned: number;
+  total: number;
+  hasMore: boolean;
+};
+
+type ToolResultTextMode = "summary" | "preview";
 
 type PathFilterResult = {
   normalizedJsonPath: string | null;
@@ -62,7 +78,7 @@ type ScenarioCondition = {
   expected: string;
 };
 
-function truncateText(value: unknown, maxChars: number): string {
+export function truncateText(value: unknown, maxChars: number): string {
   const serialized = typeof value === "string" ? value : JSON.stringify(value, null, 2);
   if (serialized.length <= maxChars) {
     return serialized;
@@ -204,12 +220,33 @@ function buildTextContent(result: unknown, summary: string, textMode: ToolResult
     return summary;
   }
 
-  if (textMode === "full") {
-    return JSON.stringify(result, null, 2);
-  }
-
   const preview = buildContentPreview(result);
   return preview ? `${summary}\n${preview}` : summary;
+}
+
+export function classifyBodySize(body: unknown): BodySizeInfo {
+  const serialized = typeof body === "string" ? body : JSON.stringify(body);
+  const chars = serialized?.length ?? 0;
+  if (chars < 4000) {
+    return { chars, classification: "small" };
+  }
+  if (chars <= MAX_FULL_VIEW_CHARS) {
+    return { chars, classification: "medium" };
+  }
+  return { chars, classification: "large" };
+}
+
+export function buildPaginatedResult<T>(items: T[], total: number, offset: number, limit: number): { items: T[]; _pagination: PaginationMeta } {
+  return {
+    items,
+    _pagination: {
+      offset,
+      limit,
+      returned: items.length,
+      total,
+      hasMore: offset + items.length < total
+    }
+  };
 }
 
 function jsonTypeName(value: unknown): string {
@@ -418,6 +455,7 @@ export function buildRequestSummary(record: RequestRecord) {
     createdAt: record.createdAt,
     source: record.source,
     secure: record.secure,
+    responseBodySize: classifyBodySize(record.responseBody),
     resolutionMode: record.resolution?.mode ?? null,
     detail: {
       tool: "get_request_detail",
@@ -458,6 +496,7 @@ export function buildMockRuleSummary(rule: MockRule) {
     updatedAt: rule.updatedAt,
     hasRequestBodyMatcher: Boolean(rule.requestBodyExactMatch || rule.requestBodyKeyMatch),
     hasResponseBody: rule.responseBody !== null && rule.responseBody !== undefined,
+    responseBodySize: classifyBodySize(rule.responseBody),
     detail: {
       tool: "get_mock_rule_detail",
       id: rule.id,
@@ -485,6 +524,17 @@ export function buildRequestDetailPayload(record: RequestRecord, options: Detail
   const view = options.view ?? "summary";
   const filterResult = applyPathFilters(record.responseBody, options);
   if (view === "full") {
+    const bodySize = classifyBodySize(filterResult.filteredValue);
+    if (bodySize.classification === "large") {
+      return {
+        ...buildRequestSummary(record),
+        _degradedFrom: "full" as const,
+        _notice: `响应体过大(${bodySize.chars} 字符)，已自动降级为 shape 视图。使用 jsonPath/responsePath 过滤后重试 view="full"。`,
+        responseBodyShape: buildShape(filterResult.filteredValue, options),
+        responseBodyMeta: estimateJsonStats(filterResult.filteredValue),
+        normalizedJsonPath: filterResult.normalizedJsonPath
+      };
+    }
     return {
       ...record,
       normalizedJsonPath: filterResult.normalizedJsonPath,
@@ -535,6 +585,17 @@ export function buildSavedRequestDetailPayload(savedRequest: SavedRequest, optio
   const view = options.view ?? "summary";
   const filterResult = applyPathFilters(savedRequest.body, options);
   if (view === "full") {
+    const bodySize = classifyBodySize(filterResult.filteredValue);
+    if (bodySize.classification === "large") {
+      return {
+        ...buildSavedRequestSummary(savedRequest),
+        _degradedFrom: "full" as const,
+        _notice: `响应体过大(${bodySize.chars} 字符)，已自动降级为 shape 视图。使用 jsonPath/responsePath 过滤后重试 view="full"。`,
+        bodyShape: buildShape(filterResult.filteredValue, options),
+        bodyMeta: estimateJsonStats(filterResult.filteredValue),
+        normalizedJsonPath: filterResult.normalizedJsonPath
+      };
+    }
     return {
       ...savedRequest,
       normalizedJsonPath: filterResult.normalizedJsonPath,
@@ -583,6 +644,17 @@ export function buildMockRuleDetailPayload(
   const baseDetail = buildMockRuleBaseDetail(rule);
 
   if (view === "full") {
+    const bodySize = classifyBodySize(filterResult.filteredValue);
+    if (bodySize.classification === "large") {
+      return {
+        ...baseDetail,
+        _degradedFrom: "full" as const,
+        _notice: `响应体过大(${bodySize.chars} 字符)，已自动降级为 shape 视图。使用 jsonPath/responsePath 过滤后重试 view="full"。`,
+        responseBodyShape: buildShape(filterResult.filteredValue, options),
+        responseBodyMeta: estimateJsonStats(filterResult.filteredValue),
+        normalizedJsonPath: filterResult.normalizedJsonPath
+      };
+    }
     return {
       rule,
       normalizedJsonPath: filterResult.normalizedJsonPath,

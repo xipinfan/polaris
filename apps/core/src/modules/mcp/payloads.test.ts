@@ -97,12 +97,13 @@ test("buildToolResult list preview includes indexed rows and key fields", () => 
   assert.match(text, /2\.\s*id=2/);
 });
 
-test("buildToolResult summary and full text modes are different", () => {
+test("buildToolResult text 字段永不输出完整 JSON，preview 模式给出摘要+预览", () => {
   const summaryOnly = buildToolResult({ ok: true }, "Only summary", { textMode: "summary" });
   assert.equal(summaryOnly.content[0]?.text, "Only summary");
 
-  const full = buildToolResult({ ok: true }, "Ignored summary", { textMode: "full" });
-  assert.equal(full.content[0]?.text, JSON.stringify({ ok: true }, null, 2));
+  const preview = buildToolResult({ ok: true }, "Ignored summary", { textMode: "preview" });
+  assert.match(preview.content[0]?.text ?? "", /Ignored summary/);
+  assert.match(preview.content[0]?.text ?? "", /ok=true/);
 });
 
 test("request summary view omits heavy payload fields", () => {
@@ -332,29 +333,22 @@ test("mock shape view returns response body shape skeleton", () => {
   });
 });
 
-test("full/shape/diagnostic views map to full JSON text mode", () => {
+test("full/shape/diagnostic 视图下 text 仅输出摘要或预览", () => {
   const payload = { ok: true, nested: { count: 1 } };
-  const fullText = JSON.stringify(payload, null, 2);
+  const fullText = buildToolResult(payload, "x", { textMode: resolveDetailTextMode("full") }).content[0]?.text ?? "";
+  const shapeText = buildToolResult(payload, "x", { textMode: resolveDetailTextMode("shape") }).content[0]?.text ?? "";
+  const diagnosticText = buildToolResult(payload, "x", { textMode: resolveDetailTextMode("diagnostic") }).content[0]?.text ?? "";
 
-  assert.equal(
-    buildToolResult(payload, "x", { textMode: resolveDetailTextMode("full") }).content[0]?.text,
-    fullText
-  );
-  assert.equal(
-    buildToolResult(payload, "x", { textMode: resolveDetailTextMode("shape") }).content[0]?.text,
-    fullText
-  );
-  assert.equal(
-    buildToolResult(payload, "x", { textMode: resolveDetailTextMode("diagnostic") }).content[0]?.text,
-    fullText
-  );
+  assert.match(fullText, /x/);
+  assert.match(diagnosticText, /x/);
+  assert.equal(shapeText, "x");
 });
 
 test("resolveDetailTextMode maps views to expected text modes", () => {
   assert.equal(resolveDetailTextMode("summary"), "summary");
   assert.equal(resolveDetailTextMode("preview"), "preview");
-  assert.equal(resolveDetailTextMode("full"), "full");
-  assert.equal(resolveDetailTextMode("shape"), "full");
-  assert.equal(resolveDetailTextMode("diagnostic"), "full");
+  assert.equal(resolveDetailTextMode("full"), "preview");
+  assert.equal(resolveDetailTextMode("shape"), "summary");
+  assert.equal(resolveDetailTextMode("diagnostic"), "preview");
   assert.equal(resolveDetailTextMode(undefined), "preview");
 });

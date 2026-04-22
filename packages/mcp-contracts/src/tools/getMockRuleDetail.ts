@@ -1,5 +1,5 @@
 export const getMockRuleDetailTool = {
   name: "get_mock_rule_detail",
-  description:
-    "Get one mock rule by id. Defaults to view='summary'. Supports view='preview', 'shape', 'full', and 'diagnostic'. Use jsonPath or responsePath to query nested response data, include requestId for diagnostic matching, and prefer summary -> preview/shape -> full when investigating."
+  description: "查看某条 Mock 规则详情时调用。五种视图递进使用：summary(默认，元数据+body统计) → preview(headers+body预览) → shape(responseBody结构骨架) → full(完整数据，超限自动降级) → diagnostic(排查不生效，需传 requestId)。大 responseBody 优先用 jsonPath/responsePath 过滤。"
 };
+

@@ -1,4 +1,5 @@
 export const enableMockRuleTool = {
   name: "enable_mock_rule",
-  description: "Enable or disable one mock rule by id or exact name, and keep one active variant per method and URL."
+  description: "启用或禁用一条 Mock 规则时调用。传 id 或 name + enabled。"
 };
+

@@ -1,6 +1,6 @@
 import { generateKeyPair, randomBytes } from "node:crypto";
 import { execFile } from "node:child_process";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import tls from "node:tls";
 import { promisify } from "node:util";
@@ -14,6 +14,8 @@ const hostCertificateDir = path.join(certificateDir, "hosts");
 const authorityCommonName = "Polaris Development Root CA";
 const execFileAsync = promisify(execFile);
 const generateKeyPairAsync = promisify(generateKeyPair);
+const NOT_BEFORE_OFFSET_MS = 1000 * 60 * 60 * 24;
+const CERT_RENEWAL_BUFFER_MS = 1000 * 60 * 60 * 24 * 7;
 
 type ForgeCertificate = forge.pki.Certificate;
 type ForgePrivateKey = forge.pki.rsa.PrivateKey;
@@ -49,8 +51,15 @@ function isIpAddress(host: string): boolean {
   return /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
 }
 
+async function safeUnlink(targetPath: string): Promise<void> {
+  try {
+    await unlink(targetPath);
+  } catch {}
+}
+
 export class CertificateManager {
   private authority?: { key: ForgePrivateKey; cert: ForgeCertificate };
+  private authorityFingerprint = "";
   private secureContextCache = new Map<string, tls.SecureContext>();
   private credentialsCache = new Map<string, { key: string; cert: string }>();
   private pendingCredentials = new Map<string, Promise<{ key: string; cert: string }>>();
@@ -62,6 +71,7 @@ export class CertificateManager {
       migrateLegacyFile("data/certificates/polaris-root-ca.cert.pem")
     ]);
     await this.loadOrCreateAuthority();
+    await this.purgeStaleHostCertificates();
   }
 
   isReady(): boolean {
@@ -159,7 +169,11 @@ export class CertificateManager {
 
     if ((await fileExists(keyPath)) && (await fileExists(certPath))) {
       const [key, cert] = await Promise.all([readFile(keyPath, "utf8"), readFile(certPath, "utf8")]);
-      return { key, cert };
+      if (this.isHostCertificateValid(cert)) {
+        return { key, cert: this.ensureCertChain(cert) };
+      }
+      await Promise.all([safeUnlink(keyPath), safeUnlink(certPath)]);
+      this.secureContextCache.delete(host);
     }
 
     const credentials = await this.createServerCertificate(host);
@@ -196,6 +210,7 @@ export class CertificateManager {
         key: forge.pki.privateKeyFromPem(keyPem),
         cert: forge.pki.certificateFromPem(certPem)
       };
+      this.authorityFingerprint = this.computeCertFingerprint(this.authority.cert);
       return;
     }
 
@@ -204,7 +219,7 @@ export class CertificateManager {
     const subject = buildDistinguishedName(authorityCommonName);
     cert.publicKey = publicKey;
     cert.serialNumber = createSerialNumber();
-    cert.validity.notBefore = new Date(Date.now() - 60_000);
+    cert.validity.notBefore = new Date(Date.now() - NOT_BEFORE_OFFSET_MS);
     cert.validity.notAfter = toFutureDate(1000 * 60 * 60 * 24 * 365 * 5);
     cert.setSubject(subject);
     cert.setIssuer(subject);
@@ -223,6 +238,7 @@ export class CertificateManager {
     ]);
 
     this.authority = { key: privateKey, cert };
+    this.authorityFingerprint = this.computeCertFingerprint(cert);
   }
 
   private async createServerCertificate(host: string): Promise<{ key: string; cert: string }> {
@@ -234,10 +250,13 @@ export class CertificateManager {
     const cert = forge.pki.createCertificate();
     cert.publicKey = publicKey;
     cert.serialNumber = createSerialNumber();
-    cert.validity.notBefore = new Date(Date.now() - 60_000);
+    cert.validity.notBefore = new Date(Date.now() - NOT_BEFORE_OFFSET_MS);
     cert.validity.notAfter = toFutureDate(1000 * 60 * 60 * 24 * 397);
     cert.setSubject(buildDistinguishedName(host));
     cert.setIssuer(this.authority.cert.subject.attributes);
+    const issuerKeyIdentifier = forge.pki
+      .getPublicKeyFingerprint(this.authority.cert.publicKey, { type: "RSAPublicKey" })
+      .getBytes();
     cert.setExtensions([
       { name: "basicConstraints", cA: false },
       { name: "keyUsage", digitalSignature: true, keyEncipherment: true },
@@ -247,13 +266,16 @@ export class CertificateManager {
         altNames: isIpAddress(host) ? [{ type: 7, ip: host }] : [{ type: 2, value: host }]
       },
       { name: "subjectKeyIdentifier" },
-      { name: "authorityKeyIdentifier", keyIdentifier: true }
+      { name: "authorityKeyIdentifier", keyIdentifier: issuerKeyIdentifier }
     ]);
     cert.sign(this.authority.key, forge.md.sha256.create());
 
+    const domainCertPem = forge.pki.certificateToPem(cert);
+    const caCertPem = forge.pki.certificateToPem(this.authority.cert);
+
     return {
       key: forge.pki.privateKeyToPem(privateKey),
-      cert: forge.pki.certificateToPem(cert)
+      cert: `${domainCertPem}${caCertPem}`
     };
   }
 
@@ -267,5 +289,68 @@ export class CertificateManager {
       publicKey: forge.pki.publicKeyFromPem(publicKey),
       privateKey: forge.pki.privateKeyFromPem(privateKey)
     };
+  }
+
+  private computeCertFingerprint(cert: ForgeCertificate): string {
+    const asn1 = forge.pki.certificateToAsn1(cert);
+    const derBytes = forge.asn1.toDer(asn1).getBytes();
+    return forge.md.sha1.create().update(derBytes).digest().toHex().toUpperCase();
+  }
+
+  private ensureCertChain(certPem: string): string {
+    if (!this.authority) {
+      return certPem;
+    }
+    const caCertPem = forge.pki.certificateToPem(this.authority.cert);
+    if (certPem.includes(caCertPem.trim())) {
+      return certPem;
+    }
+    return `${certPem}${caCertPem}`;
+  }
+
+  private isHostCertificateValid(certPem: string): boolean {
+    try {
+      const cert = forge.pki.certificateFromPem(certPem);
+      const renewalDeadline = new Date(Date.now() + CERT_RENEWAL_BUFFER_MS);
+      if (cert.validity.notAfter < renewalDeadline) {
+        return false;
+      }
+      if (this.authority) {
+        try {
+          return this.authority.cert.verify(cert);
+        } catch {
+          return false;
+        }
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private async purgeStaleHostCertificates(): Promise<void> {
+    try {
+      if (!this.authority || !this.authorityFingerprint) {
+        return;
+      }
+      const files = await readdir(hostCertificateDir);
+      const certFiles = files.filter((fileName) => fileName.endsWith(".cert.pem"));
+      for (const certFile of certFiles) {
+        try {
+          const certPath = path.join(hostCertificateDir, certFile);
+          const certPem = await readFile(certPath, "utf8");
+          if (this.isHostCertificateValid(certPem)) {
+            continue;
+          }
+          const keyFile = certFile.replace(/\.cert\.pem$/, ".key.pem");
+          await Promise.all([
+            safeUnlink(path.join(hostCertificateDir, keyFile)),
+            safeUnlink(certPath)
+          ]);
+        } catch {}
+      }
+      this.secureContextCache.clear();
+      this.credentialsCache.clear();
+    } catch {}
   }
 }
