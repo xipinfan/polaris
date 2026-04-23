@@ -1,3 +1,6 @@
+> [!WARNING]
+> 历史文档：本文件用于记录历史版本规划或提示词，不代表当前代码实现能力。
+> 当前能力请以 `README.md`、`docs/console.md`、`docs/extension.md`、`docs/development.md`、`docs/e2e-testing.md`、`docs/mcp.md` 和源码为准。
 # 《北极星》V1 正式 PRD v0.2
 
 ---

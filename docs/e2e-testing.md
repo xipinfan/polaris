@@ -1,76 +1,33 @@
 # E2E 与视觉测试
 
-这份文档是给 Polaris 开发者看的，不是给普通使用者看的。
+当前使用 Playwright，覆盖：
 
-如果你只是想安装和使用 Polaris，可以跳过这份文档。
+- Console 交互与视觉回归
+- Extension Popup 交互与视觉回归
 
----
-
-## 这份文档讲什么
-
-当前项目使用 Playwright 做两类测试：
-
-- 交互测试：模拟真实用户点击、输入、切换页面
-- 视觉测试：把页面截图和本地基线图比较
-
-覆盖范围主要包括：
-
-- Web Console
-- 浏览器扩展 Popup
-
----
-
-## 先安装浏览器运行时
+## 安装浏览器
 
 ```bash
 corepack pnpm test:e2e:install
 ```
 
----
-
-## 最常用命令
-
-运行全部 E2E：
+## 常用命令
 
 ```bash
 corepack pnpm test:e2e
-```
-
-生成或刷新本地视觉基线：
-
-```bash
 corepack pnpm test:e2e:baseline
-```
-
-更新快照：
-
-```bash
 corepack pnpm test:e2e:update
-```
-
-打开 Playwright UI：
-
-```bash
 corepack pnpm test:e2e:ui
 ```
 
----
-
 ## 单页视觉检查
-
-检查单个页面：
 
 ```bash
 corepack pnpm test:e2e:page -- --page home
-```
-
-更新单个页面的基线：
-
-```bash
 corepack pnpm test:e2e:page:baseline -- --page settings
 ```
 
-支持的页面 key：
+支持页面 key：
 
 - `home`
 - `traffic`
@@ -80,29 +37,10 @@ corepack pnpm test:e2e:page:baseline -- --page settings
 - `settings`
 - `popup`
 
----
+## 当前实现细节
 
-## 推荐使用顺序
+- E2E 启动 `node scripts/dev/start.mjs`（Core + Console）
+- 扩展测试会在 global setup 先构建 `apps/extension/dist`
+- Console baseURL 固定为 `http://127.0.0.1:5173`
+- 测试内用于发现 Core API 端口的扫描区间当前是 `9001-9100`
 
-如果你刚改完 UI，建议这样跑：
-
-1. 先生成当前基线
-2. 再执行 E2E
-3. 如果只是看某一页，优先跑单页命令
-
-也就是：
-
-```bash
-corepack pnpm test:e2e:baseline
-corepack pnpm test:e2e
-```
-
----
-
-## 当前稳定性说明
-
-- 测试会自动启动 Core 和 Console
-- API 端口是动态探测的，不写死
-- 扩展测试会读取 `apps/extension/dist` 里的构建产物
-
-所以如果你改了扩展相关代码，记得先确保扩展已经正确构建。

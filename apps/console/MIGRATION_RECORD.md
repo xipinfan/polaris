@@ -1,10 +1,17 @@
-﻿# Migration Record
+# Migration Record
 
 ## 2026-03-14
-- Added TanStack Query foundations and domain-layer data flows.
-- Migrated `proxy-forward`, `traffic`, `mock`, `home`, `settings`, `debug` away from page-level api calls.
-- Unified local persistence API under `lib/persistence`.
-- Added Zustand stores for UI/session state only.
-- Added router-level lazy loading and manual chunk split strategy.
-- Added API error normalization and request telemetry helpers.
-- Added lint guardrails and test baseline for domains/stores/core flows.
+
+- 引入 TanStack Query 域层（`domains/*`）
+- `proxy-forward`、`traffic`、`mock`、`home`、`settings`、`debug` 完成主要数据流迁移
+- 持久化统一到 `lib/persistence`
+- UI/session 状态统一到 Zustand store
+- 路由采用懒加载
+- 增加 API 错误归一化与请求指标基础能力
+
+## 2026-04-23（文档对齐）
+
+- 当前 Console 可用主路由：`/`、`/traffic`、`/proxy-forward`、`/mock`、`/debug`、`/settings`
+- 历史路径 `/requests`、`/rules` 改为重定向到 `/mock`
+- MCP 相关文档改为 pack-aware 说明（request/mock/proxy/ops）
+

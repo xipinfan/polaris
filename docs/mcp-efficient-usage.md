@@ -1,56 +1,36 @@
 # Polaris MCP Low-Context Usage
 
-## 排查 mock 不生效
+本指南默认你已接入全量 `/mcp`，或至少接入了当前步骤需要的 pack。
 
-1. `query_mock({ action: "list" })`
-2. `query_mock({ action: "detail", id, view: "diagnostic", requestId })`
-3. 仅在仍然缺信息时再用 `view: "preview"` 或 `view: "full"`
+## 先做能力确认
 
-## 小改动 patch mock
+- 如果只接了 `/mcp/request`，只能使用请求相关工具
+- 需要 `query_mock/query_proxy/setup_https/get_workspace_snapshot` 时，请接 `/mcp` 或对应 pack
 
-```json
-{
-  "op": "update",
-  "id": "mock-rule-id",
-  "patch": {
-    "enabled": true,
-    "method": "POST"
-  }
-}
-```
+## 推荐工作流
 
-## 从请求或模板创建 mock
+### 排查 mock 不生效
 
-```json
-{
-  "op": "create",
-  "name": "wxhb_mainPage mock",
-  "requestId": "captured-request-id",
-  "patch": {
-    "enabled": true
-  }
-}
-```
+1. `test_mock_match`
+2. `query_mock({ action: "list" })`
+3. `query_mock({ action: "detail", id, view: "diagnostic", requestId })`
 
-```json
-{
-  "op": "create",
-  "name": "json_ok mock",
-  "template": "json_ok",
-  "patch": {
-    "url": "https://polaris.local/template"
-  }
-}
-```
-
-## 排查代理转发
+### 排查代理转发
 
 1. `query_proxy({ action: "decision", host })`
-2. 如果要看规则细节，调用 `query_proxy({ action: "list" })` 或 `query_proxy({ action: "detail", ruleId })`
-3. 需要调整时，调用 `mutate_proxy({ op: "upsert", ... })`
+2. 必要时 `query_proxy({ action: "list" })`
+3. 再看 `query_proxy({ action: "detail", ruleId })`
 
-## HTTPS 抓包配置
+### HTTPS 抓包排障
 
 1. `setup_https({ action: "verify" })`
-2. 若证书未信任：`setup_https({ action: "install_guide" })`
+2. `setup_https({ action: "install_guide" })`
 3. 修复后再次 `setup_https({ action: "verify" })`
+
+## 低上下文原则
+
+1. 先 list，再 detail
+2. detail 视图按 `summary -> preview -> shape -> full/diagnostic`
+3. 大响应先用 `jsonPath/responsePath/includePaths/excludePaths/topLevelOnly`
+4. 写操作后先看回执，不立即 full 回读
+

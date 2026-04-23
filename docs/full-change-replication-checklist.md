@@ -1,3 +1,6 @@
+> [!WARNING]
+> 历史文档：本文件用于记录历史版本规划或提示词，不代表当前代码实现能力。
+> 当前能力请以 `README.md`、`docs/console.md`、`docs/extension.md`、`docs/development.md`、`docs/e2e-testing.md`、`docs/mcp.md` 和源码为准。
 # Polaris 全量改动执行清单
 
 > 目标：把“全量改动复刻文档”转为可执行、可回归、可勾选的任务清单。
