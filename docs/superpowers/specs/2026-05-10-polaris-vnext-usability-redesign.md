@@ -232,7 +232,222 @@ Polaris 是工具型产品，应保持紧凑、清晰、可扫描。
 - 首页存在中英文混排文案。
 - 部分页面编排逻辑仍然偏重，尤其是 Traffic 和 Mock 的跨域联动。
 
-## 11. 推荐实施顺序
+## 11. 补充问题排查与方案
+
+本节记录后续补充的三个问题：MCP 修改请求失败、Traffic 筛选能力不足、Traffic 单请求详情可读性差。它们都应纳入 vNext 的第一阶段或第二阶段。
+
+### 11.1 MCP 修改请求失败
+
+#### 现状链路
+
+MCP 请求相关能力当前有两套入口：
+
+- 标准合并工具：`mutate_request`
+- legacy 原子工具：`update_saved_request`
+
+两者最终都会进入 Core 的 `handleMutateRequest`：
+
+1. `packages/mcp-contracts/src/tools/mutateRequest.ts` 定义合并工具名称和描述。
+2. `apps/core/src/modules/mcp/sdkServer.ts` 注册 `mutate_request`，并使用 `mutateRequestInputSchema` 做输入校验。
+3. `apps/core/src/modules/mcp/toolHandlers.ts` 的 `handleLegacyToolInvocation` 会把 `update_saved_request` 转为 `{ op: "update" }` 后调用 `handleMutateRequest`。
+4. `handleMutateRequest` 读取已保存请求，再调用 `RequestService.updateSaved`。
+5. `RequestService.updateSaved` 合并旧值和新值，写回 `StorageAdapter`。
+
+#### 关键发现
+
+当前问题更像通用链路风险，不是单个页面问题。
+
+风险点如下：
+
+- 标准 MCP schema 把 `headers` 和 `query` 限制为 `Record<string,string>`。AI 修改请求时经常会传入数字、布尔、数组或对象，例如 query 参数值为 `123`，这会在 MCP SDK schema 层直接失败。
+- `SaveRequestInput` 同时用于创建和更新，但类型名和语义更偏创建。更新场景虽然在 `handleMutateRequest` 中补齐旧值，但契约层没有明确“部分更新”的输入类型。
+- legacy `update_saved_request` 工具文件只有名称和描述，没有独立 schema。legacy HTTP invoke 依赖 handler 里的强制类型转换，错误反馈不够精确。
+- `handleMutateRequest` 缺少 request mutation 的单元测试。当前 `toolHandlers.test.ts` 覆盖了 proxy、mock 和部分 legacy list，但没有覆盖保存请求的更新、字段保留、非字符串 query/header 值、body 更新失败等场景。
+- 写回执只返回 `changedFields`，失败时缺少对 AI 友好的原因说明，例如“headers.x 必须是字符串”或“id 指向的是 captured request，不是 saved request”。
+
+#### 推荐修复设计
+
+MCP 请求修改应按“宽输入、窄存储、清晰错误”处理。
+
+建议新增或调整：
+
+- 为更新请求新增明确契约：`UpdateSavedRequestInput`，字段全部可选，但至少一个可更新字段存在。
+- MCP schema 接受更宽松的输入：
+  - `headers`: `Record<string, string | number | boolean | null>`
+  - `query`: `Record<string, string | number | boolean | null | Array<string | number | boolean>>`
+  - 进入服务层前统一归一化为当前 `KeyValueMap` 或字符串 map。
+- 明确区分 captured request 和 saved request：
+  - captured request 只能保存、重放、带入调试。
+  - saved request 才能 update/delete。
+  - 如果 AI 传 captured request id 去 update，应返回可读错误，并建议先 `mutate_request(op="save", requestId=...)`。
+- `handleMutateRequest` 返回更适合 AI 使用的结构化结果：
+  - `ok`
+  - `id`
+  - `operation`
+  - `changedFields`
+  - `unchangedFields`
+  - `warnings`
+  - `nextSuggestedActions`
+- legacy `update_saved_request` 应与 `mutate_request(op="update")` 共享同一套校验和错误映射。
+- 为 MCP request mutation 增加测试矩阵：
+  - 更新 name 不影响 method/url/body。
+  - 更新 body 能正确写入对象、数组、字符串、null。
+  - 更新 headers/query 时能接受非字符串值并归一化。
+  - captured request id 执行 update 返回明确错误。
+  - legacy `update_saved_request` 与标准 `mutate_request` 行为一致。
+
+### 11.2 Traffic 筛选能力不足
+
+#### 现状链路
+
+Traffic 筛选从 Console 到 Core 的链路如下：
+
+1. `TrafficRequestPane` 维护关键词、Host、状态码、Method、focus mode。
+2. `useTrafficWorkspace` 把筛选条件传给 `useTrafficRequestsQuery`。
+3. `domains/traffic/adapters.ts` 转成 URLSearchParams。
+4. Core `/api/requests` 读取 `keyword`、`method`、`host`、`statusCode`、`limit`。
+5. `RequestService.list(filters)` 在服务端过滤。
+
+当前服务端 keyword 只匹配：
+
+- `item.url.includes(filters.keyword)`
+- `JSON.stringify(item.requestBody ?? "").includes(filters.keyword)`
+
+Host 当前是精确匹配：
+
+- `item.host === filters.host`
+
+#### 关键发现
+
+当前筛选能力和用户预期不一致。
+
+具体问题：
+
+- keyword 没有匹配 `host`、`path`、`method`、`statusCode`、`requestHeaders`、`requestQuery`、`responseHeaders`、`responseBody`、`resolution`。
+- keyword 匹配区分大小写，对 header 名、Host、URL 片段不友好。
+- Host 过滤是精确等于，不能匹配子串、域名后缀、端口差异或通配意图。
+- 没有 body path 语义，用户输入 `user.id=123`、`$.user.id=123`、`token` 时很容易筛不到。
+- 筛选结果为空时只提示“清空关键词或切换范围”，没有解释当前搜索实际覆盖了哪些字段。
+- 前端筛选 UI 文案写着“搜索 URL 或请求体”，但用户需求已经超过这两个字段。
+
+#### 推荐修复设计
+
+Traffic 搜索应分为两层：快速全文搜索和高级结构化搜索。
+
+第一阶段先做通用搜索：
+
+- `keyword` 改为大小写不敏感。
+- 搜索字段扩展到：
+  - method
+  - url
+  - host
+  - path
+  - statusCode
+  - source
+  - requestHeaders
+  - requestQuery
+  - requestBody
+  - responseHeaders
+  - responseBody
+  - resolution mode/source/reason/rule name/target
+- Host 过滤改为包含匹配，并支持忽略协议和端口输入。
+- 请求体和响应体统一使用安全 stringify，避免循环、undefined、二进制或超大对象导致异常。
+
+第二阶段增加结构化搜索：
+
+- 支持 `body:user.id=123`，匹配 request body。
+- 支持 `response:data.code=0`，匹配 response body。
+- 支持 `header:authorization`，匹配请求头或响应头。
+- 支持 `query:page=1`，匹配查询参数。
+- 支持 `host:example.com`、`path:/api/user`、`status:4xx`、`method:POST`。
+- UI 上可以先提供搜索说明浮层，不需要一开始做完整查询构造器。
+
+服务层建议新增 `requestSearch.ts`：
+
+- `buildRequestSearchText(record)`：生成通用搜索文本。
+- `matchRequestKeyword(record, keyword)`：大小写不敏感全文匹配。
+- `matchRequestStructuredQuery(record, query)`：处理带前缀的结构化搜索。
+- `safeSerializeForSearch(value)`：稳定、安全、可控长度地序列化 body/header/query。
+
+必须补测试：
+
+- keyword 能匹配 request body 内的深层字段值。
+- keyword 能匹配 response body。
+- keyword 能匹配 query/header。
+- host 支持子串和带端口输入。
+- status 支持精确状态码，后续支持 `4xx`。
+- 大 body 不会让筛选抛错或明显卡顿。
+
+### 11.3 Traffic 单请求详情可读性差
+
+#### 现状链路
+
+Traffic 页面当前使用两栏布局：
+
+- 左侧请求列表：`minmax(0, 1.85fr)`
+- 右侧详情：`minmax(360px, 0.95fr)`
+
+详情区内部结构：
+
+- `TrafficDetailPane` 顶部 tabs：总览、时间线、工具。
+- 总览里依次展示请求详情、处理决策、查询参数、请求头、响应头、请求体、响应体。
+- JSON 内容通过 `JsonBlock` 展示，`pre` 使用 `white-space: pre-wrap` 和 `word-break: break-word`。
+
+#### 关键发现
+
+详情体验差的根因是布局与内容类型不匹配。
+
+具体问题：
+
+- 右侧栏最小只有 360px，真实接口 URL、Header、JSON body 都是长文本，天然不适合窄栏阅读。
+- 请求列表占比过大，详情区是分析主区域却被压缩为辅助栏。
+- JSON 使用自动换行和断词，在窄栏下会把结构打碎，降低可读性。
+- 请求体和响应体在同一个窄栏里纵向堆叠，用户需要大量滚动。
+- 详情页的“总览”承载了太多内容，tabs 粒度不符合阅读任务。
+- 复制按钮和操作按钮占据详情头部空间，进一步压缩上下文。
+
+#### 推荐修复设计
+
+Traffic 详情应从“窄侧栏”升级为“可阅读的请求检查器”。
+
+推荐布局：
+
+- 默认桌面使用三段式：
+  - 左侧请求列表：固定或弹性宽度，建议 520-680px。
+  - 右侧详情：占剩余空间，最小 640px。
+  - 当视口不足时，列表在上、详情在下，或详情进入聚焦模式。
+- 增加“详情聚焦模式”：
+  - 选中请求后可一键放大详情。
+  - 聚焦模式隐藏或压缩请求列表。
+  - 适合阅读长 JSON、Header、响应体。
+- 详情 tabs 重新拆分：
+  - 概览：URL、状态、耗时、处理决策、命中规则。
+  - 请求：Query、Request Headers、Request Body。
+  - 响应：Response Headers、Response Body。
+  - 时间线：阶段、耗时、来源。
+  - 动作：复制 curl、重放、带入调试、创建 Mock、保存请求。
+- JSON 阅读优化：
+  - 默认不强制断词，保留缩进结构，使用横向滚动。
+  - 字号使用 12px 或 12.5px 等宽字体，行高 1.55 左右。
+  - Header 表格使用更紧凑行高，长值支持复制和展开。
+  - 大 body 默认展示 preview，提供“展开完整内容”或“复制完整内容”。
+  - 请求体/响应体支持独立高度和内部滚动。
+- 详情头部保留必要上下文：
+  - method
+  - status
+  - path
+  - host
+  - 处理结果
+  - 主操作只保留 1-2 个，其余放入更多菜单。
+
+必须补验证：
+
+- 桌面 1365px 宽度下，详情区不得低于可读宽度。
+- 1280px 以下布局不应让详情挤成窄栏。
+- 长 URL、长 header、深层 JSON 不应破坏布局。
+- Playwright 截图覆盖空态、有请求态、详情聚焦态。
+
+## 12. 推荐实施顺序
 
 ### P0：基础可用性修正
 
@@ -240,6 +455,7 @@ Polaris 是工具型产品，应保持紧凑、清晰、可扫描。
 - 替换 AntD deprecated API。
 - 统一中文文案。
 - 统一空态、错误态、加载态的基础组件用法。
+- 为 MCP request mutation 补测试，修正请求更新失败链路。
 
 ### P1：首页和实时请求重设计
 
@@ -247,6 +463,8 @@ Polaris 是工具型产品，应保持紧凑、清晰、可扫描。
 - 实时请求空态改为接入排障向导。
 - 请求详情动作统一。
 - 补充代理、证书、规则命中相关提示。
+- 扩展 Traffic 搜索范围，支持 request/response body、query、header、path、resolution。
+- 重做 Traffic 单请求详情布局，提供可阅读的请求检查器。
 
 ### P2：Mock 与代理规则体验统一
 
@@ -262,7 +480,7 @@ Polaris 是工具型产品，应保持紧凑、清晰、可扫描。
 - 请求和规则上下文复制。
 - MCP 工具清单和 pack 选择建议。
 
-## 12. 验证方案
+## 13. 验证方案
 
 每个阶段完成后都要验证：
 
@@ -272,8 +490,11 @@ Polaris 是工具型产品，应保持紧凑、清晰、可扫描。
 - 首页、实时请求、Mock、代理转发的主要路径 E2E。
 - 空态、失败态、移动端窄布局。
 - 文档是否同步更新：`README.md`、`docs/console.md`、`docs/extension.md`、`docs/mcp.md`、`docs/e2e-testing.md`。
+- MCP request mutation 测试覆盖标准工具和 legacy 工具。
+- Traffic 筛选测试覆盖 URL、Host、Query、Header、Request Body、Response Body。
+- Traffic 详情页截图覆盖普通模式和聚焦模式。
 
-## 13. 成功标准
+## 14. 成功标准
 
 - 新用户能通过首页判断接入状态，并知道下一步。
 - 抓不到包时，页面能解释最可能的原因。
@@ -281,4 +502,6 @@ Polaris 是工具型产品，应保持紧凑、清晰、可扫描。
 - Mock 和代理规则的“当前生效组”概念一致。
 - MCP 接入信息可复制、可理解、可验证。
 - 页面文案对人类可读，不依赖开发者阅读源码才能理解功能。
-
+- AI 通过 MCP 修改已保存请求时，成功和失败都有明确、结构化、可继续操作的反馈。
+- Traffic 搜索能命中请求体和响应体里的常见参数。
+- 单个请求详情在桌面宽度下可阅读，不再被窄栏和大字号破坏。
