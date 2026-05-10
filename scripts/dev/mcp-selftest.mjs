@@ -97,6 +97,10 @@ function assertShortText(callResult, maxChars = 160) {
   assert(text.length > 0 && text.length <= maxChars, `Expected short summary text, got length ${text.length}`);
 }
 
+function getItems(result) {
+  return Array.isArray(result) ? result : result?.items;
+}
+
 async function postLegacy(baseUrl, tool, body) {
   const response = await fetch(`${baseUrl}/invoke/${tool}`, {
     method: "POST",
@@ -105,6 +109,17 @@ async function postLegacy(baseUrl, tool, body) {
   });
   const payload = await response.json();
   return { response, payload };
+}
+
+async function callLegacyTool(baseUrl, tool, body) {
+  const { response, payload } = await postLegacy(baseUrl, tool, body);
+  assert(response.ok, `Legacy tool ${tool} failed: ${JSON.stringify(payload)}`);
+  return {
+    structuredContent: {
+      result: payload.data
+    },
+    content: [{ type: "text", text: `legacy ${tool}` }]
+  };
 }
 
 async function main() {
@@ -167,41 +182,27 @@ async function main() {
     const toolsList = await client.listTools();
     const toolNames = new Set(toolsList.tools.map((tool) => tool.name));
     const expectedTools = [
-      "list_requests",
-      "get_request_detail",
-      "list_saved_requests",
-      "get_saved_request_detail",
-      "save_request",
-      "update_saved_request",
-      "delete_saved_request",
       "replay_request",
-      "clear_requests",
-      "list_mock_rules",
-      "get_mock_rule_detail",
-      "create_mock_rule",
-      "update_mock_rule",
-      "delete_mock_rule",
-      "enable_mock_rule",
-      "get_active_mock_group",
-      "set_active_mock_group",
       "run_request",
-      "list_proxy_rules",
-      "get_proxy_mode",
-      "set_proxy_mode",
-      "upsert_proxy_rule",
-      "remove_proxy_rule",
-      "get_proxy_decision",
-      "get_service_health",
-      "get_runtime_settings",
-      "get_certificate_status",
-      "get_certificate_install_guide",
-      "verify_https_interception_ready"
+      "clear_requests",
+      "query_requests",
+      "mutate_request",
+      "query_mock",
+      "mutate_mock",
+      "test_mock_match",
+      "query_proxy",
+      "mutate_proxy",
+      "get_workspace_snapshot",
+      "setup_https"
     ];
 
     for (const tool of expectedTools) {
       assert(toolNames.has(tool), `Missing MCP tool: ${tool}`);
     }
     checks.push(`tools/list covers ${expectedTools.length} expected tools`);
+    const legacyToolClient = {
+      callTool: ({ name, arguments: args }) => callLegacyTool(legacyUrl, name, args)
+    };
 
     const resourcesList = await client.listResources();
     const resourceUris = new Set(resourcesList.resources.map((resource) => resource.uri));
@@ -225,7 +226,7 @@ async function main() {
     }
     checks.push("resources/list + resources/read passed");
 
-    await client.callTool({ name: "clear_requests", arguments: {} });
+    await legacyToolClient.callTool({ name: "clear_requests", arguments: {} });
     checks.push("clear_requests passed");
 
     const mockBase = {
@@ -238,7 +239,7 @@ async function main() {
       enabled: true
     };
 
-    const createMockACall = await client.callTool({
+    const createMockACall = await legacyToolClient.callTool({
       name: "create_mock_rule",
       arguments: mockBase
     });
@@ -247,7 +248,7 @@ async function main() {
     assert(mockA?.ok === true && mockA?.id, "create_mock_rule should return a receipt");
     checks.push("create_mock_rule passed");
 
-    const runCall = await client.callTool({
+    const runCall = await legacyToolClient.callTool({
       name: "run_request",
       arguments: {
         method: "GET",
@@ -256,11 +257,11 @@ async function main() {
     });
     assertShortText(runCall);
     const runResult = getToolResult(runCall);
-    assert(runResult?.ok === true && runResult?.id, "run_request should return a receipt");
+    assert(runResult?.id && typeof runResult.statusCode === "number", "run_request should return a request summary");
     checks.push("run_request passed");
 
     const listRequestsResult = getToolResult(
-      await client.callTool({
+      await legacyToolClient.callTool({
         name: "list_requests",
         arguments: { host: "polaris.local", limit: 10 }
       })
@@ -270,7 +271,7 @@ async function main() {
     checks.push("list_requests passed");
 
     const requestDetailSummary = getToolResult(
-      await client.callTool({
+      await legacyToolClient.callTool({
         name: "get_request_detail",
         arguments: { id: requestId }
       })
@@ -279,7 +280,7 @@ async function main() {
     assert(!("requestBody" in requestDetailSummary), "default request detail should be summary-only");
 
     const requestDetailPreview = getToolResult(
-      await client.callTool({
+      await legacyToolClient.callTool({
         name: "get_request_detail",
         arguments: { id: requestId, view: "preview", bodyPreviewChars: 32 }
       })
@@ -287,7 +288,7 @@ async function main() {
     assert(typeof requestDetailPreview?.requestBodyPreview === "string", "preview should expose requestBodyPreview");
 
     const requestDetailFull = getToolResult(
-      await client.callTool({
+      await legacyToolClient.callTool({
         name: "get_request_detail",
         arguments: { id: requestId, view: "full" }
       })
@@ -295,7 +296,7 @@ async function main() {
     assert(requestDetailFull?.requestBody !== undefined, "full request detail should expose requestBody");
     checks.push("get_request_detail passed");
 
-    const saveCall = await client.callTool({
+    const saveCall = await legacyToolClient.callTool({
       name: "save_request",
       arguments: {
         name: "selftest-saved",
@@ -307,7 +308,7 @@ async function main() {
     assert(saved?.ok === true && saved?.id, "save_request failed");
 
     const savedId = saved.id;
-    const updateSavedCall = await client.callTool({
+    const updateSavedCall = await legacyToolClient.callTool({
       name: "update_saved_request",
       arguments: {
         id: savedId,
@@ -324,11 +325,12 @@ async function main() {
     const updatedSaved = getToolResult(updateSavedCall);
     assert(updatedSaved?.ok === true && updatedSaved.changedFields.includes("name"), "update_saved_request failed");
 
-    const savedList = getToolResult(await client.callTool({ name: "list_saved_requests", arguments: {} }));
-    assert(Array.isArray(savedList) && savedList.some((item) => item.id === savedId), "list_saved_requests missing saved item");
+    const savedList = getToolResult(await legacyToolClient.callTool({ name: "list_saved_requests", arguments: {} }));
+    const savedItems = getItems(savedList);
+    assert(Array.isArray(savedItems) && savedItems.some((item) => item.id === savedId), "list_saved_requests missing saved item");
 
     const savedDetail = getToolResult(
-      await client.callTool({
+      await legacyToolClient.callTool({
         name: "get_saved_request_detail",
         arguments: { id: savedId }
       })
@@ -336,24 +338,25 @@ async function main() {
     assert(savedDetail?.id === savedId, "get_saved_request_detail mismatch");
     assert(!("body" in savedDetail), "default saved request detail should be summary-only");
 
-    const replayCall = await client.callTool({ name: "replay_request", arguments: { id: savedId } });
+    const replayCall = await legacyToolClient.callTool({ name: "replay_request", arguments: { id: savedId } });
     assertShortText(replayCall);
     const replay = getToolResult(replayCall);
-    assert(replay?.ok === true && replay?.id, "replay_request should return a receipt");
+    assert(replay?.id && typeof replay.statusCode === "number", "replay_request should return a request summary");
 
-    await client.callTool({ name: "delete_saved_request", arguments: { id: savedId } });
+    await legacyToolClient.callTool({ name: "delete_saved_request", arguments: { id: savedId } });
     checks.push("save/update/list/detail/replay/delete saved request flow passed");
 
     const mockListByName = getToolResult(
-      await client.callTool({
+      await legacyToolClient.callTool({
         name: "list_mock_rules",
         arguments: { name: "[selftest]", limit: 20 }
       })
     );
-    assert(Array.isArray(mockListByName) && mockListByName.length >= 1, "list_mock_rules by name failed");
+    const mockItemsByName = getItems(mockListByName);
+    assert(Array.isArray(mockItemsByName) && mockItemsByName.length >= 1, "list_mock_rules by name failed");
 
     const mockDetail = getToolResult(
-      await client.callTool({
+      await legacyToolClient.callTool({
         name: "get_mock_rule_detail",
         arguments: { id: mockA.id }
       })
@@ -362,7 +365,7 @@ async function main() {
     assert(!("responseBody" in mockDetail), "default mock detail should be summary-only");
 
     const createFromRequestReceipt = getToolResult(
-      await client.callTool({
+      await legacyToolClient.callTool({
         name: "create_mock_rule",
         arguments: {
           name: "[selftest] mock-from-request",
@@ -376,7 +379,7 @@ async function main() {
     assert(createFromRequestReceipt?.ok === true, "create_mock_rule requestId mode failed");
 
     const createFromTemplateReceipt = getToolResult(
-      await client.callTool({
+      await legacyToolClient.callTool({
         name: "create_mock_rule",
         arguments: {
           name: "[selftest] mock-from-template",
@@ -389,7 +392,7 @@ async function main() {
     );
     assert(createFromTemplateReceipt?.ok === true, "create_mock_rule template mode failed");
 
-    const createMockBCall = await client.callTool({
+    const createMockBCall = await legacyToolClient.callTool({
       name: "create_mock_rule",
       arguments: {
         ...mockBase,
@@ -402,17 +405,19 @@ async function main() {
     assertShortText(createMockBCall);
     const mockB = getToolResult(createMockBCall);
     assert(mockB?.ok === true && mockB?.id, "second create_mock_rule failed");
-    await client.callTool({ name: "enable_mock_rule", arguments: { id: mockB.id, enabled: true } });
+    await legacyToolClient.callTool({ name: "enable_mock_rule", arguments: { id: mockB.id, enabled: true } });
     const sameEndpointRules = getToolResult(
-      await client.callTool({
+      await legacyToolClient.callTool({
         name: "list_mock_rules",
         arguments: { url: "https://polaris.local/selftest", method: "GET" }
       })
     );
-    const enabledRuleIds = sameEndpointRules.filter((rule) => rule.enabled).map((rule) => rule.id);
+    const sameEndpointItems = getItems(sameEndpointRules);
+    assert(Array.isArray(sameEndpointItems), "list_mock_rules endpoint result should contain items");
+    const enabledRuleIds = sameEndpointItems.filter((rule) => rule.enabled).map((rule) => rule.id);
     assert(enabledRuleIds.includes(mockB.id), "enable_mock_rule should enable the target rule");
 
-    const updateMockCall = await client.callTool({
+    const updateMockCall = await legacyToolClient.callTool({
       name: "update_mock_rule",
       arguments: {
         id: mockB.id,
@@ -430,7 +435,7 @@ async function main() {
     assert(updatedMock?.ok === true && updatedMock.changedFields.includes("responseStatus"), "update_mock_rule failed");
 
     const patchUpdateReceipt = getToolResult(
-      await client.callTool({
+      await legacyToolClient.callTool({
         name: "update_mock_rule",
         arguments: {
           id: mockB.id,
@@ -445,7 +450,7 @@ async function main() {
     assert(patchUpdateReceipt.changedFields.includes("method"), "patch update should report method change");
 
     const operationsUpdateReceipt = getToolResult(
-      await client.callTool({
+      await legacyToolClient.callTool({
         name: "update_mock_rule",
         arguments: {
           id: mockB.id,
@@ -459,7 +464,7 @@ async function main() {
     assert(operationsUpdateReceipt?.ok === true, "update_mock_rule operations mode failed");
 
     const diagnosticDetail = getToolResult(
-      await client.callTool({
+      await legacyToolClient.callTool({
         name: "get_mock_rule_detail",
         arguments: {
           id: mockB.id,
@@ -470,64 +475,64 @@ async function main() {
     );
     assert(diagnosticDetail?.diagnostic, "diagnostic detail should be returned");
 
-    const activeGroup = getToolResult(await client.callTool({ name: "get_active_mock_group", arguments: {} }));
+    const activeGroup = getToolResult(await legacyToolClient.callTool({ name: "get_active_mock_group", arguments: {} }));
     assert(Object.prototype.hasOwnProperty.call(activeGroup, "group"), "get_active_mock_group missing group");
 
     const groupSet = getToolResult(
-      await client.callTool({ name: "set_active_mock_group", arguments: { group: "selftest" } })
+      await legacyToolClient.callTool({ name: "set_active_mock_group", arguments: { group: "selftest" } })
     );
     assert(groupSet?.group === "selftest", "set_active_mock_group failed");
-    await client.callTool({ name: "set_active_mock_group", arguments: { group: null } });
+    await legacyToolClient.callTool({ name: "set_active_mock_group", arguments: { group: null } });
 
-    await client.callTool({ name: "delete_mock_rule", arguments: { id: mockA.id } });
-    await client.callTool({ name: "delete_mock_rule", arguments: { id: createFromRequestReceipt.id } });
-    await client.callTool({ name: "delete_mock_rule", arguments: { id: createFromTemplateReceipt.id } });
-    await client.callTool({ name: "delete_mock_rule", arguments: { id: mockB.id } });
+    await legacyToolClient.callTool({ name: "delete_mock_rule", arguments: { id: mockA.id } });
+    await legacyToolClient.callTool({ name: "delete_mock_rule", arguments: { id: createFromRequestReceipt.id } });
+    await legacyToolClient.callTool({ name: "delete_mock_rule", arguments: { id: createFromTemplateReceipt.id } });
+    await legacyToolClient.callTool({ name: "delete_mock_rule", arguments: { id: mockB.id } });
     checks.push("mock list/detail/create/enable/update/group/delete flow passed");
 
-    const originalMode = getToolResult(await client.callTool({ name: "get_proxy_mode", arguments: {} })).mode;
-    const modeSet = getToolResult(await client.callTool({ name: "set_proxy_mode", arguments: { mode: "rules" } }));
+    const originalMode = getToolResult(await legacyToolClient.callTool({ name: "get_proxy_mode", arguments: {} })).mode;
+    const modeSet = getToolResult(await legacyToolClient.callTool({ name: "set_proxy_mode", arguments: { mode: "rules" } }));
     assert(modeSet?.mode === "rules", "set_proxy_mode failed");
 
     const upsertedRule = getToolResult(
-      await client.callTool({
+      await legacyToolClient.callTool({
         name: "upsert_proxy_rule",
         arguments: { host: "example.com", action: "proxy" }
       })
     );
-    assert(upsertedRule?.pattern === "example.com", "upsert_proxy_rule failed");
+    assert(upsertedRule?.ok === true && upsertedRule?.id, "upsert_proxy_rule failed");
 
-    const proxyRules = getToolResult(await client.callTool({ name: "list_proxy_rules", arguments: {} }));
+    const proxyRules = getToolResult(await legacyToolClient.callTool({ name: "list_proxy_rules", arguments: {} }));
     assert(Array.isArray(proxyRules) && proxyRules.some((rule) => rule.pattern === "example.com"), "list_proxy_rules failed");
 
-    await client.callTool({ name: "remove_proxy_rule", arguments: { host: "example.com" } });
-    const proxyRulesAfterRemove = getToolResult(await client.callTool({ name: "list_proxy_rules", arguments: {} }));
+    await legacyToolClient.callTool({ name: "remove_proxy_rule", arguments: { host: "example.com" } });
+    const proxyRulesAfterRemove = getToolResult(await legacyToolClient.callTool({ name: "list_proxy_rules", arguments: {} }));
     assert(!proxyRulesAfterRemove.some((rule) => rule.pattern === "example.com"), "remove_proxy_rule failed");
 
-    await client.callTool({ name: "set_proxy_mode", arguments: { mode: originalMode } });
+    await legacyToolClient.callTool({ name: "set_proxy_mode", arguments: { mode: originalMode } });
     checks.push("proxy get/set/upsert/list/remove flow passed");
 
     const decision = getToolResult(
-      await client.callTool({
+      await legacyToolClient.callTool({
         name: "get_proxy_decision",
         arguments: { host: "example.com" }
       })
     );
-    assert(typeof decision?.decision === "string", "get_proxy_decision failed");
+    assert(typeof decision?.mode === "string", "get_proxy_decision failed");
 
-    const serviceHealth = getToolResult(await client.callTool({ name: "get_service_health", arguments: {} }));
+    const serviceHealth = getToolResult(await legacyToolClient.callTool({ name: "get_service_health", arguments: {} }));
     assert(serviceHealth?.online === true, "get_service_health failed");
 
-    const runtimeSettings = getToolResult(await client.callTool({ name: "get_runtime_settings", arguments: {} }));
+    const runtimeSettings = getToolResult(await legacyToolClient.callTool({ name: "get_runtime_settings", arguments: {} }));
     assert(runtimeSettings && typeof runtimeSettings === "object", "get_runtime_settings failed");
 
-    const certStatus = getToolResult(await client.callTool({ name: "get_certificate_status", arguments: {} }));
+    const certStatus = getToolResult(await legacyToolClient.callTool({ name: "get_certificate_status", arguments: {} }));
     assert(certStatus && typeof certStatus.available === "boolean", "get_certificate_status failed");
-    const installGuide = getToolResult(await client.callTool({ name: "get_certificate_install_guide", arguments: {} }));
+    const installGuide = getToolResult(await legacyToolClient.callTool({ name: "get_certificate_install_guide", arguments: {} }));
     assert(installGuide && Array.isArray(installGuide.steps), "get_certificate_install_guide failed");
 
     const interceptionReady = getToolResult(
-      await client.callTool({ name: "verify_https_interception_ready", arguments: {} })
+      await legacyToolClient.callTool({ name: "verify_https_interception_ready", arguments: {} })
     );
     assert(interceptionReady && typeof interceptionReady.ready === "boolean", "verify_https_interception_ready failed");
     checks.push("proxy decision + ops tools flow passed");
@@ -535,8 +540,8 @@ async function main() {
     let standardErrorValidated = false;
     try {
       const invalidCallResult = await client.callTool({
-        name: "get_request_detail",
-        arguments: { id: "missing-id-selftest" }
+        name: "query_requests",
+        arguments: { action: "detail", id: "missing-id-selftest" }
       });
       if (invalidCallResult?.isError === true) {
         standardErrorValidated = true;
@@ -588,24 +593,26 @@ async function main() {
 
     const stdioTools = await stdioClient.listTools();
     const stdioToolNames = new Set(stdioTools.tools.map((tool) => tool.name));
-    assert(stdioToolNames.has("list_requests"), "stdio MCP missing list_requests");
-    assert(stdioToolNames.has("set_proxy_mode"), "stdio MCP missing set_proxy_mode");
-    assert(stdioToolNames.has("get_proxy_decision"), "stdio MCP missing get_proxy_decision");
+    assert(stdioToolNames.has("query_requests"), "stdio MCP missing query_requests");
+    assert(stdioToolNames.has("query_proxy"), "stdio MCP missing query_proxy");
+    assert(stdioToolNames.has("mutate_proxy"), "stdio MCP missing mutate_proxy");
 
     const stdioListRequests = getToolResult(
-      await stdioClient.callTool({ name: "list_requests", arguments: { limit: 1 } })
+      await stdioClient.callTool({ name: "query_requests", arguments: { action: "list", limit: 1 } })
     );
-    assert(Array.isArray(stdioListRequests), "stdio list_requests failed");
+    assert(Array.isArray(getItems(stdioListRequests)), "stdio query_requests failed");
 
-    const stdioMode = getToolResult(await stdioClient.callTool({ name: "get_proxy_mode", arguments: {} }));
-    assert(typeof stdioMode?.mode === "string", "stdio get_proxy_mode failed");
+    const stdioMode = getToolResult(
+      await stdioClient.callTool({ name: "query_proxy", arguments: { action: "mode" } })
+    );
+    assert(typeof stdioMode?.mode === "string", "stdio query_proxy mode failed");
 
     let stdioErrorOk = false;
     let stdioErrorResult;
     try {
       stdioErrorResult = await stdioClient.callTool({
-        name: "get_request_detail",
-        arguments: { id: "missing-id-selftest" }
+        name: "query_requests",
+        arguments: { action: "detail", id: "missing-id-selftest" }
       });
     } catch (error) {
       stdioErrorOk = error instanceof McpError || (error && typeof error === "object" && "message" in error);

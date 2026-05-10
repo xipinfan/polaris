@@ -5,6 +5,7 @@ import type {
   RunRequestInput,
   SaveRequestInput,
   SetActiveMockGroupInput,
+  UpdateSavedRequestInput,
   UpdateMockRuleInput
 } from "@polaris/shared-contracts";
 import { MockService } from "../../modules/mock/mockService";
@@ -147,7 +148,7 @@ export function createApiRouter(
   router.put(
     "/saved-requests/:id",
     withAsync(async (req, res) => {
-      res.json({ data: await requestService.updateSaved(req.params.id, req.body as SaveRequestInput) });
+      res.json({ data: await requestService.updateSaved(req.params.id, req.body as UpdateSavedRequestInput) });
     })
   );
 

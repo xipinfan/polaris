@@ -25,6 +25,16 @@ export interface SaveRequestInput {
   tags?: string[];
 }
 
+export interface UpdateSavedRequestInput {
+  name?: string;
+  method?: string;
+  url?: string;
+  headers?: Record<string, string>;
+  query?: Record<string, string>;
+  body?: unknown;
+  tags?: string[];
+}
+
 export interface RunRequestInput {
   name?: string;
   method: string;
@@ -228,7 +238,7 @@ export interface CoreApiContract {
   "/api/requests/:id/save": { post: ApiEnvelope<SavedRequest> & { body: SaveRequestInput } };
   "/api/requests/:id/replay": { post: ApiEnvelope<RequestRecord> };
   "/api/saved-requests": { get: ApiEnvelope<SavedRequest[]>; post: ApiEnvelope<SavedRequest> & { body: SaveRequestInput } };
-  "/api/saved-requests/:id": { put: ApiEnvelope<SavedRequest> & { body: SaveRequestInput }; delete: ApiEnvelope<{ id: string }> };
+  "/api/saved-requests/:id": { put: ApiEnvelope<SavedRequest> & { body: UpdateSavedRequestInput }; delete: ApiEnvelope<{ id: string }> };
   "/api/saved-requests/:id/replay": { post: ApiEnvelope<RequestRecord> };
   "/api/mock-rules": { get: ApiEnvelope<MockRule[]>; post: ApiEnvelope<MockRule> & { body: CreateMockRuleInput } };
   "/api/mock-rules/:id": { put: ApiEnvelope<MockRule> & { body: UpdateMockRuleInput }; delete: ApiEnvelope<{ id: string }> };

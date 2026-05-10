@@ -54,6 +54,12 @@ export interface PolarisMcpSdkServerOptions {
 }
 
 const stringMapSchema = z.record(z.string(), z.string());
+const wideStringMapValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
+const wideHeaderMapSchema = z.record(z.string(), wideStringMapValueSchema);
+const wideQueryMapSchema = z.record(
+  z.string(),
+  z.union([wideStringMapValueSchema, z.array(z.union([z.string(), z.number(), z.boolean()]))])
+);
 const detailFilterFields = {
   view: z.enum(detailViewValues).optional(),
   bodyPreviewChars: z.number().int().positive().max(8000).optional(),
@@ -111,8 +117,8 @@ const mutateRequestInputSchema = z.discriminatedUnion("op", [
     name: z.string().optional(),
     method: z.string().optional(),
     url: z.string().url().optional(),
-    headers: stringMapSchema.optional(),
-    query: stringMapSchema.optional(),
+    headers: wideHeaderMapSchema.optional(),
+    query: wideQueryMapSchema.optional(),
     body: z.unknown().nullable().optional(),
     tags: z.array(z.string()).optional()
   }),

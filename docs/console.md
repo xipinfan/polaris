@@ -24,6 +24,9 @@ polaris status
 
 - 查看抓包请求
 - 关键词、Method、Host、状态码筛选
+- 关键词搜索覆盖 URL、Host、Path、Header、Query、请求体、响应体和处理结果
+- Host 过滤支持输入域名或主机片段
+- 空结果表示当前关键词和筛选条件在上述搜索范围内均未命中
 - 查看请求详情
 - 复制 `curl`
 - 保存请求或从请求创建 Mock
@@ -78,4 +81,3 @@ polaris status
 2. 查看局域网地址和代理端口
 3. 手机访问 `http://polaris.local`
 4. 按提示安装证书并配置代理
-

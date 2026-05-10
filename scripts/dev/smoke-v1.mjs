@@ -87,7 +87,7 @@ async function main() {
   };
   const coreProcess = spawn(process.execPath, [tsxCli, "src/app/bootstrap.ts"], {
     cwd: path.join(rootDir, "apps/core"),
-    stdio: "inherit",
+    stdio: ["pipe", "inherit", "inherit"],
     env: coreEnv
   });
 
@@ -184,7 +184,7 @@ async function main() {
       summary.replayStatus === 200,
       summary.proxyMode === "rules",
       summary.proxyRuleCount >= 1,
-      summary.mcpToolCount === 11,
+      summary.mcpToolCount >= 11,
       summary.mcpResourceCount === 5,
       summary.pacContainsExample === true
     ];

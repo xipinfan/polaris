@@ -4,7 +4,9 @@ type HealthPayload = {
   };
 };
 
-const apiPortCandidates = Array.from({ length: 100 }, (_, index) => 9001 + index);
+const DEFAULT_API_PORT = 19601;
+const API_PORT_SCAN_SIZE = 8;
+const apiPortCandidates = Array.from({ length: API_PORT_SCAN_SIZE }, (_, index) => DEFAULT_API_PORT + index);
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -32,5 +34,5 @@ export async function resolveApiPort(timeoutMs = 45_000): Promise<number> {
     await sleep(600);
   }
 
-  throw new Error("Unable to resolve Polaris API port in range 9001-9100");
+  throw new Error("Unable to resolve Polaris API port in range 19601-19608");
 }

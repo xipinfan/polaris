@@ -52,3 +52,36 @@ polaris mcp-stdio --pack ops
 
 推荐优先使用标准 MCP；`/invoke` 主要用于兼容旧脚本。
 
+## 更新已保存请求
+
+标准 MCP 使用 `mutate_request(op="update")` 更新已保存请求。其输入字段按 `UpdateSavedRequestInput` 契约处理；legacy 兼容路径使用 `/invoke/update_saved_request`，内部字段语义一致，但返回外层不同。
+
+示例：
+
+```json
+{
+  "op": "update",
+  "id": "saved-123",
+  "name": "登录接口 - 带分页",
+  "query": {
+    "page": 1,
+    "debug": true,
+    "roles": ["admin", "tester"],
+    "obsolete": null
+  },
+  "headers": {
+    "x-trace": 9001,
+    "x-old": null
+  }
+}
+```
+
+归一化规则：
+
+- `headers` / `query` 的 `number`、`boolean` 会转为字符串后保存。
+- `headers` / `query` 的 `null` 表示删除对应 key，不会保存为 `null`。
+- `query` 数组会用逗号拼接为单个字符串，例如 `["admin", "tester"]` 保存为 `"admin,tester"`。
+- 第一阶段不支持严格多值 query 语义；如果数组元素本身包含逗号，读取时无法还原原始多值边界。
+- `headers` / `query` 的对象值会被拒绝，并返回字段路径错误。
+
+如果把抓包请求 id 当作已保存请求 id 去 update，会返回 `REQUEST_ID_NOT_SAVED`。应先调用 `mutate_request(op="save", requestId="抓包请求 id")`，再用返回的 saved request id 更新。

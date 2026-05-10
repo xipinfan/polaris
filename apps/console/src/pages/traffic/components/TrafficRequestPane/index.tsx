@@ -72,13 +72,13 @@ export function TrafficRequestPane({
           <input
             className={localStyles.filterInput}
             onChange={(event) => setKeyword(event.target.value)}
-            placeholder={"搜索 URL 或请求体"}
+            placeholder={"搜索 URL、Host、Header、Body、处理结果"}
             value={keyword}
           />
           <input
             className={localStyles.filterInput}
             onChange={(event) => setHostOnly(event.target.value)}
-            placeholder={"主机过滤"}
+            placeholder={"Host 过滤，支持片段"}
             value={hostOnly}
           />
           <input
@@ -181,7 +181,7 @@ export function TrafficRequestPane({
             {visibleRequests.length === 0 && requests.length > 0 ? (
               <div className={cx(localStyles.emptyCard, localStyles.compactEmpty)}>
                 <h3>{"当前筛选条件下暂无结果"}</h3>
-                <p>{"试试清空关键词或切换查看范围，请求列表会立即更新。"}</p>
+                <p>{"当前搜索覆盖 URL、Host、Path、Header、Query、请求体、响应体、处理结果；试试清空关键词或切换查看范围。"}</p>
               </div>
             ) : null}
 

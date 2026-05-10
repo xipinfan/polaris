@@ -42,5 +42,4 @@ corepack pnpm test:e2e:page:baseline -- --page settings
 - E2E 启动 `node scripts/dev/start.mjs`（Core + Console）
 - 扩展测试会在 global setup 先构建 `apps/extension/dist`
 - Console baseURL 固定为 `http://127.0.0.1:5173`
-- 测试内用于发现 Core API 端口的扫描区间当前是 `9001-9100`
-
+- 测试内用于发现 Core API 端口的扫描区间当前是 `19601-19608`

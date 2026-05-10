@@ -1,4 +1,5 @@
 ﻿.block {
+  min-width: 0;
   padding: 14px;
   border: 1px solid #e3e7ec;
   border-radius: var(--radius-lg);
@@ -43,27 +44,27 @@
 
 .codeShell {
   margin-top: 14px;
-  overflow: hidden;
+  max-width: 100%;
+  max-height: min(420px, 60vh);
+  overflow: auto;
   border: 1px solid #e6eaf0;
   border-radius: var(--radius-md);
   background: #f8fafc;
 }
 
 .code {
-  max-height: 420px;
+  min-width: max-content;
   margin: 0;
-  overflow: auto;
   padding: 14px;
   color: #1f2937;
-  white-space: pre-wrap;
-  word-break: break-word;
+  white-space: pre;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 12px;
   line-height: 1.65;
 }
 
 @media (max-width: 700px) {
-.header {
+  .header {
     align-items: flex-start;
   }
 }

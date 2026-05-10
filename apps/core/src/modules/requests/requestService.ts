@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import type {
   RequestFilters,
   RunRequestInput,
-  SaveRequestInput
+  SaveRequestInput,
+  UpdateSavedRequestInput
 } from "@polaris/shared-contracts";
 import type { RequestRecord, RequestResolution, SavedRequest } from "@polaris/shared-types";
 import { ExtensionHost } from "../extensions/extensionHost";
@@ -13,6 +14,7 @@ import {
   normalizeCapturedBody,
   parseSearchParamsRecord,
 } from "../../shared/requestParsing";
+import { matchRequestHost, matchRequestKeyword } from "./requestSearch";
 
 function parseQuery(url: string) {
   const parsed = new URL(url);
@@ -46,13 +48,10 @@ export class RequestService {
     }
 
     const filtered = requests.filter((item) => {
-      const keywordMatch =
-        !filters.keyword ||
-        item.url.includes(filters.keyword) ||
-        JSON.stringify(item.requestBody ?? "").includes(filters.keyword);
+      const keywordMatch = matchRequestKeyword(item, filters.keyword);
       const methodMatch = !filters.method || item.method === filters.method.toUpperCase();
       const statusMatch = !filters.statusCode || item.statusCode === filters.statusCode;
-      const hostMatch = !filters.host || item.host === filters.host;
+      const hostMatch = matchRequestHost(item, filters.host);
       return keywordMatch && methodMatch && statusMatch && hostMatch;
     });
 
@@ -106,17 +105,18 @@ export class RequestService {
     return payload;
   }
 
-  async updateSaved(id: string, input: SaveRequestInput): Promise<SavedRequest> {
+  async updateSaved(id: string, input: UpdateSavedRequestInput): Promise<SavedRequest> {
     const existing = this.getSavedById(id);
     if (!existing) {
       throw new Error("Saved request not found");
     }
+    const hasBody = Object.prototype.hasOwnProperty.call(input, "body");
 
     const nextItem: SavedRequest = {
       ...existing,
       ...input,
       method: (input.method ?? existing.method).toUpperCase(),
-      body: normalizeBody(input.body ?? existing.body),
+      body: normalizeBody(hasBody ? input.body : existing.body),
       updatedAt: new Date().toISOString()
     };
 

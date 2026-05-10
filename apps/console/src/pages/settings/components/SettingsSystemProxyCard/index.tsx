@@ -1,8 +1,6 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "antd";
+import { useSetSystemProxyMutation } from "../../../../domains/settings/mutations";
 import { useToast } from "../../../../features/feedback/ToastProvider";
-import { queryKeys } from "../../../../lib/query/queryKeys";
-import { apiClient } from "../../../../services/apiClient";
 import localStyles from "./index.module.less";
 
 type SettingsSystemProxyCardProps = {
@@ -15,16 +13,7 @@ export function SettingsSystemProxyCard({
   proxyPort,
 }: SettingsSystemProxyCardProps) {
   const { showToast } = useToast();
-  const queryClient = useQueryClient();
-  const toggleMutation = useMutation({
-    mutationFn: (nextEnabled: boolean) => apiClient.setSystemProxy(nextEnabled),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.settings.root }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.home.overview }),
-      ]);
-    },
-  });
+  const toggleMutation = useSetSystemProxyMutation();
 
   const nextEnabled = !enabled;
 

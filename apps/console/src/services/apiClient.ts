@@ -3,6 +3,7 @@ import type {
   RunRequestInput,
   SaveRequestInput,
   ServiceSnapshot,
+  UpdateSavedRequestInput,
   UpdateMockRuleInput,
   WhistleImportExecuteInput,
   WhistleImportExecuteResponse,
@@ -97,7 +98,7 @@ export const apiClient = {
   listSavedRequests: () => request<SavedRequest[]>("/saved-requests"),
   saveManualRequest: (body: SaveRequestInput) =>
     request<SavedRequest>("/saved-requests", { method: "POST", body: JSON.stringify(body) }),
-  updateSavedRequest: (id: string, body: SaveRequestInput) =>
+  updateSavedRequest: (id: string, body: UpdateSavedRequestInput) =>
     request<SavedRequest>(`/saved-requests/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteSavedRequest: (id: string) => request<{ id: string }>(`/saved-requests/${id}`, { method: "DELETE" }),
   replaySavedRequest: (id: string) => request<RequestRecord>(`/saved-requests/${id}/replay`, { method: "POST" }),

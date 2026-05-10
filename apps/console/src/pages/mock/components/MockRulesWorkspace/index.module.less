@@ -210,7 +210,6 @@
   border-radius: 12px;
   background: linear-gradient(180deg, rgba(244, 247, 252, 0.95) 0%, rgba(239, 244, 249, 0.9) 100%);
   text-align: left;
-  cursor: pointer;
 }
 
 .ruleBlockCopy {
@@ -254,10 +253,22 @@
   border-radius: 10px !important;
 }
 
-.collapseIndicator {
+.collapseButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(213, 221, 231, 0.98);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
   font-size: 11px;
   font-weight: 600;
   color: #3556a8;
+}
+
+.collapseButton:hover {
+  background: rgba(246, 248, 251, 0.96);
 }
 
 .ruleRows {

@@ -20,6 +20,8 @@ import {
   buildWriteReceipt
 } from "./payloads";
 import { buildCreateMockRuleInput, buildUpdateMockRuleInput } from "./mockRuleMutations";
+import { createPolarisError, unknownToolError } from "./errorHandling";
+import { normalizeUpdateSavedRequestInput, type WideQueryValue, type WideStringMapValue } from "./requestMutationInput";
 import { resolveDetailTextMode } from "./toolResultPolicy";
 
 export interface ToolServiceDeps {
@@ -67,8 +69,8 @@ export type MutateRequestArgs =
       name?: string;
       method?: string;
       url?: string;
-      headers?: Record<string, string>;
-      query?: Record<string, string>;
+      headers?: Record<string, WideStringMapValue>;
+      query?: Record<string, WideQueryValue>;
       body?: unknown;
       tags?: string[];
     }
@@ -268,17 +270,27 @@ export async function handleMutateRequest(args: MutateRequestArgs, deps: ToolSer
   if (args.op === "update") {
     const before = deps.requestService.getSavedById(args.id);
     if (!before) {
+      const captured = deps.requestService.getById(args.id);
+      if (captured) {
+        throw createPolarisError(
+          "REQUEST_ID_NOT_SAVED",
+          `${args.id} 是抓包请求 id，不是已保存请求 id，不能直接 update。`,
+          {
+            status: 400,
+            suggestions: [
+              `先调用 mutate_request(op="save", requestId="${args.id}")`,
+              "再使用返回的 saved request id 调用 mutate_request(op=\"update\")"
+            ]
+          }
+        );
+      }
       throw new Error("Saved request not found");
     }
-    const data = await deps.requestService.updateSaved(args.id, {
-      name: args.name ?? before.name,
-      method: args.method ?? before.method,
-      url: args.url ?? before.url,
-      headers: args.headers ?? before.headers,
-      query: args.query ?? before.query,
-      body: args.body ?? before.body,
-      tags: args.tags ?? before.tags
+    const input = normalizeUpdateSavedRequestInput(args, {
+      headers: before.headers,
+      query: before.query
     });
+    const data = await deps.requestService.updateSaved(args.id, input);
     return buildToolResult(buildWriteReceipt(before, data, `Updated saved request ${data.name}`), `Updated saved request ${data.name}`);
   }
 
@@ -725,6 +737,6 @@ export async function handleLegacyToolInvocation(toolName: string, args: Record<
     case "setup_https":
       return handleSetupHttps(args as SetupHttpsArgs, deps);
     default:
-      throw new Error(`Unknown tool: ${toolName}`);
+      throw unknownToolError(toolName);
   }
 }

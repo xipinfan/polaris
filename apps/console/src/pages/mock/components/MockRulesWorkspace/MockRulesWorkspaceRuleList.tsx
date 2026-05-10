@@ -83,11 +83,7 @@ function RuleBlockSection({
 }: RuleBlockSectionProps) {
   return (
     <section className={localStyles.ruleBlock}>
-      <button
-        className={localStyles.ruleBlockHeader}
-        onClick={() => onToggleBlock(block.key)}
-        type="button"
-      >
+      <div className={localStyles.ruleBlockHeader}>
         <div className={localStyles.ruleBlockCopy}>
           <strong>{block.key}</strong>
         </div>
@@ -108,13 +104,15 @@ function RuleBlockSection({
           >
             {`${block.rules.length} 条规则`}
           </span>
-          <span className={localStyles.collapseIndicator}>
-            {collapsedBlocks[block.key]
-              ? `+ ${"展开"}`
-              : `− ${"收起"}`}
-          </span>
+          <button
+            className={localStyles.collapseButton}
+            onClick={() => onToggleBlock(block.key)}
+            type="button"
+          >
+            {collapsedBlocks[block.key] ? "展开" : "收起"}
+          </button>
         </div>
-      </button>
+      </div>
       <div
         className={classNames(
           localStyles.ruleRows,

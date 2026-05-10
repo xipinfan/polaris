@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { MockRule, ProxyRule } from "@polaris/shared-types";
-import { handleLegacyToolInvocation, handleQueryProxy, handleTestMockMatch, type ToolServiceDeps } from "./toolHandlers";
+import type { MockRule, ProxyRule, RequestRecord, SavedRequest } from "@polaris/shared-types";
+import { handleLegacyToolInvocation, handleMutateRequest, handleQueryProxy, handleTestMockMatch, type ToolServiceDeps } from "./toolHandlers";
 
 const now = "2026-04-22T00:00:00.000Z";
 
@@ -35,21 +35,71 @@ function createMockRule(input: Partial<MockRule> & Pick<MockRule, "id" | "name">
   };
 }
 
+function createCapturedRequest(input: Partial<RequestRecord> & Pick<RequestRecord, "id">): RequestRecord {
+  return {
+    id: input.id,
+    method: input.method ?? "GET",
+    url: input.url ?? "https://example.com/api/demo",
+    host: input.host ?? "example.com",
+    path: input.path ?? "/api/demo",
+    statusCode: input.statusCode ?? 200,
+    duration: input.duration ?? 10,
+    requestHeaders: input.requestHeaders ?? {},
+    requestQuery: input.requestQuery ?? {},
+    requestBody: input.requestBody ?? null,
+    responseHeaders: input.responseHeaders ?? {},
+    responseBody: input.responseBody ?? null,
+    createdAt: input.createdAt ?? now,
+    source: input.source ?? "proxy",
+    secure: input.secure ?? true,
+    resolution: input.resolution
+  };
+}
+
+function createSavedRequest(input: Partial<SavedRequest> & Pick<SavedRequest, "id">): SavedRequest {
+  return {
+    id: input.id,
+    name: input.name ?? "Saved request",
+    method: input.method ?? "GET",
+    url: input.url ?? "https://example.com/api/demo",
+    headers: input.headers ?? {},
+    query: input.query ?? {},
+    body: input.body ?? null,
+    tags: input.tags ?? [],
+    sourceType: input.sourceType ?? "manual",
+    sourceRequestId: input.sourceRequestId,
+    updatedAt: input.updatedAt ?? now
+  };
+}
+
 function createDeps(overrides: {
   proxyRules?: ProxyRule[];
   mockRules?: MockRule[];
   activeGroup?: string | null;
+  capturedRequests?: RequestRecord[];
+  savedRequests?: SavedRequest[];
 } = {}): ToolServiceDeps {
   const proxyRules = overrides.proxyRules ?? [];
   const mockRules = overrides.mockRules ?? [];
   const activeGroup = overrides.activeGroup ?? null;
+  const capturedRequests = overrides.capturedRequests ?? [];
+  let savedRequests = overrides.savedRequests ?? [];
 
   return {
     requestService: {
       list: () => [],
-      listSaved: () => [],
-      getById: () => undefined,
-      getSavedById: () => undefined
+      listSaved: () => savedRequests,
+      getById: (id: string) => capturedRequests.find((item) => item.id === id),
+      getSavedById: (id: string) => savedRequests.find((item) => item.id === id),
+      updateSaved: async (id: string, input: Partial<SavedRequest>) => {
+        const existing = savedRequests.find((item) => item.id === id);
+        if (!existing) {
+          throw new Error("Saved request not found");
+        }
+        const next = { ...existing, ...input, updatedAt: now };
+        savedRequests = savedRequests.map((item) => (item.id === id ? next : item));
+        return next;
+      }
     } as unknown as ToolServiceDeps["requestService"],
     mockService: {
       list: () => mockRules,
@@ -72,6 +122,97 @@ function createDeps(overrides: {
     certificateManager: undefined
   };
 }
+
+test("mutate_request update preserves existing fields when only name changes", async () => {
+  const saved = createSavedRequest({
+    id: "saved-1",
+    name: "Original",
+    method: "POST",
+    url: "https://example.com/api/users",
+    headers: { accept: "application/json" },
+    query: { page: "1" },
+    body: { ok: true },
+    tags: ["old"]
+  });
+  const deps = createDeps({ savedRequests: [saved] });
+
+  const result = await handleMutateRequest({ op: "update", id: "saved-1", name: "Renamed" }, deps);
+
+  const next = deps.requestService.getSavedById("saved-1")!;
+  assert.equal(next.name, "Renamed");
+  assert.equal(next.method, "POST");
+  assert.equal(next.url, "https://example.com/api/users");
+  assert.deepEqual(next.headers, { accept: "application/json" });
+  assert.deepEqual(next.query, { page: "1" });
+  assert.deepEqual(next.body, { ok: true });
+  assert.deepEqual(next.tags, ["old"]);
+  const payload = result.structuredContent.result as { changedFields: string[] };
+  assert.ok(payload.changedFields.includes("name"));
+});
+
+test("mutate_request update writes normalized headers and query values", async () => {
+  const deps = createDeps({
+    savedRequests: [
+      createSavedRequest({
+        id: "saved-1",
+        headers: { keep: "yes", remove: "old" },
+        query: { keep: "yes", obsolete: "old" }
+      })
+    ]
+  });
+
+  await handleMutateRequest(
+    {
+      op: "update",
+      id: "saved-1",
+      headers: { count: 1, enabled: true, remove: null },
+      query: { page: 2, debug: false, roles: ["admin", "tester"], obsolete: null }
+    },
+    deps
+  );
+
+  const next = deps.requestService.getSavedById("saved-1")!;
+  assert.deepEqual(next.headers, { keep: "yes", count: "1", enabled: "true" });
+  assert.deepEqual(next.query, { keep: "yes", page: "2", debug: "false", roles: "admin,tester" });
+});
+
+test("mutate_request update supports null body as an explicit update", async () => {
+  const deps = createDeps({
+    savedRequests: [createSavedRequest({ id: "saved-1", body: { before: true } })]
+  });
+
+  await handleMutateRequest({ op: "update", id: "saved-1", body: null }, deps);
+
+  assert.equal(deps.requestService.getSavedById("saved-1")!.body, null);
+});
+
+test("mutate_request update reports captured request id misuse with next step", async () => {
+  const deps = createDeps({ capturedRequests: [createCapturedRequest({ id: "captured-1" })] });
+
+  await assert.rejects(
+    () => handleMutateRequest({ op: "update", id: "captured-1", name: "Renamed" }, deps),
+    (error: unknown) => {
+      const payload = (error as { payload?: { code?: string; suggestions?: string[] } }).payload;
+      assert.equal(payload?.code, "REQUEST_ID_NOT_SAVED");
+      assert.ok(payload?.suggestions?.some((item) => item.includes("mutate_request")));
+      return true;
+    }
+  );
+});
+
+test("legacy update_saved_request matches mutate_request update result semantics", async () => {
+  const deps = createDeps({
+    savedRequests: [createSavedRequest({ id: "saved-1", query: { page: "1" } })]
+  });
+
+  const result = await handleLegacyToolInvocation("update_saved_request", { id: "saved-1", query: { page: 2 } }, deps);
+  const payload = result.structuredContent.result as { ok: boolean; id: string; changedFields: string[] };
+
+  assert.equal(payload.ok, true);
+  assert.equal(payload.id, "saved-1");
+  assert.ok(payload.changedFields.includes("query"));
+  assert.deepEqual(deps.requestService.getSavedById("saved-1")!.query, { page: "2" });
+});
 
 test("legacy list_proxy_rules maps action filter without overwriting discriminated action", async () => {
   const deps = createDeps({

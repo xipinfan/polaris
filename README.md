@@ -67,6 +67,8 @@ corepack pnpm test:e2e:page -- --page home
 
 说明：历史路径 `/requests` 与 `/rules` 当前会重定向到 `/mock`。
 
+实时请求 `/traffic` 的关键词搜索覆盖 URL、Host、Path、Header、Query、请求体、响应体和处理结果；Host 过滤支持输入片段匹配。空结果表示当前筛选条件在上述范围内均未命中。
+
 ## MCP 接入（当前实现）
 
 - 全量入口：`/mcp`
